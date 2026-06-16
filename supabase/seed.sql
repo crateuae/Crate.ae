@@ -475,18 +475,29 @@ INSERT INTO products (
  'C',28,45,2,10,'منتج فاخر بطيء الحركة — هامش ربح عالٍ يعوض انخفاض التداول','Premium slow-mover — high profit margin compensates for low velocity',
  true),
 
--- p030 Traubi Raisin Drink (REGISTERED UAE)
+-- p030 Traubi Raisin Soft Drink 250ml (REGISTERED UAE)
+-- Origin: Hungary (Traubi Hungaria, Balatonvilágos) + licensed Iraq (Zain Middle East Food Industries, Baghdad)
+-- UAE Exclusive Distributor: RAM Food & Beverage Trading LLC (ramtrading.ae)
+-- Retail: ADNOC Oasis, Amazon.ae, Grandiose.ae, Grocerjy | HORECA: Hotels, Cafés, Restaurants
+-- Ingredients: Carbonated water, grape juice concentrate 5%, sugar, citric acid, raisin flavour (natural identical), sodium benzoate, potassium sorbate, caramel colour
+-- Sizes: 250ml glass × 24 | 325ml glass × 24
+-- Social: @traubi.ae (UAE) | @traubi.bh (BH) | @traubi.iq (IQ)
+-- Exhibited at Gulfood 2025
 ('prod-p030-0000-0000-000000000030','traubi-raisin-drink-250ml',
- 'ترابي مشروب الزبيب الغازي 250ml','Traubi Raisin Soft Drink 250ml','Traubi Hungaria',
- 'Hungary','المجر',
+ 'ترابي مشروب الزبيب الغازي 250ml','Traubi Raisin Soft Drink 250ml','Traubi Hungaria / Zain Middle East',
+ 'Hungary / Iraq (licensed)','المجر / العراق (مرخّص)',
  'cat-bev-0001-0000-000000000001','مشروبات','Beverages','مشروبات غازية','Carbonated Drinks',
- '250ml × 24', 9.5, 130, 85, 24,'EAN-13', 18,'4–25 °C',
- ARRAY['Halal','ESMA'],'2202.99','rising', 58,
- '🍇','مشروب غازي بنكهة الزبيب الطبيعية — أيقونة هنغارية منذ 1954، يحتوي على ٥٪ عصير عنب طبيعي، موزّع في الإمارات عبر شركة RAM Trading','Carbonated raisin-flavoured soft drink — Hungarian icon since 1954, contains 5% natural grape juice, distributed in UAE by RAM Food & Beverage Trading',
+ '250ml × 24 زجاج', 9.5, 130, 85, 24,'EAN-13', 18,'4–25 °C (زجاج — بعيداً عن الشمس)',
+ ARRAY['Halal','ESMA','Iraqi FDA (Zain)'],'2202.99','rising', 62,
+ '🍇',
+ 'مشروب غازي بنكهة الزبيب الأصيلة — أيقونة أوروبية منذ 1954 بعصير عنب طبيعي ٥٪، زجاجة أنيقة تمنحه حضوراً مميزاً. متوفر في ADNOC Oasis وAmazon.ae وGrandiose وGrocerjy، موزَّع حصرياً من RAM Food & Beverage Trading ويستهدف HORECA والفنادق وكافيهات البريميوم',
+ 'Carbonated raisin drink — European icon since 1954 with 5% natural grape juice in a premium glass bottle. Available at ADNOC Oasis, Amazon.ae, Grandiose & Grocerjy. Exclusively distributed by RAM Food & Beverage Trading, targeting HORECA, hotels and premium cafés across UAE & GCC',
  'registered_uae','both',
- 'موزّع حصري في الإمارات والخليج: شركة RAM Food & Beverage Trading — متاح على Amazon.ae وGrandiose وGrocerjy', null, null,
+ 'الموزع الحصري: RAM Food & Beverage Trading (ramtrading.ae) — يغطي ADNOC Oasis + Key Account + HORECA + هايبرماركت + فنادق. حجمان: 250ml و325ml × 24. Instagram: @traubi.ae', null, null,
  null,
- 'B',62,18,16,28,'مشروب عنب فريد من نوعه — متوسط الحركة حالياً لكن الطلب في تصاعد مستمر مع نمو التوزيع','Unique grape raisin drink — medium velocity now but demand rising as distribution expands',
+ 'B',62,18,16,28,
+ 'مشروب عنب فريد من نوعه — متوسط الحركة حالياً لكن الطلب في تصاعد مستمر مع توسع التوزيع في ADNOC Oasis والهوريكا',
+ 'Unique grape raisin drink — medium velocity now but rising fast as distribution expands via ADNOC Oasis and HORECA channels',
  true)
 
 ON CONFLICT (id) DO UPDATE SET
@@ -602,14 +613,14 @@ INSERT INTO gap_alerts (
  'Increase monthly order 20% and negotiate annual supply contracts with restaurants',
  now(), now()),
 
--- Traubi Raisin Drink — rising demand
+-- Traubi Raisin Drink — rising demand across UAE channels
 ('alrt-p030-0000-0000-000000000009',
  'prod-p030-0000-0000-000000000030',
- 'trend_rising','medium', 72,45,58,
- 'طلب متنامٍ على Amazon.ae وGrandiose، مشروب عنب فريد بلا منافس مباشر في الإمارات، يُعرض في Gulfood 2025',
- 'Growing demand on Amazon.ae and Grandiose, unique grape drink with no direct UAE competitor, exhibited at Gulfood 2025',
- 'بناء توزيع في المطاعم والكافيهات والفنادق — المنتج مناسب للقائمة الأوروبية والحفلات',
- 'Build distribution in restaurants, cafés and hotels — product suits European menus and events',
+ 'trend_rising','medium', 72,45,62,
+ 'متوفر في ADNOC Oasis (379 محطة) وAmazon.ae وGrandiose وGrocerjy — مشروب عنب زجاجي فريد بلا منافس مباشر في الإمارات. عُرض في Gulfood 2025، RAM Trading يستهدف HORECA والفنادق والكافيهات. نسخة 325ml متاحة للجملة. @traubi.ae على انستغرام',
+ 'Available at ADNOC Oasis (379 stations), Amazon.ae, Grandiose & Grocerjy — unique glass-bottle grape drink with no direct UAE competitor. Exhibited at Gulfood 2025, RAM Trading targeting HORECA, hotels and cafés. 325ml bulk size available. @traubi.ae on Instagram',
+ 'استهدف قنوات HORECA: فنادق 5 نجوم + كافيهات أوروبية + رحلات الطيران + منافذ ADNOC Oasis — هامش ربح أعلى من المشروبات الغازية التقليدية بسبب زجاجة البريميوم والأصل الأوروبي',
+ 'Target HORECA channels: 5-star hotels + European cafés + airline catering + ADNOC Oasis — higher profit margin than standard sodas due to premium glass bottle and European heritage',
  now(), now())
 
 ON CONFLICT (id) DO UPDATE SET
