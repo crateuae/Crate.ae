@@ -114,6 +114,9 @@ const FMCG_MAP: Record<string, FMCGData> = {
   'p029': { class:'C', turnover_days:45, weekly_units_per_store:2,  market_penetration_pct:10, fmcg_score:28,
     note_ar:'منتج فاخر بطيء الحركة — هامش ربح عالٍ يعوض انخفاض التداول',
     note_en:'Premium slow-mover — high profit margin compensates for low velocity' },
+  'p030': { class:'B', turnover_days:18, weekly_units_per_store:16, market_penetration_pct:28, fmcg_score:62,
+    note_ar:'مشروب عنب فريد من نوعه — متوسط الحركة حالياً لكن الطلب في تصاعد مستمر مع نمو التوزيع',
+    note_en:'Unique grape raisin drink — medium velocity now but demand rising as distribution expands' },
 }
 
 export function getProductFMCG(p: CatalogProduct): FMCGData | null {
@@ -150,6 +153,7 @@ const PRODUCT_SLUG_MAP: Record<string, string> = {
   'p027': 'arizona-green-tea-680ml',
   'p028': 'tao-kae-noi-seaweed-32g',
   'p029': 'yemeni-sidr-honey-500g',
+  'p030': 'traubi-raisin-drink-250ml',
 }
 
 export function getProductSlug(p: CatalogProduct): string {
@@ -1121,6 +1125,38 @@ export const PRODUCTS_CATALOG: CatalogProduct[] = [
       'شهادة خلو من المضادات الحيوية',
       'تفويض من المنتج',
     ],
+    is_active: true,
+  },
+  // ─── p030 — Traubi Raisin Drink 250ml ─────────────────────────────────────
+  {
+    id: 'p030',
+    name_ar: 'ترابي مشروب الزبيب الغازي 250ml',
+    name_en: 'Traubi Raisin Soft Drink 250ml',
+    brand: 'Traubi Hungaria',
+    country_origin: 'Hungary',
+    country_origin_ar: 'المجر',
+    category_ar: 'مشروبات',
+    category_en: 'Beverages',
+    subcategory_ar: 'مشروبات غازية',
+    subcategory_en: 'Carbonated Drinks',
+    unit_size: '250ml × 24',
+    price_retail_aed: 9.5,
+    price_wholesale_aed: 130,
+    price_import_aed: 85,
+    units_per_carton: 24,
+    barcode_type: 'EAN-13',
+    shelf_life_months: 18,
+    storage_temp: '4–25 °C',
+    certifications: ['Halal', 'ESMA'],
+    hs_code: '2202.99',
+    market_signal: 'rising',
+    gap_score: 58,
+    image_emoji: '🍇',
+    description_ar: 'مشروب غازي بنكهة الزبيب الطبيعية — أيقونة هنغارية منذ 1954، يحتوي على ٥٪ عصير عنب طبيعي، موزّع في الإمارات عبر شركة RAM Trading',
+    description_en: 'Carbonated raisin-flavoured soft drink — Hungarian icon since 1954, contains 5% natural grape juice, distributed in UAE by RAM Food & Beverage Trading',
+    registration_status: 'registered_uae',
+    acquisition_type: 'both',
+    local_distributor_note: 'موزّع حصري في الإمارات والخليج: شركة RAM Food & Beverage Trading — متاح على Amazon.ae وGrandiose وGrocerjy',
     is_active: true,
   },
 ]

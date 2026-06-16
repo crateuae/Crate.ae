@@ -473,6 +473,20 @@ INSERT INTO products (
  null, 8000, 3,
  ARRAY['شهادة تحليل مختبري (نسبة الرطوبة، السكر، المضادات الحيوية)','شهادة منشأ يمنية موثقة','اختبار ESMA للعسل','ملصق عربي وفق UAE.S 9:2019','شهادة خلو من المضادات الحيوية','تفويض من المنتج'],
  'C',28,45,2,10,'منتج فاخر بطيء الحركة — هامش ربح عالٍ يعوض انخفاض التداول','Premium slow-mover — high profit margin compensates for low velocity',
+ true),
+
+-- p030 Traubi Raisin Drink (REGISTERED UAE)
+('prod-p030-0000-0000-000000000030','traubi-raisin-drink-250ml',
+ 'ترابي مشروب الزبيب الغازي 250ml','Traubi Raisin Soft Drink 250ml','Traubi Hungaria',
+ 'Hungary','المجر',
+ 'cat-bev-0001-0000-000000000001','مشروبات','Beverages','مشروبات غازية','Carbonated Drinks',
+ '250ml × 24', 9.5, 130, 85, 24,'EAN-13', 18,'4–25 °C',
+ ARRAY['Halal','ESMA'],'2202.99','rising', 58,
+ '🍇','مشروب غازي بنكهة الزبيب الطبيعية — أيقونة هنغارية منذ 1954، يحتوي على ٥٪ عصير عنب طبيعي، موزّع في الإمارات عبر شركة RAM Trading','Carbonated raisin-flavoured soft drink — Hungarian icon since 1954, contains 5% natural grape juice, distributed in UAE by RAM Food & Beverage Trading',
+ 'registered_uae','both',
+ 'موزّع حصري في الإمارات والخليج: شركة RAM Food & Beverage Trading — متاح على Amazon.ae وGrandiose وGrocerjy', null, null,
+ null,
+ 'B',62,18,16,28,'مشروب عنب فريد من نوعه — متوسط الحركة حالياً لكن الطلب في تصاعد مستمر مع نمو التوزيع','Unique grape raisin drink — medium velocity now but demand rising as distribution expands',
  true)
 
 ON CONFLICT (id) DO UPDATE SET
@@ -586,6 +600,16 @@ INSERT INTO gap_alerts (
  'Restaurant sales +35% this month, Lulu stock dropping fast, school season approaching',
  'زد الطلب الشهري 20% واتفق مع المطاعم على عقد توريد سنوي',
  'Increase monthly order 20% and negotiate annual supply contracts with restaurants',
+ now(), now()),
+
+-- Traubi Raisin Drink — rising demand
+('alrt-p030-0000-0000-000000000009',
+ 'prod-p030-0000-0000-000000000030',
+ 'trend_rising','medium', 72,45,58,
+ 'طلب متنامٍ على Amazon.ae وGrandiose، مشروب عنب فريد بلا منافس مباشر في الإمارات، يُعرض في Gulfood 2025',
+ 'Growing demand on Amazon.ae and Grandiose, unique grape drink with no direct UAE competitor, exhibited at Gulfood 2025',
+ 'بناء توزيع في المطاعم والكافيهات والفنادق — المنتج مناسب للقائمة الأوروبية والحفلات',
+ 'Build distribution in restaurants, cafés and hotels — product suits European menus and events',
  now(), now())
 
 ON CONFLICT (id) DO UPDATE SET
