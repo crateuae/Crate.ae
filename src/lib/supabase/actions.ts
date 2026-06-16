@@ -107,6 +107,54 @@ export async function deleteSubcategory(id: string) {
   if (error) throw error
 }
 
+// ─── Market Signals (gap_alerts) ─────────────────────────────
+
+export async function getProductSignals(slug: string) {
+  const supabase = await createClient()
+  // Try to find via product join first
+  const { data: productRow } = await supabase
+    .from('products')
+    .select('id')
+    .eq('slug', slug)
+    .single()
+  if (!productRow) return null
+  const { data } = await supabase
+    .from('gap_alerts')
+    .select('demand_score, supply_score, gap_score, details_ar, details_en, recommended_action_ar, recommended_action_en, detected_at, updated_at')
+    .eq('product_id', productRow.id)
+    .order('detected_at', { ascending: false })
+    .limit(1)
+    .single()
+  return data
+}
+
+export async function getAllSignals() {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('gap_alerts')
+    .select('*, products(name_ar, name_en, image_emoji)')
+    .order('gap_score', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+export async function upsertSignal(signal: Record<string, unknown>) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('gap_alerts')
+    .upsert(signal, { onConflict: 'id' })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteSignal(id: string) {
+  const supabase = await createClient()
+  const { error } = await supabase.from('gap_alerts').delete().eq('id', id)
+  if (error) throw error
+}
+
 // ─── Dashboard Stats ─────────────────────────────────────────
 
 export async function getDashboardStats() {

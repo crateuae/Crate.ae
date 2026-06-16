@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Boxes, Globe, Tag, Clock, Award, CheckCircle2, AlertTriangle } from 'lucide-react'
-import { PRODUCTS_CATALOG, PRODUCT_CATEGORIES } from '@/lib/data/products-catalog'
+import { PRODUCTS_CATALOG, PRODUCT_CATEGORIES, getProductSlug } from '@/lib/data/products-catalog'
 
 const SIGNAL_CONFIG = {
   shortage:  { label_ar: 'نقص عرض',     label_en: 'Shortage',  cls: 'bg-red-100 text-red-700' },
@@ -159,7 +159,7 @@ export default async function ProductsPage({ params, searchParams }: {
                         </div>
 
                         {/* Clickable product name → detail page */}
-                        <Link href={`/${locale}/products/${p.id}`} className="block group/link">
+                        <Link href={`/${locale}/products/${getProductSlug(p)}`} className="block group/link">
                           <h3 className="font-black text-gray-900 text-[15px] leading-tight mb-0.5 group-hover/link:text-orange-500 transition-colors">
                             {isAr ? p.name_ar : p.name_en}
                           </h3>

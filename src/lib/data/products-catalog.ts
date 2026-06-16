@@ -2,8 +2,53 @@ export type RegistrationStatus = 'registered_uae' | 'unregistered'
 export type AcquisitionType = 'local_trade' | 'direct_import' | 'both'
 export type MarketSignal = 'shortage' | 'rising' | 'arbitrage' | 'stable'
 
+export function slugify(s: string): string {
+  return s.toLowerCase()
+    .replace(/['']/g, '')
+    .replace(/&/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+const PRODUCT_SLUG_MAP: Record<string, string> = {
+  'p001': 'coca-cola-330ml',
+  'p002': 'red-bull-250ml',
+  'p003': 'almarai-milk-1l',
+  'p004': 'uncle-bens-basmati-5kg',
+  'p005': 'indomie-mi-goreng-80g',
+  'p006': 'lays-classic-167g',
+  'p007': 'sunola-corn-oil-4l',
+  'p008': 'puck-cream-cheese-500g',
+  'p009': 'nescafe-classic-200g',
+  'p010': 'lipton-yellow-label-100s',
+  'p011': 'kit-kat-4-finger-41g',
+  'p012': 'kelloggs-corn-flakes-500g',
+  'p013': 'heinz-ketchup-570g',
+  'p014': 'nutella-400g',
+  'p015': 'afia-olive-oil-750ml',
+  'p016': 'san-remo-penne-500g',
+  'p017': 'activia-yogurt-4x120g',
+  'p018': 'president-butter-200g',
+  'p019': 'al-kabeer-chicken-1kg',
+  'p020': 'mms-peanut-200g',
+  'p021': 'masafi-water-1-5l',
+  'p022': 'del-monte-tomato-paste-135g',
+  'p023': 'john-west-tuna-185g',
+  'p024': 'kiri-cream-cheese-8-portions',
+  'p025': 'al-kabeer-shawarma-1kg',
+  'p026': 'samyang-buldak-ramen-140g',
+  'p027': 'arizona-green-tea-680ml',
+  'p028': 'tao-kae-noi-seaweed-32g',
+  'p029': 'yemeni-sidr-honey-500g',
+}
+
+export function getProductSlug(p: CatalogProduct): string {
+  return p.slug || PRODUCT_SLUG_MAP[p.id] || slugify(p.name_en)
+}
+
 export interface CatalogProduct {
   id: string
+  slug?: string
   name_ar: string
   name_en: string
   brand: string

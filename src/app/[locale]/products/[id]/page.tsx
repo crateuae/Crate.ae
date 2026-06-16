@@ -5,7 +5,8 @@ import {
   ShoppingCart, Plane, FileText, TrendingUp, TrendingDown, Minus,
   Package, Building2, ChevronLeft, BarChart3, Info,
 } from 'lucide-react'
-import { PRODUCTS_CATALOG } from '@/lib/data/products-catalog'
+import { PRODUCTS_CATALOG, getProductSlug } from '@/lib/data/products-catalog'
+import { getProductSignals } from '@/lib/supabase/actions'
 
 const SIGNAL_CONFIG = {
   shortage:  { label_ar: 'نقص عرض',      label_en: 'Supply Shortage', cls: 'bg-red-100 text-red-700 border-red-200',    Icon: TrendingDown },
@@ -21,8 +22,11 @@ export default async function ProductDetailPage({
 }) {
   const { locale, id } = await params
   const isAr = locale === 'ar'
-  const product = PRODUCTS_CATALOG.find(p => p.id === id)
+  const product = PRODUCTS_CATALOG.find(p => getProductSlug(p) === id || p.id === id)
   if (!product) notFound()
+
+  const slug = getProductSlug(product)
+  const signals = await getProductSignals(slug).catch(() => null)
 
   const sig = SIGNAL_CONFIG[product.market_signal]
   const SigIcon = sig.Icon
@@ -367,6 +371,75 @@ export default async function ProductDetailPage({
             </div>
           </div>
         )}
+
+        {/* ── Market Signals ──────────────────────────────────────────────── */}
+        <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-orange-50 rounded-xl flex items-center justify-center">
+                <BarChart3 className="w-4 h-4 text-orange-500" />
+              </div>
+              <h2 className="font-black text-gray-900">
+                {isAr ? 'إشارات السوق' : 'Market Signals'}
+              </h2>
+            </div>
+            {signals?.updated_at && (
+              <span className="text-[10px] text-gray-400">
+                {isAr ? 'آخر تحديث:' : 'Updated:'} {new Date(signals.updated_at).toLocaleDateString(isAr ? 'ar-AE' : 'en-AE')}
+              </span>
+            )}
+          </div>
+
+          {signals ? (
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label_ar: 'الطلب', label_en: 'Demand', value: signals.demand_score, color: 'text-green-600', bg: 'bg-green-50', bar: 'bg-green-400' },
+                { label_ar: 'العرض', label_en: 'Supply', value: signals.supply_score, color: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-400' },
+                { label_ar: 'فجوة السوق', label_en: 'Market Gap', value: signals.gap_score, color: 'text-orange-600', bg: 'bg-orange-50', bar: 'bg-orange-400' },
+              ].map((s, i) => (
+                <div key={i} className={`${s.bg} rounded-2xl p-4 text-center`}>
+                  <div className={`text-3xl font-black ${s.color}`}>{s.value}</div>
+                  <div className="text-xs text-gray-400 mb-2">/100</div>
+                  <div className="w-full h-1.5 bg-white/60 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${s.bar}`} style={{ width: `${s.value}%` }} />
+                  </div>
+                  <div className={`text-xs font-bold mt-2 ${s.color}`}>{isAr ? s.label_ar : s.label_en}</div>
+                </div>
+              ))}
+              {signals.details_ar && (
+                <div className="col-span-3 bg-gray-50 rounded-xl p-3 text-xs text-gray-600">
+                  {isAr ? signals.details_ar : signals.details_en}
+                </div>
+              )}
+              {signals.recommended_action_ar && (
+                <div className="col-span-3 flex items-start gap-2 bg-orange-50 border border-orange-100 rounded-xl p-3 text-xs text-orange-700">
+                  <TrendingUp className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  <span>{isAr ? signals.recommended_action_ar : signals.recommended_action_en}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label_ar: 'الطلب', label_en: 'Demand', value: product.gap_score > 60 ? Math.min(product.gap_score + 15, 100) : product.gap_score, color: 'text-green-600', bg: 'bg-green-50', bar: 'bg-green-400' },
+                { label_ar: 'العرض', label_en: 'Supply', value: product.market_signal === 'shortage' ? Math.max(100 - product.gap_score, 10) : 55, color: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-400' },
+                { label_ar: 'فجوة السوق', label_en: 'Market Gap', value: product.gap_score, color: 'text-orange-600', bg: 'bg-orange-50', bar: 'bg-orange-400' },
+              ].map((s, i) => (
+                <div key={i} className={`${s.bg} rounded-2xl p-4 text-center`}>
+                  <div className={`text-3xl font-black ${s.color}`}>{s.value}</div>
+                  <div className="text-xs text-gray-400 mb-2">/100</div>
+                  <div className="w-full h-1.5 bg-white/60 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${s.bar}`} style={{ width: `${s.value}%` }} />
+                  </div>
+                  <div className={`text-xs font-bold mt-2 ${s.color}`}>{isAr ? s.label_ar : s.label_en}</div>
+                </div>
+              ))}
+              <div className="col-span-3 text-center text-xs text-gray-400 py-1">
+                {isAr ? 'بيانات تقديرية — يمكن تحديثها من لوحة التحكم' : 'Estimated data — can be refreshed from dashboard'}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* ── Back button ─────────────────────────────────────────────────── */}
         <div className="flex justify-start">

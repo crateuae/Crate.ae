@@ -39,7 +39,7 @@ const DEMO_SIGNALS = [
     recommended_action_ar: 'تواصل مع موزع إقليمي لتأمين كمية قبل الشحنة التالية',
     recommended_action_en: 'Contact regional distributor to secure stock before next shipment',
     detected_at: new Date().toISOString(),
-    products: { name_ar: 'كوكاكولا 330ml × 24', name_en: 'Coca-Cola 330ml × 24', slug: 'coca-cola-330ml', images: [] },
+    products: { name_ar: 'كوكاكولا كلاسيك 330ml', name_en: 'Coca-Cola Classic 330ml', slug: 'coca-cola-330ml', images: [] },
     category_ar: 'مشروبات غازية',
   },
   {
@@ -50,7 +50,7 @@ const DEMO_SIGNALS = [
     recommended_action_ar: 'بدء تخزين استراتيجي — السعر سيرتفع خلال ٣ أسابيع',
     recommended_action_en: 'Start strategic stockpiling — price will rise within 3 weeks',
     detected_at: new Date().toISOString(),
-    products: { name_ar: 'رز بسمتي حبة طويلة 5kg', name_en: 'Basmati Long Grain Rice 5kg', slug: 'basmati-rice-5kg', images: [] },
+    products: { name_ar: "رز بسمتي Uncle Ben's 5kg", name_en: "Uncle Ben's Basmati Rice 5kg", slug: 'uncle-bens-basmati-5kg', images: [] },
     category_ar: 'حبوب — أرز',
   },
   {
@@ -61,7 +61,7 @@ const DEMO_SIGNALS = [
     recommended_action_ar: 'شراء بالجملة + توزيع على المنافذ بهامش 25%+',
     recommended_action_en: 'Buy bulk + distribute to retail outlets with 25%+ margin',
     detected_at: new Date().toISOString(),
-    products: { name_ar: 'زيت ذرة Sunola 4L', name_en: 'Sunola Corn Oil 4L', slug: 'sunola-corn-oil-4l', images: [] },
+    products: { name_ar: 'زيت ذرة سنولا 4L', name_en: 'Sunola Corn Oil 4L', slug: 'sunola-corn-oil-4l', images: [] },
     category_ar: 'زيوت — زيت نباتي',
   },
   {
@@ -72,7 +72,7 @@ const DEMO_SIGNALS = [
     recommended_action_ar: 'افحص المطابقة → قدّم للتسجيل كوكيل حصري',
     recommended_action_en: 'Check compliance → apply for exclusive agency registration',
     detected_at: new Date().toISOString(),
-    products: { name_ar: 'Red Bull Tropical 250ml', name_en: 'Red Bull Tropical 250ml', slug: 'red-bull-tropical', images: [] },
+    products: { name_ar: 'ريد بول 250ml', name_en: 'Red Bull 250ml', slug: 'red-bull-250ml', images: [] },
     category_ar: 'مشروبات طاقة',
   },
   {
@@ -83,7 +83,7 @@ const DEMO_SIGNALS = [
     recommended_action_ar: 'استيراد مباشر من إندونيسيا بسعر أقل 30%',
     recommended_action_en: 'Direct import from Indonesia at 30% lower cost',
     detected_at: new Date().toISOString(),
-    products: { name_ar: 'Indomie Mi Goreng 80g × 40', name_en: 'Indomie Mi Goreng 80g × 40', slug: 'indomie-mi-goreng', images: [] },
+    products: { name_ar: 'إندومي مي غورينج 80g', name_en: 'Indomie Mi Goreng 80g', slug: 'indomie-mi-goreng-80g', images: [] },
     category_ar: 'حبوب — نودلز',
   },
   {
@@ -94,7 +94,7 @@ const DEMO_SIGNALS = [
     recommended_action_ar: 'طرح عروض توريد شهرية على الفنادق والمطاعم',
     recommended_action_en: 'Offer monthly supply contracts to hotels and restaurants',
     detected_at: new Date().toISOString(),
-    products: { name_ar: 'Almarai Laban 1L × 12', name_en: 'Almarai Laban 1L × 12', slug: 'almarai-laban-1l', images: [] },
+    products: { name_ar: 'حليب المراعي كامل الدسم 1L', name_en: 'Almarai Full Fat Milk 1L', slug: 'almarai-milk-1l', images: [] },
     category_ar: 'منتجات ألبان',
   },
 ]
