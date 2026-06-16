@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Package, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
-const ADMIN_EMAIL = 'altubjimalik@gmail.com'
+const ADMIN_EMAIL = 'crateuae@gmail.com'
 
 export default function LoginPage() {
   const params = useParams()

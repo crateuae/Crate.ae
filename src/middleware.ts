@@ -1,11 +1,11 @@
-import createMiddleware from 'next-intl/middleware'
+﻿import createMiddleware from 'next-intl/middleware'
 import { NextRequest, NextResponse } from 'next/server'
 import { routing } from './i18n/routing'
 import { createServerClient } from '@supabase/ssr'
 
 const intlMiddleware = createMiddleware(routing)
 
-const ADMIN_EMAIL = 'altubjimalik@gmail.com'
+const ADMIN_EMAIL = 'crateuae@gmail.com'
 const PROTECTED_PATHS = ['/dashboard']
 
 export async function middleware(request: NextRequest) {

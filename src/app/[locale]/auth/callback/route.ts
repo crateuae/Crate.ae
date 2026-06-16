@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
-const ADMIN_EMAIL = 'altubjimalik@gmail.com'
+const ADMIN_EMAIL = 'crateuae@gmail.com'
 
 export async function GET(
   request: NextRequest,

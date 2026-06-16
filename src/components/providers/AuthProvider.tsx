@@ -1,9 +1,9 @@
-'use client'
+﻿'use client'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 
-const ADMIN_EMAIL = 'altubjimalik@gmail.com'
+const ADMIN_EMAIL = 'crateuae@gmail.com'
 
 interface AuthCtx {
   user: User | null
