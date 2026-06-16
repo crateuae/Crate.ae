@@ -5,7 +5,7 @@ import {
   ShoppingCart, Plane, FileText, TrendingUp, TrendingDown, Minus,
   Package, Building2, ChevronLeft, BarChart3, Info,
 } from 'lucide-react'
-import { PRODUCTS_CATALOG, getProductSlug } from '@/lib/data/products-catalog'
+import { PRODUCTS_CATALOG, getProductSlug, getProductFMCG } from '@/lib/data/products-catalog'
 import { getProductSignals } from '@/lib/supabase/actions'
 
 const SIGNAL_CONFIG = {
@@ -26,7 +26,10 @@ export default async function ProductDetailPage({
   if (!product) notFound()
 
   const slug = getProductSlug(product)
-  const signals = await getProductSignals(slug).catch(() => null)
+  const [signals, fmcg] = await Promise.all([
+    getProductSignals(slug).catch(() => null),
+    Promise.resolve(getProductFMCG(product)),
+  ])
 
   const sig = SIGNAL_CONFIG[product.market_signal]
   const SigIcon = sig.Icon
@@ -82,6 +85,21 @@ export default async function ProductDetailPage({
                   <SigIcon className="w-3.5 h-3.5" />
                   {isAr ? sig.label_ar : sig.label_en}
                 </span>
+                {/* FMCG Class badge */}
+                {fmcg && (
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full border ${
+                    fmcg.class === 'A' ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                    : fmcg.class === 'B' ? 'bg-blue-100 text-blue-700 border-blue-200'
+                    : 'bg-gray-100 text-gray-600 border-gray-200'
+                  }`}>
+                    FMCG {fmcg.class}
+                    <span className="opacity-70 font-normal text-[10px]">
+                      {fmcg.class === 'A' ? (isAr ? '· سريع جداً' : '· Fast Mover')
+                        : fmcg.class === 'B' ? (isAr ? '· متوسط' : '· Medium')
+                        : (isAr ? '· بطيء' : '· Slow Mover')}
+                    </span>
+                  </span>
+                )}
                 {/* Category */}
                 <span className="text-xs font-medium px-3 py-1 rounded-full bg-gray-100 text-gray-500">
                   {isAr ? product.subcategory_ar : product.subcategory_en}
@@ -440,6 +458,181 @@ export default async function ProductDetailPage({
             </div>
           )}
         </div>
+
+        {/* ── FMCG Velocity Card ──────────────────────────────────────────── */}
+        {fmcg && (
+          <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-emerald-50 rounded-xl flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div>
+                  <h2 className="font-black text-gray-900 text-sm">
+                    {isAr ? 'معيار FMCG — سرعة تداول السوق' : 'FMCG Velocity Standard'}
+                  </h2>
+                  <p className="text-[10px] text-gray-400">
+                    {isAr ? 'تصنيف ABC للبضائع سريعة التداول — السوق الإماراتي' : 'ABC velocity classification — UAE market'}
+                  </p>
+                </div>
+              </div>
+              {/* Class badge large */}
+              <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center font-black text-xl border-2 ${
+                fmcg.class === 'A' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : fmcg.class === 'B' ? 'bg-blue-50 text-blue-700 border-blue-200'
+                : 'bg-gray-50 text-gray-600 border-gray-200'
+              }`}>
+                {fmcg.class}
+                <span className="text-[8px] font-bold mt-0.5 opacity-70">CLASS</span>
+              </div>
+            </div>
+
+            {/* Score bar */}
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs text-gray-400">{isAr ? 'نقاط سرعة التداول' : 'Velocity Score'}</span>
+                <span className="text-sm font-black text-gray-900">{fmcg.fmcg_score}<span className="text-xs font-normal text-gray-400">/100</span></span>
+              </div>
+              <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden relative">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    fmcg.fmcg_score >= 80 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500'
+                    : fmcg.fmcg_score >= 50 ? 'bg-gradient-to-r from-blue-400 to-blue-500'
+                    : 'bg-gradient-to-r from-gray-300 to-gray-400'
+                  }`}
+                  style={{ width: `${fmcg.fmcg_score}%` }}
+                />
+                {/* Threshold markers */}
+                <div className="absolute top-0 bottom-0 left-[50%] w-px bg-white/60" />
+                <div className="absolute top-0 bottom-0 left-[80%] w-px bg-white/60" />
+              </div>
+              <div className="flex justify-between text-[9px] text-gray-300 mt-1">
+                <span>0</span>
+                <span className="text-gray-400">C</span>
+                <span>|</span>
+                <span className="text-gray-400">B</span>
+                <span>|</span>
+                <span className="text-gray-400">A</span>
+                <span>100</span>
+              </div>
+            </div>
+
+            {/* Metrics grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              {[
+                {
+                  icon: '📅',
+                  label_ar: 'أيام الدوران',
+                  label_en: 'Turnover Days',
+                  value: `${fmcg.turnover_days} ${isAr ? 'يوم' : 'days'}`,
+                  sub_ar: 'متوسط بيع كرتون كامل',
+                  sub_en: 'avg to sell 1 carton',
+                  color: 'bg-orange-50 border-orange-100',
+                },
+                {
+                  icon: '🏪',
+                  label_ar: 'وحدة/أسبوع/متجر',
+                  label_en: 'Units/Week/Store',
+                  value: fmcg.weekly_units_per_store,
+                  sub_ar: 'في المتجر الواحد تقديرياً',
+                  sub_en: 'per store estimated',
+                  color: 'bg-blue-50 border-blue-100',
+                },
+                {
+                  icon: '🗺️',
+                  label_ar: 'انتشار في السوق',
+                  label_en: 'Market Penetration',
+                  value: `${fmcg.market_penetration_pct}%`,
+                  sub_ar: 'من منافذ التجزئة الإماراتية',
+                  sub_en: 'of UAE retail outlets',
+                  color: 'bg-purple-50 border-purple-100',
+                },
+                {
+                  icon: '🔄',
+                  label_ar: 'دورات/السنة',
+                  label_en: 'Cycles/Year',
+                  value: Math.round(365 / fmcg.turnover_days),
+                  sub_ar: 'عدد مرات تجديد المخزون',
+                  sub_en: 'inventory replenishment times',
+                  color: 'bg-emerald-50 border-emerald-100',
+                },
+              ].map((m, i) => (
+                <div key={i} className={`${m.color} border rounded-2xl p-3`}>
+                  <div className="text-lg mb-1">{m.icon}</div>
+                  <div className="text-xl font-black text-gray-900">{m.value}</div>
+                  <div className="text-[10px] font-bold text-gray-500 mt-0.5">{isAr ? m.label_ar : m.label_en}</div>
+                  <div className="text-[9px] text-gray-400 mt-0.5">{isAr ? m.sub_ar : m.sub_en}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* ABC explanation */}
+            <div className={`rounded-2xl p-4 flex items-start gap-3 ${
+              fmcg.class === 'A' ? 'bg-emerald-50 border border-emerald-100'
+              : fmcg.class === 'B' ? 'bg-blue-50 border border-blue-100'
+              : 'bg-gray-50 border border-gray-100'
+            }`}>
+              <span className="text-2xl flex-shrink-0">
+                {fmcg.class === 'A' ? '🚀' : fmcg.class === 'B' ? '📊' : '🐢'}
+              </span>
+              <div>
+                <p className={`text-sm font-bold mb-0.5 ${
+                  fmcg.class === 'A' ? 'text-emerald-700' : fmcg.class === 'B' ? 'text-blue-700' : 'text-gray-600'
+                }`}>
+                  {isAr
+                    ? fmcg.class === 'A' ? 'فئة A — بضاعة سريعة التداول (Fast Mover)'
+                      : fmcg.class === 'B' ? 'فئة B — بضاعة متوسطة التداول (Medium Mover)'
+                      : 'فئة C — بضاعة بطيئة التداول (Slow Mover)'
+                    : fmcg.class === 'A' ? 'Class A — Fast Moving Consumer Good'
+                      : fmcg.class === 'B' ? 'Class B — Medium Velocity Product'
+                      : 'Class C — Slow Moving Item'}
+                </p>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  {isAr ? fmcg.note_ar : fmcg.note_en}
+                </p>
+              </div>
+            </div>
+
+            {/* What this means for trading */}
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+              {[
+                {
+                  label_ar: 'كمية الشراء المثلى',
+                  label_en: 'Optimal Order Qty',
+                  value: fmcg.class === 'A'
+                    ? (isAr ? 'مخزون ١٤–٣٠ يوم' : '14–30 day stock')
+                    : fmcg.class === 'B'
+                    ? (isAr ? 'مخزون ٣٠–٦٠ يوم' : '30–60 day stock')
+                    : (isAr ? 'مخزون ٦٠–٩٠ يوم' : '60–90 day stock'),
+                },
+                {
+                  label_ar: 'توصية التخزين',
+                  label_en: 'Storage Tip',
+                  value: fmcg.class === 'A'
+                    ? (isAr ? 'تجديد أسبوعي' : 'Weekly restock')
+                    : fmcg.class === 'B'
+                    ? (isAr ? 'تجديد شهري' : 'Monthly restock')
+                    : (isAr ? 'تجديد ربعي' : 'Quarterly restock'),
+                },
+                {
+                  label_ar: 'أولوية الرف',
+                  label_en: 'Shelf Priority',
+                  value: fmcg.class === 'A'
+                    ? (isAr ? 'موضع العين 👁️' : 'Eye level 👁️')
+                    : fmcg.class === 'B'
+                    ? (isAr ? 'مرئي جيداً' : 'Visible spot')
+                    : (isAr ? 'مرفق / خلفي' : 'Side / back'),
+                },
+              ].map((t, i) => (
+                <div key={i} className="bg-gray-50 rounded-xl p-2.5">
+                  <div className="font-bold text-gray-700 text-xs mb-0.5">{t.value}</div>
+                  <div className="text-[10px] text-gray-400">{isAr ? t.label_ar : t.label_en}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── Back button ─────────────────────────────────────────────────── */}
         <div className="flex justify-start">

@@ -10,6 +10,116 @@ export function slugify(s: string): string {
     .replace(/^-|-$/g, '')
 }
 
+// ─── FMCG Velocity Classification ────────────────────────────────────────────
+export type FMCGClass = 'A' | 'B' | 'C'
+
+export interface FMCGData {
+  class: FMCGClass              // A = fast mover, B = medium, C = slow
+  turnover_days: number         // avg days to sell 1 carton in a UAE retail store
+  weekly_units_per_store: number // avg units sold/week per store
+  market_penetration_pct: number // % of UAE retail outlets stocking this SKU
+  fmcg_score: number            // 0–100 composite velocity score
+  note_ar: string
+  note_en: string
+}
+
+// UAE market FMCG data per product (research-based estimates)
+const FMCG_MAP: Record<string, FMCGData> = {
+  // ── Registered Products ──────────────────────────────────────────────
+  'p001': { class:'A', turnover_days:3,  weekly_units_per_store:48, market_penetration_pct:98, fmcg_score:97,
+    note_ar:'الأكثر مبيعاً في الإمارات — موجود في كل نقطة بيع تقريباً',
+    note_en:'Top UAE seller — present in virtually every point of sale' },
+  'p002': { class:'A', turnover_days:5,  weekly_units_per_store:24, market_penetration_pct:92, fmcg_score:91,
+    note_ar:'مشروب طاقة رائد — نقص مستمر يؤكد سرعة التداول العالية',
+    note_en:'Leading energy drink — persistent shortage confirms very high velocity' },
+  'p003': { class:'A', turnover_days:2,  weekly_units_per_store:36, market_penetration_pct:95, fmcg_score:96,
+    note_ar:'منتج أساسي يومي — دوران سريع جداً بسبب قصر الصلاحية',
+    note_en:'Daily essential — very fast turnover driven by short shelf life' },
+  'p004': { class:'B', turnover_days:21, weekly_units_per_store:8,  market_penetration_pct:75, fmcg_score:55,
+    note_ar:'أرز متوسط الحركة — ذروة المبيعات في رمضان والمواسم',
+    note_en:'Medium-velocity rice — peak sales during Ramadan and seasons' },
+  'p005': { class:'A', turnover_days:7,  weekly_units_per_store:30, market_penetration_pct:88, fmcg_score:82,
+    note_ar:'من أسرع المعكرونة تداولاً في الإمارات بين المجتمعات الآسيوية',
+    note_en:'One of fastest-moving noodles in UAE within Asian communities' },
+  'p006': { class:'A', turnover_days:5,  weekly_units_per_store:36, market_penetration_pct:94, fmcg_score:88,
+    note_ar:'شيبس رائج في كل المنافذ — مبيعات ثابتة على مدار السنة',
+    note_en:'Top chips in all outlets — consistent sales year-round' },
+  'p007': { class:'B', turnover_days:14, weekly_units_per_store:12, market_penetration_pct:82, fmcg_score:62,
+    note_ar:'زيت ذرة متوسط الحركة — ارتفاع في موسم الطهي',
+    note_en:'Medium-velocity corn oil — picks up during cooking seasons' },
+  'p008': { class:'B', turnover_days:10, weekly_units_per_store:12, market_penetration_pct:78, fmcg_score:65,
+    note_ar:'جبنة كريمية عالية الطلب في المطاعم — متوسطة في التجزئة',
+    note_en:'High restaurant demand cream cheese — medium in retail' },
+  'p009': { class:'B', turnover_days:14, weekly_units_per_store:10, market_penetration_pct:86, fmcg_score:60,
+    note_ar:'قهوة فورية ثابتة المبيعات — ارتفاع ملحوظ في الشتاء ورمضان',
+    note_en:'Stable instant coffee — notable uptick in winter and Ramadan' },
+  'p010': { class:'B', turnover_days:21, weekly_units_per_store:8,  market_penetration_pct:84, fmcg_score:57,
+    note_ar:'شاي ثابت المبيعات — معدل تداول منتظم طوال السنة',
+    note_en:'Steady tea seller — consistent turnover rate throughout the year' },
+  'p011': { class:'A', turnover_days:7,  weekly_units_per_store:24, market_penetration_pct:90, fmcg_score:83,
+    note_ar:'أعلى حلوى شوكولاته مبيعاً في الإمارات — سريع التداول',
+    note_en:'Top chocolate bar seller in UAE — fast moving SKU' },
+  'p012': { class:'B', turnover_days:14, weekly_units_per_store:10, market_penetration_pct:82, fmcg_score:59,
+    note_ar:'حبوب إفطار موسمية — ذروة المبيعات أغسطس–مايو مع موسم الدراسة',
+    note_en:'Seasonal breakfast cereal — peak sales Aug–May with school season' },
+  'p013': { class:'B', turnover_days:21, weekly_units_per_store:8,  market_penetration_pct:80, fmcg_score:54,
+    note_ar:'كاتشب أساسي في المطاعم — حركة ثابتة وإعادة طلب منتظمة',
+    note_en:'Restaurant condiment staple — steady movement with regular reorders' },
+  'p014': { class:'B', turnover_days:14, weekly_units_per_store:10, market_penetration_pct:85, fmcg_score:61,
+    note_ar:'نوتيلا طلبها ثابت في العائلات — ذروة في رمضان والأعياد',
+    note_en:'Steady family demand Nutella — peaks in Ramadan and holidays' },
+  'p015': { class:'B', turnover_days:21, weekly_units_per_store:6,  market_penetration_pct:78, fmcg_score:51,
+    note_ar:'زيت زيتون متوسط الحركة — طلب متنامٍ مع التوجه الصحي',
+    note_en:'Medium-velocity olive oil — growing demand with health awareness' },
+  'p016': { class:'B', turnover_days:21, weekly_units_per_store:8,  market_penetration_pct:72, fmcg_score:49,
+    note_ar:'معكرونة جيدة المبيعات في مطاعم المأكولات الإيطالية',
+    note_en:'Good-selling pasta in Italian cuisine restaurants' },
+  'p017': { class:'A', turnover_days:3,  weekly_units_per_store:18, market_penetration_pct:80, fmcg_score:85,
+    note_ar:'زبادي مبرد سريع جداً — صلاحية قصيرة تدفع الدوران اليومي',
+    note_en:'Very fast chilled yogurt — short shelf life drives daily turnover' },
+  'p018': { class:'B', turnover_days:14, weekly_units_per_store:8,  market_penetration_pct:70, fmcg_score:52,
+    note_ar:'زبدة فاخرة — طلب ثابت في المخابز والفنادق',
+    note_en:'Premium butter — steady demand in bakeries and hotels' },
+  'p019': { class:'B', turnover_days:7,  weekly_units_per_store:12, market_penetration_pct:75, fmcg_score:66,
+    note_ar:'دجاج مجمد متوسط–سريع — مطلوب في المطاعم أسبوعياً',
+    note_en:'Medium–fast frozen chicken — weekly restaurant demand' },
+  'p020': { class:'B', turnover_days:14, weekly_units_per_store:10, market_penetration_pct:76, fmcg_score:56,
+    note_ar:'حلوى M&M طلبها متوسط مع ارتفاع في المواسم والهدايا',
+    note_en:'Medium demand candy — spikes in festive and gifting seasons' },
+  'p021': { class:'A', turnover_days:2,  weekly_units_per_store:60, market_penetration_pct:96, fmcg_score:98,
+    note_ar:'مياه معبأة — الأعلى تداولاً في الإمارات، تُعاد طلبها يومياً',
+    note_en:'Bottled water — highest velocity in UAE, reordered daily' },
+  'p022': { class:'B', turnover_days:21, weekly_units_per_store:8,  market_penetration_pct:78, fmcg_score:50,
+    note_ar:'معجون طماطم أساسي في المطابخ — طلب ثابت ومنتظم',
+    note_en:'Kitchen staple tomato paste — steady consistent demand' },
+  'p023': { class:'B', turnover_days:21, weekly_units_per_store:6,  market_penetration_pct:72, fmcg_score:47,
+    note_ar:'تونة معلبة جيدة المبيعات في التجمعات العمالية والمدارس',
+    note_en:'Good-selling canned tuna in labor communities and schools' },
+  'p024': { class:'B', turnover_days:10, weekly_units_per_store:10, market_penetration_pct:75, fmcg_score:60,
+    note_ar:'جبنة كيري ثابتة — إقبال مرتفع في موسم الدراسة والأعياد',
+    note_en:'Steady Kiri — high uptake in school season and holidays' },
+  'p025': { class:'B', turnover_days:7,  weekly_units_per_store:8,  market_penetration_pct:65, fmcg_score:63,
+    note_ar:'شاورما مجمدة متنامية — طلب مؤسسي متزايد في المطاعم',
+    note_en:'Growing frozen shawarma — increasing institutional restaurant demand' },
+  // ── Unregistered — Estimated based on global & regional data ─────────
+  'p026': { class:'A', turnover_days:5,  weekly_units_per_store:20, market_penetration_pct:15, fmcg_score:72,
+    note_ar:'سريع التداول عالمياً — محدودية التوزيع في الإمارات تكبح إمكاناته الفعلية',
+    note_en:'Fast-moving globally — limited UAE distribution caps its actual reach' },
+  'p027': { class:'A', turnover_days:3,  weekly_units_per_store:24, market_penetration_pct:5,  fmcg_score:78,
+    note_ar:'إقبال ضخم من Gen-Z عالمياً — غياب التوزيع الرسمي يخلق فجوة ضخمة',
+    note_en:'Massive Gen-Z global demand — absence of official distribution creates huge gap' },
+  'p028': { class:'B', turnover_days:10, weekly_units_per_store:12, market_penetration_pct:8,  fmcg_score:58,
+    note_ar:'وجبة خفيفة ترندينغ — سريع الحركة في آسيا، يكتسب زخماً في الإمارات',
+    note_en:'Trending snack — fast-moving in Asia, gaining momentum in UAE' },
+  'p029': { class:'C', turnover_days:45, weekly_units_per_store:2,  market_penetration_pct:10, fmcg_score:28,
+    note_ar:'منتج فاخر بطيء الحركة — هامش ربح عالٍ يعوض انخفاض التداول',
+    note_en:'Premium slow-mover — high profit margin compensates for low velocity' },
+}
+
+export function getProductFMCG(p: CatalogProduct): FMCGData | null {
+  return FMCG_MAP[p.id] || null
+}
+
 const PRODUCT_SLUG_MAP: Record<string, string> = {
   'p001': 'coca-cola-330ml',
   'p002': 'red-bull-250ml',

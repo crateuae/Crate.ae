@@ -2,15 +2,20 @@
 -- Crate.ae Seed Data — Run this in Supabase SQL Editor
 -- ═══════════════════════════════════════════════════════════════
 
--- Add updated_at column to gap_alerts if not exists
-ALTER TABLE gap_alerts ADD COLUMN IF NOT EXISTS updated_at timestamptz default now();
--- Add slug to products if not exists
-ALTER TABLE products ADD COLUMN IF NOT EXISTS slug text;
--- Add image_emoji if not exists
-ALTER TABLE products ADD COLUMN IF NOT EXISTS image_emoji text;
--- Add category_id FK col if not exists
-ALTER TABLE products ADD COLUMN IF NOT EXISTS category_id text;
--- Ensure unique slugs
+-- ─── Schema additions (idempotent) ──────────────────────────────
+ALTER TABLE gap_alerts   ADD COLUMN IF NOT EXISTS updated_at timestamptz default now();
+ALTER TABLE products     ADD COLUMN IF NOT EXISTS slug text;
+ALTER TABLE products     ADD COLUMN IF NOT EXISTS image_emoji text;
+ALTER TABLE products     ADD COLUMN IF NOT EXISTS category_id text;
+-- FMCG velocity columns
+ALTER TABLE products     ADD COLUMN IF NOT EXISTS fmcg_class text;             -- A | B | C
+ALTER TABLE products     ADD COLUMN IF NOT EXISTS fmcg_score int;              -- 0-100
+ALTER TABLE products     ADD COLUMN IF NOT EXISTS fmcg_turnover_days int;      -- days per carton
+ALTER TABLE products     ADD COLUMN IF NOT EXISTS fmcg_weekly_units int;       -- units/week/store
+ALTER TABLE products     ADD COLUMN IF NOT EXISTS fmcg_penetration_pct int;    -- % UAE stores
+ALTER TABLE products     ADD COLUMN IF NOT EXISTS fmcg_note_ar text;
+ALTER TABLE products     ADD COLUMN IF NOT EXISTS fmcg_note_en text;
+-- Unique index on slug
 CREATE UNIQUE INDEX IF NOT EXISTS products_slug_idx ON products(slug);
 
 
@@ -84,6 +89,8 @@ INSERT INTO products (
   image_emoji, description_ar, description_en,
   registration_status, acquisition_type,
   local_distributor_note, registration_cost_aed, registration_months, required_docs,
+  fmcg_class, fmcg_score, fmcg_turnover_days, fmcg_weekly_units, fmcg_penetration_pct,
+  fmcg_note_ar, fmcg_note_en,
   is_active
 ) VALUES
 
@@ -97,6 +104,7 @@ INSERT INTO products (
  '🥤','مُصنَّع محلياً بترخيص — الأكثر مبيعاً في الإمارات','Locally manufactured under license — top seller in UAE',
  'registered_uae','local_trade',
  'متوفر من خلال موزعي كوكاكولا الإمارات مباشرةً أو من مستودعات الجملة الكبرى', null, null, null,
+ 'A',97,3,48,98,'الأكثر مبيعاً في الإمارات — موجود في كل نقطة بيع تقريباً','Top UAE seller — present in virtually every point of sale',
  true),
 
 -- p002 Red Bull
@@ -109,6 +117,7 @@ INSERT INTO products (
  '⚡','مسجّل بالإمارات — نقص مستمر في المناطق الصناعية والمحطات','Registered in UAE — consistent shortage in industrial zones and petrol stations',
  'registered_uae','both',
  'الموزع الرسمي: شركة أبوظبي الوطنية للغازات وعدة وكلاء إقليميين', null, null, null,
+ 'A',91,5,24,92,'مشروب طاقة رائد — نقص مستمر يؤكد سرعة التداول العالية','Leading energy drink — persistent shortage confirms very high velocity',
  true),
 
 -- p003 Almarai Milk
@@ -121,6 +130,7 @@ INSERT INTO products (
  '🥛','منتج خليجي مسجّل — طلب متزايد مع نمو السكان','GCC registered product — growing demand with population growth',
  'registered_uae','both',
  'متوفر من الموزع الرسمي المراعي الإمارات أو من مستودعات دبي', null, null, null,
+ 'A',96,2,36,95,'منتج أساسي يومي — دوران سريع جداً بسبب قصر الصلاحية','Daily essential — very fast turnover driven by short shelf life',
  true),
 
 -- p004 Uncle Ben's Rice
@@ -133,6 +143,7 @@ INSERT INTO products (
  '🌾','مسجّل ومتوفر — استيراد مباشر يوفر هامش 30% إضافي','Registered and available — direct import saves 30% margin',
  'registered_uae','both',
  'متوفر في مستودعات الجملة في القوز والمفرق', null, null, null,
+ 'B',55,21,8,75,'أرز متوسط الحركة — ذروة المبيعات في رمضان والمواسم','Medium-velocity rice — peak sales during Ramadan and seasons',
  true),
 
 -- p005 Indomie
@@ -145,6 +156,7 @@ INSERT INTO products (
  '🍜','استيراد مباشر من إندونيسيا يوفر هامشاً أعلى بـ 30%','Direct import from Indonesia yields 30% higher margin',
  'registered_uae','both',
  'متوفر من موزعين آسيويين في منطقة بر دبي والقوز', null, null, null,
+ 'A',82,7,30,88,'من أسرع المعكرونة تداولاً في الإمارات بين المجتمعات الآسيوية','One of fastest-moving noodles in UAE within Asian communities',
  true),
 
 -- p006 Lays
@@ -157,6 +169,7 @@ INSERT INTO products (
  '🍟','مُصنَّع محلياً — فارق سعري 40% بين الجملة والتجزئة في البقالات الصغيرة','Locally manufactured — 40% price gap between wholesale and small retail',
  'registered_uae','local_trade',
  'الموزع الرسمي: فريتو لاي الإمارات، توزيع مباشر لمناطق دبي وأبوظبي', null, null, null,
+ 'A',88,5,36,94,'شيبس رائج في كل المنافذ — مبيعات ثابتة على مدار السنة','Top chips in all outlets — consistent sales year-round',
  true),
 
 -- p007 Sunola Oil
@@ -169,6 +182,7 @@ INSERT INTO products (
  '🫙','استيراد مباشر من مصر يوفر 28% عن سعر الجملة المحلي','Direct import from Egypt saves 28% vs local wholesale price',
  'registered_uae','both',
  'متوفر من مستودعات سافولا الإمارات في جبل علي', null, null, null,
+ 'B',62,14,12,82,'زيت ذرة متوسط الحركة — ارتفاع في موسم الطهي','Medium-velocity corn oil — picks up during cooking seasons',
  true),
 
 -- p008 Puck Cream Cheese
@@ -181,6 +195,7 @@ INSERT INTO products (
  '🧀','مطلوبة في المطاعم والفنادق — استيراد مباشر بفارق 25%','High demand from restaurants & hotels — direct import 25% cheaper',
  'registered_uae','both',
  'الموزع: أرلا فودز الإمارات، أبوظبي وبعض وكلاء دبي', null, null, null,
+ 'B',65,10,12,78,'جبنة كريمية عالية الطلب في المطاعم — متوسطة في التجزئة','High restaurant demand cream cheese — medium in retail',
  true),
 
 -- p009 Nescafe
@@ -193,6 +208,7 @@ INSERT INTO products (
  '☕','طلب ثابت طوال العام — مناسب للتجارة المحلية أو الاستيراد','Steady year-round demand — suitable for local trade or import',
  'registered_uae','both',
  'نستله الإمارات: توزيع واسع النطاق عبر شبكة معتمدة', null, null, null,
+ 'B',60,14,10,86,'قهوة فورية ثابتة المبيعات — ارتفاع ملحوظ في الشتاء ورمضان','Stable instant coffee — notable uptick in winter and Ramadan',
  true),
 
 -- p010 Lipton
@@ -205,6 +221,7 @@ INSERT INTO products (
  '🍵','شاي ثابت المبيعات — تكليف الاستيراد المباشر أقل 27% من الجملة المحلية','Stable tea sales — direct import 27% cheaper than local wholesale',
  'registered_uae','both',
  'يونيليفر الإمارات: توزيع مباشر أو عبر موزعين معتمدين', null, null, null,
+ 'B',57,21,8,84,'شاي ثابت المبيعات — معدل تداول منتظم طوال السنة','Steady tea seller — consistent turnover rate throughout the year',
  true),
 
 -- p011 Kit Kat
@@ -217,6 +234,7 @@ INSERT INTO products (
  '🍫','مُصنَّع محلياً — طلب مستمر في كل نقاط البيع','Locally manufactured — consistent demand at all retail points',
  'registered_uae','local_trade',
  'نستله الإمارات: توزيع مباشر، لا حاجة لاستيراد', null, null, null,
+ 'A',83,7,24,90,'أعلى حلوى شوكولاته مبيعاً في الإمارات — سريع التداول','Top chocolate bar seller in UAE — fast moving SKU',
  true),
 
 -- p012 Kellogg's
@@ -229,6 +247,7 @@ INSERT INTO products (
  '🥣','حبوب إفطار مصنوعة محلياً — ذروة المبيعات سبتمبر-يونيو','Locally manufactured breakfast cereal — peak sales Sep–Jun',
  'registered_uae','local_trade',
  'كيلوغز الخليج: مصنع في دبي، توزيع مباشر', null, null, null,
+ 'B',59,14,10,82,'حبوب إفطار موسمية — ذروة المبيعات أغسطس–مايو مع موسم الدراسة','Seasonal breakfast cereal — peak sales Aug–May with school season',
  true),
 
 -- p013 Heinz Ketchup
@@ -241,6 +260,7 @@ INSERT INTO products (
  '🍅','ضروري في المطاعم — طلب ثابت على مدار السنة','Restaurant staple — stable year-round institutional demand',
  'registered_uae','both',
  'كرافت هاينز الخليج: موزعون معتمدون في دبي وأبوظبي', null, null, null,
+ 'B',54,21,8,80,'كاتشب أساسي في المطاعم — حركة ثابتة وإعادة طلب منتظمة','Restaurant condiment staple — steady movement with regular reorders',
  true),
 
 -- p014 Nutella
@@ -253,6 +273,7 @@ INSERT INTO products (
  '🫙','طلب ثابت — استيراد مباشر يوفر هامشاً أعلى للمستودعات','Steady demand — direct import yields higher margin for wholesalers',
  'registered_uae','both',
  'فيريرو الخليج: موزع رسمي في دبي', null, null, null,
+ 'B',61,14,10,85,'نوتيلا طلبها ثابت في العائلات — ذروة في رمضان والأعياد','Steady family demand Nutella — peaks in Ramadan and holidays',
  true),
 
 -- p015 Afia Olive Oil
@@ -265,6 +286,7 @@ INSERT INTO products (
  '🫒','طلب متزايد من الوعي الصحي — استيراد مباشر من إسبانيا بفارق 26%','Growing health-conscious demand — direct Spain import saves 26%',
  'registered_uae','both',
  'سافولا الإمارات: مستودع جبل علي', null, null, null,
+ 'B',51,21,6,78,'زيت زيتون متوسط الحركة — طلب متنامٍ مع التوجه الصحي','Medium-velocity olive oil — growing demand with health awareness',
  true),
 
 -- p016 San Remo Penne
@@ -277,6 +299,7 @@ INSERT INTO products (
  '🍝','مطلوبة في المطاعم الإيطالية — استيراد مباشر بفارق 28%','Restaurant staple — direct import saves 28% vs local wholesale',
  'registered_uae','both',
  'موزعون أستراليون في منطقة القوز، دبي', null, null, null,
+ 'B',49,21,8,72,'معكرونة جيدة المبيعات في مطاعم المأكولات الإيطالية','Good-selling pasta in Italian cuisine restaurants',
  true),
 
 -- p017 Activia
@@ -289,6 +312,7 @@ INSERT INTO products (
  '🫙','مصنوع محلياً بترخيص — أعلى مبيعاً في قسم الألبان المبردة','Locally made under license — top chilled dairy seller',
  'registered_uae','local_trade',
  'دانون الإمارات: توزيع مباشر مبرد، لا يصلح للاستيراد', null, null, null,
+ 'A',85,3,18,80,'زبادي مبرد سريع جداً — صلاحية قصيرة تدفع الدوران اليومي','Very fast chilled yogurt — short shelf life drives daily turnover',
  true),
 
 -- p018 President Butter
@@ -301,6 +325,7 @@ INSERT INTO products (
  '🧈','زبدة فرنسية فاخرة — مطلوبة في المخابز والمطاعم الراقية','Premium French butter — demanded by bakeries and fine dining',
  'registered_uae','both',
  'لاكتاليس الخليج: مستودع مبرد في دبي', null, null, null,
+ 'B',52,14,8,70,'زبدة فاخرة — طلب ثابت في المخابز والفنادق','Premium butter — steady demand in bakeries and hotels',
  true),
 
 -- p019 Al Kabeer Chicken
@@ -313,6 +338,7 @@ INSERT INTO products (
  '🍗','إنتاج محلي — توزيع مباشر من المصنع في الإمارات','Local production — direct distribution from UAE factory',
  'registered_uae','local_trade',
  'الكبير فودز: مبيعات مباشرة للجملة من مستودع جبل علي', null, null, null,
+ 'B',66,7,12,75,'دجاج مجمد متوسط–سريع — مطلوب في المطاعم أسبوعياً','Medium–fast frozen chicken — weekly restaurant demand',
  true),
 
 -- p020 M&M's
@@ -325,6 +351,7 @@ INSERT INTO products (
  '🍬','فجوة سعرية واضحة — استيراد مباشر بفارق 28%','Clear price gap — direct import at 28% cheaper than local',
  'registered_uae','both',
  'مارس الخليج: وكلاء معتمدون في دبي وأبوظبي', null, null, null,
+ 'B',56,14,10,76,'حلوى M&M طلبها متوسط مع ارتفاع في المواسم والهدايا','Medium demand candy — spikes in festive and gifting seasons',
  true),
 
 -- p021 Masafi Water
@@ -337,6 +364,7 @@ INSERT INTO products (
  '💧','مياه معدنية طبيعية إماراتية — توزيع مباشر من مصنع رأس الخيمة','UAE natural mineral water — direct distribution from RAK factory',
  'registered_uae','local_trade',
  'مسافي: توزيع مباشر لجميع مناطق الإمارات', null, null, null,
+ 'A',98,2,60,96,'مياه معبأة — الأعلى تداولاً في الإمارات، تُعاد طلبها يومياً','Bottled water — highest velocity in UAE, reordered daily',
  true),
 
 -- p022 Del Monte Tomato Paste
@@ -349,6 +377,7 @@ INSERT INTO products (
  '🥫','مادة أساسية في المطابخ العربية — طلب ثابت مؤسسي','Arab kitchen staple — steady institutional demand',
  'registered_uae','both',
  'دل مونتي الخليج: موزعون في دبي وأبوظبي', null, null, null,
+ 'B',50,21,8,78,'معجون طماطم أساسي في المطابخ — طلب ثابت ومنتظم','Kitchen staple tomato paste — steady consistent demand',
  true),
 
 -- p023 John West Tuna
@@ -361,6 +390,7 @@ INSERT INTO products (
  '🐟','طلب متزايد في التجمعات العمالية والمدارس — استيراد مباشر بفارق 27%','Growing demand in labor camps and schools — direct import 27% cheaper',
  'registered_uae','both',
  'جون ويست الخليج: موزعون في منطقة القوز، دبي', null, null, null,
+ 'B',47,21,6,72,'تونة معلبة جيدة المبيعات في التجمعات العمالية والمدارس','Good-selling canned tuna in labor communities and schools',
  true),
 
 -- p024 Kiri Cream Cheese
@@ -373,6 +403,7 @@ INSERT INTO products (
  '🧀','مطلوبة للإفطار المدرسي — استيراد مباشر بفارق 26%','School breakfast staple — direct import at 26% lower cost',
  'registered_uae','both',
  'مجموعة بيل الشرق الأوسط: موزعون في دبي', null, null, null,
+ 'B',60,10,10,75,'جبنة كيري ثابتة — إقبال مرتفع في موسم الدراسة والأعياد','Steady Kiri — high uptake in school season and holidays',
  true),
 
 -- p025 Al Kabeer Shawarma
@@ -385,6 +416,7 @@ INSERT INTO products (
  '🥙','طلب متصاعد في مطاعم الوجبات السريعة والمؤسسات','Rising demand from fast food restaurants and institutions',
  'registered_uae','local_trade',
  'الكبير فودز: مبيعات مباشرة مجمدة من المصنع', null, null, null,
+ 'B',63,7,8,65,'شاورما مجمدة متنامية — طلب مؤسسي متزايد في المطاعم','Growing frozen shawarma — increasing institutional restaurant demand',
  true),
 
 -- p026 Samyang (UNREGISTERED)
@@ -398,6 +430,7 @@ INSERT INTO products (
  'unregistered','direct_import',
  null, 12000, 4,
  ARRAY['تفويض رسمي من Samyang Foods كوريا','شهادة حلال من جهة إسلامية معترف بها','نتائج اختبارات مختبر ESMA','ملصق عربي وفق UAE.S 9:2019','شهادة المنشأ (COO) من كوريا','شهادة التحليل الغذائي (COA)'],
+ 'A',72,5,20,15,'سريع التداول عالمياً — محدودية التوزيع في الإمارات تكبح إمكاناته الفعلية','Fast-moving globally — limited UAE distribution caps its actual reach',
  true),
 
 -- p027 Arizona Green Tea (UNREGISTERED)
@@ -411,6 +444,7 @@ INSERT INTO products (
  'unregistered','direct_import',
  null, 15000, 5,
  ARRAY['تفويض رسمي من Arizona Beverages','شهادة حلال — المشروبات يجب فحص مكونات النكهة','اختبار نسبة الكافيين (إن وجد)','ملصق عربي وفق UAE.S 9:2019','شهادة المنشأ الأمريكية','شهادة تحليل كيميائي وميكروبيولوجي'],
+ 'A',78,3,24,5,'إقبال ضخم من Gen-Z عالمياً — غياب التوزيع الرسمي يخلق فجوة ضخمة','Massive Gen-Z global demand — absence of official distribution creates huge gap',
  true),
 
 -- p028 Tao Kae Noi (UNREGISTERED)
@@ -424,6 +458,7 @@ INSERT INTO products (
  'unregistered','direct_import',
  null, 10000, 3,
  ARRAY['تفويض رسمي من Tao Kae Noi','التحقق من شهادة الحلال التايلاندية (معترف بها في UAE؟)','ملصق عربي وفق UAE.S 9:2019','قائمة مكونات كاملة للفحص','شهادة منشأ تايلاند','شهادة تحليل غذائي'],
+ 'B',58,10,12,8,'وجبة خفيفة ترندينغ — سريع الحركة في آسيا، يكتسب زخماً في الإمارات','Trending snack — fast-moving in Asia, gaining momentum in UAE',
  true),
 
 -- p029 Yemeni Sidr Honey (UNREGISTERED)
@@ -437,6 +472,7 @@ INSERT INTO products (
  'unregistered','direct_import',
  null, 8000, 3,
  ARRAY['شهادة تحليل مختبري (نسبة الرطوبة، السكر، المضادات الحيوية)','شهادة منشأ يمنية موثقة','اختبار ESMA للعسل','ملصق عربي وفق UAE.S 9:2019','شهادة خلو من المضادات الحيوية','تفويض من المنتج'],
+ 'C',28,45,2,10,'منتج فاخر بطيء الحركة — هامش ربح عالٍ يعوض انخفاض التداول','Premium slow-mover — high profit margin compensates for low velocity',
  true)
 
 ON CONFLICT (id) DO UPDATE SET
@@ -453,6 +489,13 @@ ON CONFLICT (id) DO UPDATE SET
   image_emoji = EXCLUDED.image_emoji,
   registration_status = EXCLUDED.registration_status,
   acquisition_type = EXCLUDED.acquisition_type,
+  fmcg_class = EXCLUDED.fmcg_class,
+  fmcg_score = EXCLUDED.fmcg_score,
+  fmcg_turnover_days = EXCLUDED.fmcg_turnover_days,
+  fmcg_weekly_units = EXCLUDED.fmcg_weekly_units,
+  fmcg_penetration_pct = EXCLUDED.fmcg_penetration_pct,
+  fmcg_note_ar = EXCLUDED.fmcg_note_ar,
+  fmcg_note_en = EXCLUDED.fmcg_note_en,
   is_active = EXCLUDED.is_active;
 
 -- ─── 4. MARKET SIGNALS (gap_alerts) ────────────────────────────

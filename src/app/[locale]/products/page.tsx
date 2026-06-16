@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Boxes, Globe, Tag, Clock, Award, CheckCircle2, AlertTriangle } from 'lucide-react'
-import { PRODUCTS_CATALOG, PRODUCT_CATEGORIES, getProductSlug } from '@/lib/data/products-catalog'
+import { PRODUCTS_CATALOG, PRODUCT_CATEGORIES, getProductSlug, getProductFMCG } from '@/lib/data/products-catalog'
 
 const SIGNAL_CONFIG = {
   shortage:  { label_ar: 'نقص عرض',     label_en: 'Shortage',  cls: 'bg-red-100 text-red-700' },
@@ -204,9 +204,27 @@ export default async function ProductsPage({ params, searchParams }: {
                           ))}
                         </div>
 
-                        {/* CTA */}
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <Link href={`/${locale}/products/${p.id}`}
+                        {/* FMCG badge + CTA */}
+                        <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+                          {(() => {
+                            const fmcg = getProductFMCG(p)
+                            if (!fmcg) return null
+                            return (
+                              <div className="flex items-center justify-between">
+                                <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
+                                  fmcg.class === 'A' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : fmcg.class === 'B' ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                  : 'bg-gray-100 text-gray-500 border-gray-200'
+                                }`}>
+                                  FMCG {fmcg.class} · {fmcg.fmcg_score}/100
+                                </span>
+                                <span className="text-[10px] text-gray-400">
+                                  {isAr ? `${fmcg.turnover_days}ي دوران` : `${fmcg.turnover_days}d turnover`}
+                                </span>
+                              </div>
+                            )
+                          })()}
+                          <Link href={`/${locale}/products/${getProductSlug(p)}`}
                             className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 py-2 rounded-xl transition-colors">
                             {isAr ? 'عرض التفاصيل الكاملة' : 'View Full Details'}
                           </Link>
