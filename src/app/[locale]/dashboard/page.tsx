@@ -1,22 +1,19 @@
 import Link from 'next/link'
-import { Boxes, FolderTree, Package, ShieldCheck, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react'
-import { PRODUCTS_CATALOG, PRODUCT_CATEGORIES } from '@/lib/data/products-catalog'
+import { Boxes, FolderTree, Package, ShieldCheck, TrendingUp, AlertTriangle } from 'lucide-react'
+import { getDashboardStats, getProducts } from '@/lib/supabase/actions'
 
 export default async function DashboardPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
   const isAr = locale === 'ar'
 
-  const stats = {
-    products: PRODUCTS_CATALOG.length,
-    categories: PRODUCT_CATEGORIES.length,
-    shortage: PRODUCTS_CATALOG.filter(p => p.market_signal === 'shortage').length,
-    rising: PRODUCTS_CATALOG.filter(p => p.market_signal === 'rising').length,
-    arbitrage: PRODUCTS_CATALOG.filter(p => p.market_signal === 'arbitrage').length,
-  }
+  const [stats, allProducts] = await Promise.all([
+    getDashboardStats().catch(() => ({ total: 0, active: 0, categories: 0, shortage: 0, rising: 0, unregistered: 0 })),
+    getProducts().catch(() => []),
+  ])
 
-  const topOpportunities = PRODUCTS_CATALOG
-    .filter(p => p.market_signal !== 'stable')
-    .sort((a, b) => b.gap_score - a.gap_score)
+  const topOpportunities = allProducts
+    .filter((p: Record<string, unknown>) => p.market_signal !== 'stable')
+    .sort((a: Record<string, unknown>, b: Record<string, unknown>) => Number(b.gap_score || 0) - Number(a.gap_score || 0))
     .slice(0, 5)
 
   return (
@@ -33,10 +30,10 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
-          { label_ar: 'المنتجات', label_en: 'Products', value: stats.products, icon: Boxes, color: 'text-orange-500', bg: 'bg-orange-50', href: '/dashboard/products' },
+          { label_ar: 'المنتجات النشطة', label_en: 'Active Products', value: stats.active, icon: Boxes, color: 'text-orange-500', bg: 'bg-orange-50', href: '/dashboard/products' },
           { label_ar: 'التصنيفات', label_en: 'Categories', value: stats.categories, icon: FolderTree, color: 'text-blue-500', bg: 'bg-blue-50', href: '/dashboard/products-categories' },
           { label_ar: 'نقص عرض', label_en: 'Shortages', value: stats.shortage, icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-50', href: '/dashboard/products' },
-          { label_ar: 'طلب صاعد', label_en: 'Rising', value: stats.rising, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50', href: '/dashboard/products' },
+          { label_ar: 'فرص استيراد', label_en: 'Import Opps', value: stats.unregistered, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50', href: '/dashboard/products' },
         ].map((s, i) => (
           <Link key={i} href={`/${locale}${s.href}`}
             className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md hover:-translate-y-0.5 transition-all">
@@ -79,31 +76,21 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
         <div className="bg-white border border-gray-200 rounded-2xl p-6">
           <h2 className="text-sm font-bold text-gray-700 mb-4">{isAr ? 'أعلى الفرص حالياً' : 'Top Opportunities Now'}</h2>
           <div className="space-y-2">
-            {topOpportunities.map((p, i) => {
-              const sigColors = {
-                shortage: 'text-red-600 bg-red-50',
-                rising: 'text-green-600 bg-green-50',
-                arbitrage: 'text-amber-600 bg-amber-50',
-                stable: 'text-gray-500 bg-gray-100',
-              }
-              const sigLabels = {
-                shortage: isAr ? 'نقص' : 'Shortage',
-                rising: isAr ? 'صاعد' : 'Rising',
-                arbitrage: isAr ? 'مراجحة' : 'Arbitrage',
-                stable: isAr ? 'مستقر' : 'Stable',
-              }
+            {topOpportunities.length === 0 && <p className="text-sm text-gray-400 text-center py-4">لا توجد منتجات بعد</p>}
+            {topOpportunities.map((p: Record<string, unknown>, i: number) => {
+              const sig = String(p.market_signal || 'stable')
+              const sigColors: Record<string, string> = { shortage: 'text-red-600 bg-red-50', rising: 'text-green-600 bg-green-50', arbitrage: 'text-amber-600 bg-amber-50', stable: 'text-gray-500 bg-gray-100' }
+              const sigLabels: Record<string, string> = { shortage: isAr ? 'نقص' : 'Shortage', rising: isAr ? 'صاعد' : 'Rising', arbitrage: isAr ? 'مراجحة' : 'Arbitrage', stable: isAr ? 'مستقر' : 'Stable' }
               return (
-                <div key={p.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors">
-                  <span className="text-xl">{p.image_emoji}</span>
+                <div key={String(p.id)} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors">
+                  <span className="text-xl">{String(p.image_emoji || '📦')}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-gray-800 truncate">{isAr ? p.name_ar : p.name_en}</div>
-                    <div className="text-xs text-gray-400">{p.brand}</div>
+                    <div className="text-sm font-semibold text-gray-800 truncate">{isAr ? String(p.name_ar) : String(p.name_en)}</div>
+                    <div className="text-xs text-gray-400">{String(p.brand || '')}</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-orange-500">{p.gap_score}</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${sigColors[p.market_signal]}`}>
-                      {sigLabels[p.market_signal]}
-                    </span>
+                    <span className="text-xs font-black text-orange-500">{String(p.gap_score || 0)}</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${sigColors[sig] || ''}`}>{sigLabels[sig] || sig}</span>
                   </div>
                 </div>
               )
