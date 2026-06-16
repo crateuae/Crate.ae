@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/campaigns/run",
-      "schedule": "0 * * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/seo/reindex",
