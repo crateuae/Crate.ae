@@ -19,7 +19,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <aside className="w-60 bg-white border-e border-gray-200 flex flex-col fixed top-[58px] bottom-0 z-40">
+      <aside className="w-60 bg-white border-e border-gray-200 flex flex-col fixed top-[58px] bottom-0 z-40 start-0">
         <div className="px-4 py-5 border-b border-gray-100">
           <div className="text-xs font-bold text-gray-400 uppercase tracking-wide">
             {isAr ? 'لوحة الإدارة' : 'Admin Panel'}
@@ -53,7 +53,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main */}
-      <main className={`flex-1 ${isAr ? 'me-60' : 'ms-60'} min-h-screen`}>
+      <main className="flex-1 min-h-screen overflow-hidden" style={{ marginInlineStart: '240px' }}>
         {children}
       </main>
     </div>
