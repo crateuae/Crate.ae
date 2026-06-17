@@ -22,6 +22,7 @@ export type ProviderRow = {
   name_en: string | null
   type: string | null
   category: string | null
+  categories: string[] | null
   emirate: string | null
   license_no: string | null
   issue_date: string | null
@@ -33,6 +34,7 @@ type GetProvidersResult = {
   total: number
   traders: number
   repack: number
+  category_counts: Record<string, number>
 }
 
 /** Single RPC call: paginated rows + type counts. Cached 1 hour per unique filter combo. */
@@ -68,17 +70,18 @@ export function getProviders(opts: {
         })
         if (error || !data) {
           console.error('get_providers RPC error:', error)
-          return { rows: [], total: 0, traders: 0, repack: 0 }
+          return { rows: [], total: 0, traders: 0, repack: 0, category_counts: {} }
         }
         return {
-          rows:    data.rows    ?? [],
-          total:   data.total   ?? 0,
-          traders: data.traders ?? 0,
-          repack:  data.repack  ?? 0,
+          rows:            data.rows            ?? [],
+          total:           data.total           ?? 0,
+          traders:         data.traders         ?? 0,
+          repack:          data.repack          ?? 0,
+          category_counts: data.category_counts ?? {},
         }
       } catch (err) {
         console.error('getProviders threw:', err)
-        return { rows: [], total: 0, traders: 0, repack: 0 }
+        return { rows: [], total: 0, traders: 0, repack: 0, category_counts: {} }
       }
     },
     cacheKey,

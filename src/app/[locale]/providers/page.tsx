@@ -20,8 +20,8 @@ type StaticProvider = {
 
 type DbProvider = {
   id: string; slug: string; name_ar: string | null; name_en: string | null
-  type: string | null; category: string | null; emirate: string | null
-  license_no: string | null; issue_date: string | null; is_verified: boolean
+  type: string | null; category: string | null; categories: string[] | null
+  emirate: string | null; license_no: string | null; issue_date: string | null; is_verified: boolean
 }
 
 const EMIRATES_LABELS_AR: Record<string, string> = {
@@ -81,14 +81,24 @@ function ProviderCard({ p, isStatic, locale, isAr }: {
         </div>
       </div>
 
-      {/* Category badge */}
-      {p.category && (
-        <div className="mb-2">
-          <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md">
-            {isAr ? (CATEGORY_LABELS_AR[p.category] ?? p.category) : p.category}
-          </span>
-        </div>
-      )}
+      {/* Category badges — show all categories this company has */}
+      {(() => {
+        const cats = (p as DbProvider).categories?.length
+          ? (p as DbProvider).categories!
+          : p.category ? [p.category] : []
+        return cats.length > 0 ? (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {cats.slice(0, 3).map(cat => (
+              <span key={cat} className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md">
+                {isAr ? (CATEGORY_LABELS_AR[cat] ?? cat) : cat}
+              </span>
+            ))}
+            {cats.length > 3 && (
+              <span className="text-[10px] text-gray-400 px-1 py-0.5">+{cats.length - 3}</span>
+            )}
+          </div>
+        ) : null
+      })()}
 
       {(emLabel || zone) && (
         <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
@@ -258,7 +268,7 @@ export default async function ProvidersPage({
   const to             = from + PAGE_SIZE - 1
 
   // Single cached RPC call
-  const { rows: dbProviders, total: count, traders: totalTraders, repack: totalRepackagers } =
+  const { rows: dbProviders, total: count, traders: totalTraders, repack: totalRepackagers, category_counts } =
     await getProviders({
       type:     typeFilter     !== 'all' ? typeFilter     : undefined,
       emirate:  emirateFilter  !== 'all' ? emirateFilter  : undefined,
@@ -369,27 +379,34 @@ export default async function ProvidersPage({
             </span>
           </div>
 
-          {/* Row 2: Category chips */}
+          {/* Row 2: Category chips with counts */}
           <div className="flex items-center gap-1.5 flex-wrap pb-1">
             <Link href={buildUrl({ cat: 'all', page: undefined })}
-              className={`px-3 py-1 rounded-full text-[11px] font-bold border transition-all whitespace-nowrap ${
+              className={`px-3 py-1 rounded-full text-[11px] font-bold border transition-all whitespace-nowrap flex items-center gap-1 ${
                 categoryFilter === 'all'
                   ? 'bg-gray-900 text-white border-gray-900'
                   : 'text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700'
               }`}>
-              {isAr ? 'كل التصنيفات' : 'All Categories'}
+              {isAr ? 'الكل' : 'All'}
+              <span className={`text-[10px] tabular-nums ${categoryFilter === 'all' ? 'text-gray-300' : 'text-gray-400'}`}>
+                {(count ?? 0).toLocaleString()}
+              </span>
             </Link>
-            {CATEGORIES_SORTED.map(cat => {
+            {CATEGORIES_SORTED.filter(cat => (category_counts[cat] ?? 0) > 0).map(cat => {
               const active = categoryFilter === cat
               const label  = isAr ? (CATEGORY_LABELS_AR[cat] ?? cat) : cat
+              const cnt    = category_counts[cat] ?? 0
               return (
                 <Link key={cat} href={buildUrl({ cat, page: undefined })}
-                  className={`px-3 py-1 rounded-full text-[11px] border transition-all whitespace-nowrap ${
+                  className={`px-3 py-1 rounded-full text-[11px] border transition-all whitespace-nowrap flex items-center gap-1 ${
                     active
                       ? 'bg-indigo-600 text-white border-indigo-600 font-bold'
                       : 'text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
                   }`}>
                   {label}
+                  <span className={`text-[10px] tabular-nums ${active ? 'text-indigo-200' : 'text-gray-400'}`}>
+                    {cnt.toLocaleString()}
+                  </span>
                 </Link>
               )
             })}
