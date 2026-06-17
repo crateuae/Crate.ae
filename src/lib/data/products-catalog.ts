@@ -117,6 +117,9 @@ const FMCG_MAP: Record<string, FMCGData> = {
   'p030': { class:'B', turnover_days:18, weekly_units_per_store:16, market_penetration_pct:28, fmcg_score:62,
     note_ar:'مشروب عنب فريد من نوعه — متوسط الحركة حالياً لكن الطلب في تصاعد مستمر مع نمو التوزيع',
     note_en:'Unique grape raisin drink — medium velocity now but demand rising as distribution expands' },
+  'p031': { class:'A', turnover_days:5,  weekly_units_per_store:22, market_penetration_pct:6,  fmcg_score:74,
+    note_ar:'نكهة ترندينغ من Dr Pepper — مبيعات ضخمة في أمريكا، غياب التوزيع الرسمي في الإمارات يخلق فجوة واضحة',
+    note_en:'Trending Dr Pepper flavour — massive US sales; absence of official UAE distribution creates a clear gap' },
 }
 
 export function getProductFMCG(p: CatalogProduct): FMCGData | null {
@@ -154,6 +157,7 @@ const PRODUCT_SLUG_MAP: Record<string, string> = {
   'p028': 'tao-kae-noi-seaweed-32g',
   'p029': 'yemeni-sidr-honey-500g',
   'p030': 'traubi-raisin-drink-250ml',
+  'p031': 'dr-pepper-strawberry-355ml',
 }
 
 export function getProductSlug(p: CatalogProduct): string {
@@ -1157,6 +1161,47 @@ export const PRODUCTS_CATALOG: CatalogProduct[] = [
     registration_status: 'registered_uae',
     acquisition_type: 'both',
     local_distributor_note: 'الموزع الحصري في الإمارات والخليج: RAM Food & Beverage Trading (ramtrading.ae) — يغطي Key Account + HORECA + محطات الوقود (ADNOC Oasis) + هايبرماركت + فنادق. الحجم المتاح: 250ml و325ml × 24 زجاجة. Instagram: @traubi.ae',
+    is_active: true,
+  },
+
+  // ─── p031 — Dr Pepper Strawberry 355ml ────────────────────────────────────
+  {
+    id: 'p031',
+    name_ar: 'دكتور بيبر فراولة 355ml',
+    name_en: 'Dr Pepper Strawberry 355ml',
+    brand: 'Keurig Dr Pepper',
+    country_origin: 'USA',
+    country_origin_ar: 'الولايات المتحدة الأمريكية',
+    category_ar: 'مشروبات',
+    category_en: 'Beverages',
+    subcategory_ar: 'مشروبات غازية',
+    subcategory_en: 'Carbonated Drinks',
+    unit_size: '355ml × 12 علبة',
+    price_retail_aed: 8.5,
+    price_wholesale_aed: 72,
+    price_import_aed: 52,
+    units_per_carton: 12,
+    barcode_type: 'UPC-A',
+    shelf_life_months: 15,
+    storage_temp: '4–25 °C',
+    certifications: ['Halal (مطلوب)', 'ESMA (مطلوب)'],
+    hs_code: '2202.10',
+    market_signal: 'rising',
+    gap_score: 74,
+    image_emoji: '🍓',
+    description_ar: 'نسخة الفراولة من المشروب الأمريكي الأيقوني Dr Pepper — تجمع بين النكهة الـ23 الأصلية مع لمسة فراولة حلوة ومنعشة. علبة 355ml (12 fl oz) القياسية الأمريكية. ضجة كبيرة على TikTok و Instagram من مجتمع Gen-Z — متوفرة حالياً فقط من خلال الاستيراد الموازي عبر متاجر الأطعمة الأمريكية المتخصصة',
+    description_en: 'Strawberry variant of iconic American Dr Pepper — blends the original 23-flavour formula with a sweet strawberry twist. Standard US 355ml (12 fl oz) can. Major social media buzz on TikTok & Instagram driven by Gen-Z. Currently available only via parallel imports through specialty US food stores in UAE',
+    registration_status: 'unregistered',
+    acquisition_type: 'direct_import',
+    registration_cost_aed: 35000,
+    registration_months: 6,
+    required_docs: [
+      'شهادة حلال معتمدة من ESMA أو مجلس الإمارات للإفتاء',
+      'Formula Declaration (بيان المكونات الكامل من Keurig Dr Pepper)',
+      'Certificate of Free Sale من FDA الأمريكي',
+      'تحليل مختبري (Heavy Metals + Preservatives + Sugar content)',
+      'MOH Product Registration Form',
+    ],
     is_active: true,
   },
 ]
