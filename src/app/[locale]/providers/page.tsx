@@ -192,32 +192,42 @@ const EMIRATES_EN = ['All', 'Dubai', 'Abu Dhabi', 'Sharjah', 'Ras Al Khaimah', '
 
 // All category labels — EN key → AR label
 const CATEGORY_LABELS_AR: Record<string, string> = {
-  'Restaurant':           'مطعم',
-  'Fast Food':            'وجبات سريعة',
-  'Café & Coffee':        'مقهى وقهوة',
-  'Supermarket':          'سوبرماركت',
-  'Bakery & Pastry':      'مخبز وحلويات',
-  'Catering':             'تموين وضيافة',
-  'Seafood':              'مأكولات بحرية',
-  'Meat & Poultry':       'لحوم ودواجن',
-  'Dairy & Eggs':         'ألبان وبيض',
-  'Frozen Foods':         'أغذية مجمدة',
-  'Beverages & Juices':   'مشروبات وعصائر',
-  'Chocolate & Sweets':   'شوكولاتة وحلوى',
-  'Spices & Condiments':  'توابل وبهارات',
-  'Grains & Flour':       'حبوب ودقيق',
-  'Oils & Fats':          'زيوت ودهون',
-  'Organic & Natural':    'أغذية عضوية',
-  'Health & Nutrition':   'صحة وتغذية',
-  'Snacks & Chips':       'وجبات خفيفة',
-  'Grocery & General Food':'بقالة وغذاء عام',
-  'Food Packaging':       'تعبئة وتغليف',
-  'General Trading':      'تجارة عامة',
-  'Foodstuff Trading':    'تجارة مواد غذائية',
+  // Trading
+  'Restaurant':                   'مطعم',
+  'Fast Food':                    'وجبات سريعة',
+  'Café & Coffee':                'مقهى وقهوة',
+  'Supermarket':                  'سوبرماركت',
+  'Bakery & Pastry':              'مخبز وحلويات',
+  'Catering':                     'تموين وضيافة',
+  'Seafood':                      'مأكولات بحرية',
+  'Meat & Poultry':               'لحوم ودواجن',
+  'Dairy & Eggs':                 'ألبان وبيض',
+  'Frozen Foods':                 'أغذية مجمدة',
+  'Beverages & Juices':           'مشروبات وعصائر',
+  'Chocolate & Sweets':           'شوكولاتة وحلوى',
+  'Spices & Condiments':          'توابل وبهارات',
+  'Grains & Flour':               'حبوب ودقيق',
+  'Oils & Fats':                  'زيوت ودهون',
+  'Organic & Natural':            'أغذية عضوية',
+  'Health & Nutrition':           'صحة وتغذية',
+  'Snacks & Chips':               'وجبات خفيفة',
+  'Grocery & General Food':       'بقالة وغذاء عام',
+  'Food Packaging':               'تعبئة وتغليف',
+  'General Trading':              'تجارة عامة',
+  'Foodstuff Trading':            'تجارة مواد غذائية',
+  // Packaging
+  'Packaging Services':           'خدمات التعبئة والتغليف',
+  'Packaging Materials Trading':  'تجارة مواد التعبئة',
+  'Repackaging Services':         'إعادة التعبئة والتغليف',
+  'Packaging Industries':         'صناعات التعبئة والتغليف',
+  'Labeling & Printing':          'ملصقات وطباعة',
+  'Fruits & Vegetables Packaging':'تعبئة الفواكه والخضراوات',
+  'Spices & Condiments Packaging':'تعبئة البهارات والتوابل',
+  'Sugar & Sweets Packaging':     'تعبئة السكر والحلويات',
 }
 
-// Ordered list for filter UI (sorted by count from classification)
-const CATEGORIES_SORTED = [
+// Trading subcategory order (by count from classification)
+const TRADING_CATEGORIES = [
   'Grocery & General Food',
   'Restaurant',
   'Foodstuff Trading',
@@ -227,7 +237,6 @@ const CATEGORIES_SORTED = [
   'Oils & Fats',
   'Bakery & Pastry',
   'General Trading',
-  'Food Packaging',
   'Seafood',
   'Grains & Flour',
   'Supermarket',
@@ -240,6 +249,18 @@ const CATEGORIES_SORTED = [
   'Chocolate & Sweets',
   'Fast Food',
   'Frozen Foods',
+]
+
+// Packaging subcategory order (by count from classification)
+const PACKAGING_CATEGORIES = [
+  'Packaging Services',
+  'Packaging Materials Trading',
+  'Repackaging Services',
+  'Packaging Industries',
+  'Labeling & Printing',
+  'Fruits & Vegetables Packaging',
+  'Spices & Condiments Packaging',
+  'Sugar & Sweets Packaging',
 ]
 
 // Static providers — cleared, all data now comes from DB
@@ -345,9 +366,9 @@ export default async function ProvidersPage({
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
               {([
-                { val: 'all',        ar: 'الكل',          en: 'All' },
-                { val: 'trader',     ar: 'تجارة',          en: 'Trading' },
-                { val: 'repackager', ar: 'إعادة تعبئة',   en: 'Packaging' },
+                { val: 'all',        ar: 'الكل',                    en: 'All' },
+                { val: 'trader',     ar: 'شركات تجارية',            en: 'Trading Cos.' },
+                { val: 'repackager', ar: 'شركات تعبئة وتغليف',     en: 'Packaging Cos.' },
               ] as const).map(opt => (
                 <Link key={opt.val} href={buildUrl({ type: opt.val, page: undefined })}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
@@ -379,38 +400,51 @@ export default async function ProvidersPage({
             </span>
           </div>
 
-          {/* Row 2: Category chips with counts */}
-          <div className="flex items-center gap-1.5 flex-wrap pb-1">
-            <Link href={buildUrl({ cat: 'all', page: undefined })}
-              className={`px-3 py-1 rounded-full text-[11px] font-bold border transition-all whitespace-nowrap flex items-center gap-1 ${
-                categoryFilter === 'all'
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700'
-              }`}>
-              {isAr ? 'الكل' : 'All'}
-              <span className={`text-[10px] tabular-nums ${categoryFilter === 'all' ? 'text-gray-300' : 'text-gray-400'}`}>
-                {(count ?? 0).toLocaleString()}
-              </span>
-            </Link>
-            {CATEGORIES_SORTED.filter(cat => (category_counts[cat] ?? 0) > 0).map(cat => {
-              const active = categoryFilter === cat
-              const label  = isAr ? (CATEGORY_LABELS_AR[cat] ?? cat) : cat
-              const cnt    = category_counts[cat] ?? 0
-              return (
-                <Link key={cat} href={buildUrl({ cat, page: undefined })}
-                  className={`px-3 py-1 rounded-full text-[11px] border transition-all whitespace-nowrap flex items-center gap-1 ${
-                    active
-                      ? 'bg-indigo-600 text-white border-indigo-600 font-bold'
-                      : 'text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
+          {/* Row 2: Subcategory chips — shown only when a type is selected */}
+          {typeFilter !== 'all' && (() => {
+            const isPackaging = typeFilter === 'repackager'
+            const chipList    = isPackaging ? PACKAGING_CATEGORIES : TRADING_CATEGORIES
+            const activeColor = isPackaging
+              ? 'bg-orange-500 text-white border-orange-500 font-bold'
+              : 'bg-indigo-600 text-white border-indigo-600 font-bold'
+            const hoverColor  = isPackaging
+              ? 'hover:border-orange-300 hover:text-orange-600'
+              : 'hover:border-indigo-300 hover:text-indigo-600'
+            const activeCount = isPackaging
+              ? 'text-orange-200'
+              : 'text-indigo-200'
+            return (
+              <div className="flex items-center gap-1.5 flex-wrap pb-1">
+                <Link href={buildUrl({ cat: 'all', page: undefined })}
+                  className={`px-3 py-1 rounded-full text-[11px] font-bold border transition-all whitespace-nowrap flex items-center gap-1 ${
+                    categoryFilter === 'all'
+                      ? 'bg-gray-900 text-white border-gray-900'
+                      : 'text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700'
                   }`}>
-                  {label}
-                  <span className={`text-[10px] tabular-nums ${active ? 'text-indigo-200' : 'text-gray-400'}`}>
-                    {cnt.toLocaleString()}
+                  {isAr ? 'الكل' : 'All'}
+                  <span className={`text-[10px] tabular-nums ${categoryFilter === 'all' ? 'text-gray-300' : 'text-gray-400'}`}>
+                    {(count ?? 0).toLocaleString()}
                   </span>
                 </Link>
-              )
-            })}
-          </div>
+                {chipList.filter(cat => (category_counts[cat] ?? 0) > 0).map(cat => {
+                  const active = categoryFilter === cat
+                  const label  = isAr ? (CATEGORY_LABELS_AR[cat] ?? cat) : cat
+                  const cnt    = category_counts[cat] ?? 0
+                  return (
+                    <Link key={cat} href={buildUrl({ cat, page: undefined })}
+                      className={`px-3 py-1 rounded-full text-[11px] border transition-all whitespace-nowrap flex items-center gap-1 ${
+                        active ? activeColor : `text-gray-500 border-gray-200 ${hoverColor}`
+                      }`}>
+                      {label}
+                      <span className={`text-[10px] tabular-nums ${active ? activeCount : 'text-gray-400'}`}>
+                        {cnt.toLocaleString()}
+                      </span>
+                    </Link>
+                  )
+                })}
+              </div>
+            )
+          })()}
         </div>
       </div>
 
