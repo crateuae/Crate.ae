@@ -633,5 +633,45 @@ ON CONFLICT (id) DO UPDATE SET
   recommended_action_en = EXCLUDED.recommended_action_en,
   updated_at = now();
 
+-- ─── Trends Tables ──────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS product_trends (
+  id            uuid            DEFAULT gen_random_uuid() PRIMARY KEY,
+  product_id    text            NOT NULL,
+  keyword       text            NOT NULL,
+  keyword_ar    text,
+  trend_score   int,
+  trend_direction text,
+  uae_interest_pct int,
+  related_queries  jsonb,
+  gap_signal    boolean         DEFAULT false,
+  is_available_uae boolean,
+  retailer_mentions jsonb,
+  avg_price_aed numeric,
+  fetched_at    timestamptz     DEFAULT now(),
+  UNIQUE(product_id, keyword)
+);
+
+CREATE INDEX IF NOT EXISTS product_trends_product_id_idx ON product_trends(product_id);
+CREATE INDEX IF NOT EXISTS product_trends_fetched_at_idx ON product_trends(fetched_at);
+
+CREATE TABLE IF NOT EXISTS trend_discoveries (
+  id            uuid            DEFAULT gen_random_uuid() PRIMARY KEY,
+  keyword       text            NOT NULL UNIQUE,
+  keyword_ar    text,
+  trend_score   int,
+  uae_interest_pct int,
+  trend_direction text,
+  category_guess  text,
+  gap_score     int,
+  is_available_uae boolean,
+  status        text            DEFAULT 'pending',
+  discovered_at timestamptz     DEFAULT now(),
+  reviewed_at   timestamptz
+);
+
+CREATE INDEX IF NOT EXISTS trend_discoveries_status_idx ON trend_discoveries(status);
+CREATE INDEX IF NOT EXISTS trend_discoveries_gap_score_idx ON trend_discoveries(gap_score DESC);
+
 -- ─── Done ───────────────────────────────────────────────────────
 SELECT 'Seed complete: ' || count(*) || ' products' FROM products;

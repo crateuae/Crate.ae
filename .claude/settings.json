@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "model": "claude-sonnet-4-6",
+  "alwaysThinkingEnabled": true,
+  "effortLevel": "high",
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep"
+    ]
+  },
+  "skillListingMaxDescChars": 800,
+  "skillListingBudgetFraction": 0.015,
+  "autoMemoryEnabled": true,
+  "respectGitignore": true,
+  "claudeMd": "# Crate.ae FMCG Research & Development\n\n## Research Strategy for FMCG Products\n\n### Search Methodology (Token-Efficient)\n1. **Targeted Searches Only**: Use 3-4 specific, focused searches per product instead of many generic ones\n   - First search: Product basics + nutrition + ingredients\n   - Second search: UAE market + distributor + pricing\n   - Third search: Regional/global market data\n   - Fourth search (if needed): Social media presence + trends\n2. **Source Verification**: Prioritize official sources (Wikipedia, Open Food Facts, brand sites, distributors)\n3. **Avoid Redundancy**: Cache findings in memory to prevent re-searching\n\n### Analysis Quality Standards\n- **Data Accuracy**: Verify numbers against 2+ sources before committing to DB\n- **FMCG Classification (A/B/C)**:\n  - A (Fast): 0-7 days turnover, 20+ units/week/store, 80%+ penetration\n  - B (Medium): 8-21 days, 8-19 units/week, 60-80% penetration\n  - C (Slow): 22+ days, <8 units/week, <60% penetration\n- **Gap Score (0-100)**: Market opportunity = (demand - supply) × market_size_factor\n- **Market Signal**: shortage | rising | arbitrage | stable\n\n### Product Data Requirements\n**Minimum fields for commitment:**\n- Brand + country origin (with license notes if applicable)\n- Sizes available (250ml, 325ml, 1L, etc.)\n- Price points: retail, wholesale, import (AED)\n- FMCG class + velocity score\n- Market signal + gap score\n- Distribution channels in UAE (ADNOC, Amazon, hypermarkets, etc.)\n- Certifications (Halal, ESMA, FDA, etc.)\n- 3+ years operational history OR distributor confirmation\n\n### Don't Guess\n- If ingredient list is unclear, mark as \"TBD\"\n- If pricing varies >20% across sources, note the range\n- If market penetration unknown, estimate based on observed retail presence (not keyword volume alone)\n- Social media followers are NOT market penetration\n\n### Token Efficiency\n- **Use Memory**: After researching a brand, save key findings in auto-memory so future references are instant\n- **Web Search Filters**: Use `allowed_domains` to prefer .ae (local UAE), .org (OpenFoodFacts), official brand sites\n- **Avoid Exploratory Searches**: Plan searches before executing (1 prompt → 2-3 parallel searches, not sequential)\n- **Reuse Findings**: If you've already researched the FMCG market for beverages, apply those insights to similar products\n\n### Documentation\n- product-catalog.ts → CatalogProduct interface (source of truth)\n- seed.sql → Database seed (must match catalog)\n- gap_alerts table → Market opportunities\n- Memory files → Supplier research, brand history, market context\n"
+}
