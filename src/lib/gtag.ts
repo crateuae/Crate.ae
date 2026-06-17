@@ -3,7 +3,8 @@
  * Used throughout the app for event tracking.
  */
 
-export const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? 'G-D24S8N3VBP'
+export const GT_ID = 'GT-K5M94L6R'   // Google Tag container
+export const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? 'G-D24S8N3VBP'  // GA4 destination
 export const ADS_ACCOUNT = '288-270-4613'
 
 declare global {

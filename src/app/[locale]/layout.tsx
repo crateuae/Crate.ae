@@ -9,7 +9,8 @@ import VisitorTracker from '@/components/layout/VisitorTracker'
 import { AuthProvider } from '@/components/providers/AuthProvider'
 import '../globals.css'
 
-const GA_ID = 'G-D24S8N3VBP'
+const GT_ID = 'GT-K5M94L6R'   // Google Tag container (routes to GA4 + Ads)
+const GA_ID = 'G-D24S8N3VBP'  // GA4 Measurement ID (destination)
 
 export const metadata: Metadata = {
   title: { default: 'Crate — منصة الاستيراد والتوريد في الإمارات', template: '%s | Crate' },
@@ -32,12 +33,11 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={dir}>
       <head>
-        {/* Google tag (gtag.js) — GA4 G-D24S8N3VBP */}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
+        {/* Google Tag — GT-K5M94L6R → GA4 G-D24S8N3VBP */}
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GT_ID}`} />
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');`,
+            __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GT_ID}');gtag('config','${GA_ID}');`,
           }}
         />
       </head>
