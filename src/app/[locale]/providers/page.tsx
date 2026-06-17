@@ -7,7 +7,159 @@ import {
 } from 'lucide-react'
 import { getProviders } from '@/lib/supabase/cached'
 
-export const revalidate = 3600   // Vercel CDN caches full page 1 hour
+// ─── Provider Card ────────────────────────────────────────────────────────────
+
+type StaticProvider = {
+  slug: string; type: 'repackager' | 'trader'; name_ar: string; name_en: string
+  emirate: string; zone: string; is_verified: boolean; license_no: null; issue_date: null
+  specialties_ar: string[]; specialties_en: string[]
+  services_ar: string[]; services_en: string[]
+  certs: string[]
+}
+
+type DbProvider = {
+  id: string; slug: string; name_ar: string | null; name_en: string | null
+  type: string | null; category: string | null; emirate: string | null
+  license_no: string | null; issue_date: string | null; is_verified: boolean
+}
+
+const EMIRATES_LABELS_AR: Record<string, string> = {
+  'Dubai': 'دبي', 'Abu Dhabi': 'أبوظبي', 'Sharjah': 'الشارقة',
+  'Ras Al Khaimah': 'رأس الخيمة', 'Ajman': 'عجمان',
+}
+
+function fmtDate(d: string | null, isAr: boolean) {
+  if (!d) return null
+  try { return new Date(d).toLocaleDateString(isAr ? 'ar-AE' : 'en-AE', { year: 'numeric', month: 'short' }) }
+  catch { return d }
+}
+
+function ProviderCard({ p, isStatic, locale, isAr }: {
+  p: DbProvider | StaticProvider
+  isStatic: boolean
+  locale: string
+  isAr: boolean
+}) {
+  const isRepack = p.type === 'repackager'
+  const TypeIcon = isRepack ? Repeat2 : Store
+  const emLabel  = isAr ? (EMIRATES_LABELS_AR[p.emirate ?? ''] ?? p.emirate) : p.emirate
+  const sp       = isStatic ? (p as StaticProvider) : null
+  const specialties = sp ? (isAr ? sp.specialties_ar : sp.specialties_en) : []
+  const services    = sp ? (isAr ? sp.services_ar    : sp.services_en)    : []
+  const certs       = sp ? sp.certs : []
+  const zone        = sp ? sp.zone : null
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isRepack ? 'bg-orange-50' : 'bg-indigo-50'}`}>
+            <TypeIcon className={`w-5 h-5 ${isRepack ? 'text-orange-500' : 'text-indigo-500'}`} />
+          </div>
+          <div className="min-w-0">
+            <div className="font-black text-gray-900 text-sm leading-tight">
+              {isAr ? (p.name_ar || p.name_en) : (p.name_en || p.name_ar)}
+            </div>
+            <div className="text-[10px] text-gray-400 mt-0.5 truncate">
+              {isAr ? p.name_en : p.name_ar}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1 flex-shrink-0 ms-2">
+          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+            isRepack ? 'text-orange-600 bg-orange-50 border-orange-200' : 'text-indigo-600 bg-indigo-50 border-indigo-200'
+          }`}>
+            {isRepack ? (isAr ? 'إعادة تعبئة' : 'Repackager') : (isAr ? 'تجارة عامة' : 'Trader')}
+          </span>
+          {p.is_verified && (
+            <span className="flex items-center gap-0.5 text-[9px] text-emerald-600 font-bold">
+              <BadgeCheck className="w-3 h-3" />
+              {isAr ? 'موثّق' : 'Verified'}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {(emLabel || zone) && (
+        <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
+          <MapPin className="w-3 h-3 flex-shrink-0" />
+          {emLabel && <span className="font-medium">{emLabel}</span>}
+          {zone && <><span className="text-gray-300">·</span><span className="text-gray-400 truncate">{zone}</span></>}
+        </div>
+      )}
+
+      {(p.license_no || p.issue_date) && (
+        <div className="flex items-center gap-3 text-[10px] text-gray-400 mb-3">
+          {p.license_no && <span>{isAr ? 'رخصة:' : 'Lic:'} <span className="text-gray-600 font-medium">{p.license_no}</span></span>}
+          {p.issue_date && <span>{isAr ? 'الإصدار:' : 'Since:'} <span className="text-gray-600 font-medium">{fmtDate(p.issue_date, isAr)}</span></span>}
+        </div>
+      )}
+
+      {specialties.length > 0 && (
+        <div className="mb-3">
+          <div className="text-[10px] text-gray-400 mb-1.5">{isAr ? 'التخصص:' : 'Specialties:'}</div>
+          <div className="flex flex-wrap gap-1">
+            {specialties.map(s => (
+              <span key={s} className="text-[10px] bg-gray-50 border border-gray-200 text-gray-600 rounded-md px-2 py-0.5">{s}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {services.length > 0 && (
+        <div className="mb-3 flex-1">
+          <div className="text-[10px] text-gray-400 mb-1.5">{isAr ? 'الخدمات:' : 'Services:'}</div>
+          <ul className="space-y-1">
+            {services.slice(0, 3).map(s => (
+              <li key={s} className="flex items-start gap-1.5 text-xs text-gray-600">
+                <CheckCircle2 className={`w-3 h-3 flex-shrink-0 mt-0.5 ${isRepack ? 'text-orange-400' : 'text-indigo-400'}`} />
+                {s}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {certs.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-4">
+          {certs.map(c => (
+            <span key={c} className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-100 rounded px-1.5 py-0.5 font-medium">{c}</span>
+          ))}
+        </div>
+      )}
+
+      <div className={`border-t border-gray-100 pt-3 flex items-center gap-2 flex-wrap ${specialties.length === 0 && services.length === 0 ? 'mt-auto' : ''}`}>
+        {isRepack ? (
+          <Link href={`/${locale}/packaging`}
+            className="flex items-center gap-1 text-[10px] font-bold text-orange-500 hover:text-orange-600">
+            <Package className="w-3 h-3" />
+            {isAr ? 'خطة التعبئة' : 'Packaging Plan'}
+          </Link>
+        ) : (
+          <Link href={`/${locale}/compliance`}
+            className="flex items-center gap-1 text-[10px] font-bold text-indigo-500 hover:text-indigo-600">
+            <ShieldCheck className="w-3 h-3" />
+            {isAr ? 'اشتراطات الاستيراد' : 'Import Requirements'}
+          </Link>
+        )}
+        <Link href={`/${locale}/market`}
+          className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-700">
+          {isAr ? 'فرص السوق' : 'Market Gaps'}
+        </Link>
+        {p.slug && (
+          <Link href={`/${locale}/providers/${p.slug}`}
+            className="ms-auto flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-gray-700">
+            <ExternalLink className="w-3 h-3" />
+          </Link>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────────────
+
+export const revalidate = 3600
 
 export const metadata: Metadata = {
   title: 'شبكة الموردين — Crate',
@@ -17,10 +169,6 @@ export const metadata: Metadata = {
 const PAGE_SIZE = 24
 
 const EMIRATES_EN = ['All', 'Dubai', 'Abu Dhabi', 'Sharjah', 'Ras Al Khaimah', 'Ajman']
-const EMIRATES_LABELS_AR: Record<string, string> = {
-  'Dubai': 'دبي', 'Abu Dhabi': 'أبوظبي', 'Sharjah': 'الشارقة',
-  'Ras Al Khaimah': 'رأس الخيمة', 'Ajman': 'عجمان',
-}
 
 // Static rich providers (existing verified ones — will move to DB later)
 const STATIC_PROVIDERS = [
@@ -138,12 +286,6 @@ const STATIC_PROVIDERS = [
   },
 ]
 
-type DbProvider = {
-  id: string; slug: string; name_ar: string | null; name_en: string | null
-  type: string | null; category: string | null; emirate: string | null
-  license_no: string | null; issue_date: string | null; is_verified: boolean
-}
-
 // ─── Page ──────────────────────────────────────────────────────────────────
 
 export default async function ProvidersPage({
@@ -194,143 +336,6 @@ export default async function ProvidersPage({
       if (v && v !== 'all' && v !== '') p.set(k, v)
     }
     return `/${locale}/providers${p.size ? '?' + p.toString() : ''}`
-  }
-
-  function fmtDate(d: string | null) {
-    if (!d) return null
-    try { return new Date(d).toLocaleDateString(isAr ? 'ar-AE' : 'en-AE', { year: 'numeric', month: 'short' }) }
-    catch { return d }
-  }
-
-  // ── Provider card (shared for static + DB) ──────────────────────────────
-  function ProviderCard({ p, isStatic }: {
-    p: DbProvider | typeof STATIC_PROVIDERS[0]
-    isStatic: boolean
-  }) {
-    const isRepack  = p.type === 'repackager'
-    const TypeIcon  = isRepack ? Repeat2 : Store
-    const accent    = isRepack ? 'orange' : 'indigo'
-    const emLabel   = isAr ? (EMIRATES_LABELS_AR[p.emirate ?? ''] ?? p.emirate) : p.emirate
-
-    const sp = isStatic ? (p as typeof STATIC_PROVIDERS[0]) : null
-    const specialties = sp ? (isAr ? sp.specialties_ar : sp.specialties_en) : []
-    const services    = sp ? (isAr ? sp.services_ar    : sp.services_en)    : []
-    const certs       = sp ? sp.certs : []
-    const zone        = sp ? sp.zone : null
-
-    return (
-      <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col hover:shadow-md transition-shadow">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-start gap-3 min-w-0">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isRepack ? 'bg-orange-50' : 'bg-indigo-50'}`}>
-              <TypeIcon className={`w-5 h-5 ${isRepack ? 'text-orange-500' : 'text-indigo-500'}`} />
-            </div>
-            <div className="min-w-0">
-              <div className="font-black text-gray-900 text-sm leading-tight">
-                {isAr ? (p.name_ar || p.name_en) : (p.name_en || p.name_ar)}
-              </div>
-              <div className="text-[10px] text-gray-400 mt-0.5 truncate">
-                {isAr ? p.name_en : p.name_ar}
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-1 flex-shrink-0 ms-2">
-            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
-              isRepack ? 'text-orange-600 bg-orange-50 border-orange-200' : 'text-indigo-600 bg-indigo-50 border-indigo-200'
-            }`}>
-              {isRepack ? (isAr ? 'إعادة تعبئة' : 'Repackager') : (isAr ? 'تجارة عامة' : 'Trader')}
-            </span>
-            {p.is_verified && (
-              <span className="flex items-center gap-0.5 text-[9px] text-emerald-600 font-bold">
-                <BadgeCheck className="w-3 h-3" />
-                {isAr ? 'موثّق' : 'Verified'}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Location */}
-        {(emLabel || zone) && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
-            <MapPin className="w-3 h-3 flex-shrink-0" />
-            {emLabel && <span className="font-medium">{emLabel}</span>}
-            {zone && <><span className="text-gray-300">·</span><span className="text-gray-400 truncate">{zone}</span></>}
-          </div>
-        )}
-
-        {/* License + Issue Date (from DB records) */}
-        {(p.license_no || p.issue_date) && (
-          <div className="flex items-center gap-3 text-[10px] text-gray-400 mb-3">
-            {p.license_no && <span>{isAr ? 'رخصة:' : 'Lic:'} <span className="text-gray-600 font-medium">{p.license_no}</span></span>}
-            {p.issue_date && <span>{isAr ? 'الإصدار:' : 'Since:'} <span className="text-gray-600 font-medium">{fmtDate(p.issue_date)}</span></span>}
-          </div>
-        )}
-
-        {/* Specialties (static only) */}
-        {specialties.length > 0 && (
-          <div className="mb-3">
-            <div className="text-[10px] text-gray-400 mb-1.5">{isAr ? 'التخصص:' : 'Specialties:'}</div>
-            <div className="flex flex-wrap gap-1">
-              {specialties.map(s => (
-                <span key={s} className="text-[10px] bg-gray-50 border border-gray-200 text-gray-600 rounded-md px-2 py-0.5">{s}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Services (static only) */}
-        {services.length > 0 && (
-          <div className="mb-3 flex-1">
-            <div className="text-[10px] text-gray-400 mb-1.5">{isAr ? 'الخدمات:' : 'Services:'}</div>
-            <ul className="space-y-1">
-              {services.slice(0, 3).map(s => (
-                <li key={s} className="flex items-start gap-1.5 text-xs text-gray-600">
-                  <CheckCircle2 className={`w-3 h-3 flex-shrink-0 mt-0.5 ${isRepack ? 'text-orange-400' : 'text-indigo-400'}`} />
-                  {s}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Certs (static only) */}
-        {certs.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-4">
-            {certs.map(c => (
-              <span key={c} className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-100 rounded px-1.5 py-0.5 font-medium">{c}</span>
-            ))}
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className={`border-t border-gray-100 pt-3 flex items-center gap-2 flex-wrap ${specialties.length === 0 && services.length === 0 ? 'mt-auto' : ''}`}>
-          {isRepack ? (
-            <Link href={`/${locale}/packaging`}
-              className="flex items-center gap-1 text-[10px] font-bold text-orange-500 hover:text-orange-600">
-              <Package className="w-3 h-3" />
-              {isAr ? 'خطة التعبئة' : 'Packaging Plan'}
-            </Link>
-          ) : (
-            <Link href={`/${locale}/compliance`}
-              className="flex items-center gap-1 text-[10px] font-bold text-indigo-500 hover:text-indigo-600">
-              <ShieldCheck className="w-3 h-3" />
-              {isAr ? 'اشتراطات الاستيراد' : 'Import Requirements'}
-            </Link>
-          )}
-          <Link href={`/${locale}/market`}
-            className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-700">
-            {isAr ? 'فرص السوق' : 'Market Gaps'}
-          </Link>
-          {p.slug && (
-            <Link href={`/${locale}/providers/${p.slug}`}
-              className="ms-auto flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-gray-700">
-              <ExternalLink className="w-3 h-3" />
-            </Link>
-          )}
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -418,12 +423,12 @@ export default async function ProvidersPage({
 
           {/* Static verified providers first (page 1, no filters) */}
           {showStatic && staticFiltered.map(p => (
-            <ProviderCard key={p.slug} p={p as any} isStatic={true} />
+            <ProviderCard key={p.slug} p={p} isStatic={true} locale={locale} isAr={isAr} />
           ))}
 
           {/* DB providers */}
-          {(dbProviders as DbProvider[]).map(p => (
-            <ProviderCard key={p.id} p={p} isStatic={false} />
+          {dbProviders.map((p: DbProvider) => (
+            <ProviderCard key={p.id} p={p} isStatic={false} locale={locale} isAr={isAr} />
           ))}
         </div>
 
