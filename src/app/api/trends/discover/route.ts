@@ -32,8 +32,10 @@ function matchesExistingProduct(keyword: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret')
-  if (secret !== process.env.CRON_SECRET && process.env.NODE_ENV === 'production') {
+  const cronSecret = process.env.CRON_SECRET
+  const providedSecret = req.headers.get('x-cron-secret')
+  const isRealSecret = cronSecret && cronSecret !== 'your_cron_secret' && cronSecret !== ''
+  if (isRealSecret && providedSecret !== cronSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
