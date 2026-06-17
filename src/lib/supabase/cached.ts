@@ -40,14 +40,16 @@ export function getProviders(opts: {
   type?: string
   emirate?: string
   query?: string
+  category?: string
   from: number
   to: number
 }): Promise<GetProvidersResult> {
   const cacheKey = [
     'providers-list',
-    opts.type    ?? 'all',
-    opts.emirate ?? 'all',
-    opts.query   ?? '',
+    opts.type     ?? 'all',
+    opts.emirate  ?? 'all',
+    opts.category ?? 'all',
+    opts.query    ?? '',
     String(opts.from),
     String(opts.to),
   ]
@@ -57,11 +59,12 @@ export function getProviders(opts: {
       try {
         const supabase = getClient()
         const { data, error } = await supabase.rpc('get_providers', {
-          p_type:    opts.type    || null,
-          p_emirate: opts.emirate || null,
-          p_query:   opts.query   || null,
-          p_from:    opts.from,
-          p_to:      opts.to,
+          p_type:     opts.type     || null,
+          p_emirate:  opts.emirate  || null,
+          p_query:    opts.query    || null,
+          p_category: opts.category || null,
+          p_from:     opts.from,
+          p_to:       opts.to,
         })
         if (error || !data) {
           console.error('get_providers RPC error:', error)

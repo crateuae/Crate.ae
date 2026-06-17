@@ -12,6 +12,7 @@ import { getProviders } from '@/lib/supabase/cached'
 type StaticProvider = {
   slug: string; type: 'repackager' | 'trader'; name_ar: string; name_en: string
   emirate: string; zone: string; is_verified: boolean; license_no: null; issue_date: null
+  category?: string | null
   specialties_ar: string[]; specialties_en: string[]
   services_ar: string[]; services_en: string[]
   certs: string[]
@@ -79,6 +80,15 @@ function ProviderCard({ p, isStatic, locale, isAr }: {
           )}
         </div>
       </div>
+
+      {/* Category badge */}
+      {p.category && (
+        <div className="mb-2">
+          <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md">
+            {isAr ? (CATEGORY_LABELS_AR[p.category] ?? p.category) : p.category}
+          </span>
+        </div>
+      )}
 
       {(emLabel || zone) && (
         <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
@@ -169,6 +179,58 @@ export const metadata: Metadata = {
 const PAGE_SIZE = 24
 
 const EMIRATES_EN = ['All', 'Dubai', 'Abu Dhabi', 'Sharjah', 'Ras Al Khaimah', 'Ajman']
+
+// All category labels — EN key → AR label
+const CATEGORY_LABELS_AR: Record<string, string> = {
+  'Restaurant':           'مطعم',
+  'Fast Food':            'وجبات سريعة',
+  'Café & Coffee':        'مقهى وقهوة',
+  'Supermarket':          'سوبرماركت',
+  'Bakery & Pastry':      'مخبز وحلويات',
+  'Catering':             'تموين وضيافة',
+  'Seafood':              'مأكولات بحرية',
+  'Meat & Poultry':       'لحوم ودواجن',
+  'Dairy & Eggs':         'ألبان وبيض',
+  'Frozen Foods':         'أغذية مجمدة',
+  'Beverages & Juices':   'مشروبات وعصائر',
+  'Chocolate & Sweets':   'شوكولاتة وحلوى',
+  'Spices & Condiments':  'توابل وبهارات',
+  'Grains & Flour':       'حبوب ودقيق',
+  'Oils & Fats':          'زيوت ودهون',
+  'Organic & Natural':    'أغذية عضوية',
+  'Health & Nutrition':   'صحة وتغذية',
+  'Snacks & Chips':       'وجبات خفيفة',
+  'Grocery & General Food':'بقالة وغذاء عام',
+  'Food Packaging':       'تعبئة وتغليف',
+  'General Trading':      'تجارة عامة',
+  'Foodstuff Trading':    'تجارة مواد غذائية',
+}
+
+// Ordered list for filter UI (sorted by count from classification)
+const CATEGORIES_SORTED = [
+  'Grocery & General Food',
+  'Restaurant',
+  'Foodstuff Trading',
+  'Café & Coffee',
+  'Beverages & Juices',
+  'Catering',
+  'Oils & Fats',
+  'Bakery & Pastry',
+  'General Trading',
+  'Food Packaging',
+  'Seafood',
+  'Grains & Flour',
+  'Supermarket',
+  'Meat & Poultry',
+  'Spices & Condiments',
+  'Health & Nutrition',
+  'Dairy & Eggs',
+  'Organic & Natural',
+  'Snacks & Chips',
+  'Chocolate & Sweets',
+  'Fast Food',
+  'Frozen Foods',
+]
 
 // Static rich providers (existing verified ones — will move to DB later)
 const STATIC_PROVIDERS = [
@@ -293,26 +355,28 @@ export default async function ProvidersPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>
-  searchParams: Promise<{ type?: string; emirate?: string; q?: string; page?: string }>
+  searchParams: Promise<{ type?: string; emirate?: string; q?: string; page?: string; cat?: string }>
 }) {
   const { locale }    = await params
   const sp            = await searchParams
   const isAr          = locale === 'ar'
   const Arrow         = isAr ? ArrowLeft : ArrowRight
 
-  const typeFilter    = (sp.type    ?? 'all') as 'all' | 'trader' | 'repackager'
-  const emirateFilter = sp.emirate ?? 'all'
-  const query         = (sp.q       ?? '').trim()
-  const page          = Math.max(1, parseInt(sp.page ?? '1', 10))
-  const from          = (page - 1) * PAGE_SIZE
-  const to            = from + PAGE_SIZE - 1
+  const typeFilter     = (sp.type ?? 'all') as 'all' | 'trader' | 'repackager'
+  const emirateFilter  = sp.emirate ?? 'all'
+  const categoryFilter = sp.cat ?? 'all'
+  const query          = (sp.q ?? '').trim()
+  const page           = Math.max(1, parseInt(sp.page ?? '1', 10))
+  const from           = (page - 1) * PAGE_SIZE
+  const to             = from + PAGE_SIZE - 1
 
-  // Single cached RPC call — replaces 3 separate DB queries
+  // Single cached RPC call
   const { rows: dbProviders, total: count, traders: totalTraders, repack: totalRepackagers } =
     await getProviders({
-      type:    typeFilter    !== 'all' ? typeFilter    : undefined,
-      emirate: emirateFilter !== 'all' ? emirateFilter : undefined,
-      query:   query || undefined,
+      type:     typeFilter     !== 'all' ? typeFilter     : undefined,
+      emirate:  emirateFilter  !== 'all' ? emirateFilter  : undefined,
+      category: categoryFilter !== 'all' ? categoryFilter : undefined,
+      query:    query || undefined,
       from,
       to,
     })
@@ -329,7 +393,7 @@ export default async function ProvidersPage({
   })
 
   function buildUrl(overrides: Record<string, string | undefined>) {
-    const base   = { type: typeFilter, emirate: emirateFilter, q: query || undefined, page: undefined }
+    const base   = { type: typeFilter, emirate: emirateFilter, cat: categoryFilter, q: query || undefined, page: undefined }
     const merged = { ...base, ...overrides }
     const p      = new URLSearchParams()
     for (const [k, v] of Object.entries(merged)) {
@@ -378,42 +442,71 @@ export default async function ProvidersPage({
 
       {/* ── Filters ── */}
       <div className="bg-white border-b border-gray-100 sticky top-[58px] z-30">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
-            {([
-              { val: 'all',        ar: 'الكل',          en: 'All',         count: (totalTraders ?? 0) + (totalRepackagers ?? 0) },
-              { val: 'trader',     ar: 'تجارة غذائية',  en: 'Food Trading', count: totalTraders ?? 0 },
-              { val: 'repackager', ar: 'إعادة تعبئة',   en: 'Repackaging',  count: totalRepackagers ?? 0 },
-            ] as const).map(opt => (
-              <Link key={opt.val} href={buildUrl({ type: opt.val, page: undefined })}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                  typeFilter === opt.val ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                }`}>
-                {isAr ? opt.ar : opt.en}
-                <span className="text-[9px] bg-gray-100 rounded px-1 tabular-nums">{opt.count.toLocaleString()}</span>
-              </Link>
-            ))}
+        <div className="max-w-6xl mx-auto px-6 py-3 space-y-2">
+
+          {/* Row 1: Type + Emirates + count */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+              {([
+                { val: 'all',        ar: 'الكل',          en: 'All' },
+                { val: 'trader',     ar: 'تجارة',          en: 'Trading' },
+                { val: 'repackager', ar: 'إعادة تعبئة',   en: 'Packaging' },
+              ] as const).map(opt => (
+                <Link key={opt.val} href={buildUrl({ type: opt.val, page: undefined })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                    typeFilter === opt.val ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}>
+                  {isAr ? opt.ar : opt.en}
+                </Link>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1 flex-wrap">
+              {EMIRATES_EN.map((em, i) => {
+                const val    = i === 0 ? 'all' : em
+                const active = emirateFilter === val
+                const label  = isAr ? (EMIRATES_LABELS_AR[em] ?? em) : em
+                return (
+                  <Link key={em} href={buildUrl({ emirate: val, page: undefined })}
+                    className={`px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap flex items-center gap-1 ${
+                      active ? 'bg-indigo-100 text-indigo-700 font-bold' : 'text-gray-500 hover:bg-gray-100'
+                    }`}>
+                    {i !== 0 && <MapPin className="w-2.5 h-2.5" />}{label}
+                  </Link>
+                )
+              })}
+            </div>
+
+            <span className="ms-auto text-xs text-gray-400">
+              {(count ?? 0).toLocaleString()} {isAr ? 'شركة' : 'companies'}
+            </span>
           </div>
 
-          <div className="flex items-center gap-1 flex-wrap">
-            {EMIRATES_EN.map((em, i) => {
-              const val    = i === 0 ? 'all' : em
-              const active = emirateFilter === val
-              const label  = isAr ? (EMIRATES_LABELS_AR[em] ?? em) : em
+          {/* Row 2: Category chips */}
+          <div className="flex items-center gap-1.5 flex-wrap pb-1">
+            <Link href={buildUrl({ cat: 'all', page: undefined })}
+              className={`px-3 py-1 rounded-full text-[11px] font-bold border transition-all whitespace-nowrap ${
+                categoryFilter === 'all'
+                  ? 'bg-gray-900 text-white border-gray-900'
+                  : 'text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700'
+              }`}>
+              {isAr ? 'كل التصنيفات' : 'All Categories'}
+            </Link>
+            {CATEGORIES_SORTED.map(cat => {
+              const active = categoryFilter === cat
+              const label  = isAr ? (CATEGORY_LABELS_AR[cat] ?? cat) : cat
               return (
-                <Link key={em} href={buildUrl({ emirate: val, page: undefined })}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap flex items-center gap-1 ${
-                    active ? 'bg-indigo-100 text-indigo-700 font-bold' : 'text-gray-500 hover:bg-gray-100'
+                <Link key={cat} href={buildUrl({ cat, page: undefined })}
+                  className={`px-3 py-1 rounded-full text-[11px] border transition-all whitespace-nowrap ${
+                    active
+                      ? 'bg-indigo-600 text-white border-indigo-600 font-bold'
+                      : 'text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
                   }`}>
-                  {i !== 0 && <MapPin className="w-2.5 h-2.5" />}{label}
+                  {label}
                 </Link>
               )
             })}
           </div>
-
-          <span className="ms-auto text-xs text-gray-400">
-            {(count ?? 0).toLocaleString()} {isAr ? 'شركة' : 'companies'}
-          </span>
         </div>
       </div>
 
