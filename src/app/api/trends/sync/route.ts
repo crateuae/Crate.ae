@@ -1,26 +1,27 @@
 /**
  * POST /api/trends/sync
- * Syncs Google Trends data for all products in the catalog.
- * Called by cron (daily) or manually from dashboard.
- * Updates product_trends table in Supabase.
+ * Multi-source trend sync for all products.
+ * Sources: SerpAPI Google Trends + SerpAPI Search + First-party pageviews + FMCG score
+ *
+ * Quota strategy (100 SerpAPI calls/month):
+ *  - Each product = 2 calls (trends + search)
+ *  - 30 products = 60 calls/month, leaving 40 for discovery
+ *  - skipSerp=true syncs only FMCG + pageviews (0 quota cost)
  */
 
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { PRODUCTS_CATALOG, getProductSlug } from '@/lib/data/products-catalog'
-import { fetchUAETrend } from '@/lib/trends/google-trends'
-import { checkUAEAvailability } from '@/lib/trends/serpapi'
+import { PRODUCTS_CATALOG, getProductFMCG, getProductSlug } from '@/lib/data/products-catalog'
+import { computeUAETrend } from '@/lib/trends/engine'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// Rate limit: 1 product per ~3 seconds to be polite to Google
-const DELAY_MS = 2500
-
-function sleep(ms: number) {
-  return new Promise(r => setTimeout(r, ms))
+function productUUID(id: string) {
+  const num = String(parseInt(id.replace('p', ''))).padStart(12, '0')
+  return `prod-${id}-0000-0000-${num}`
 }
 
 export async function POST(req: NextRequest) {
@@ -30,7 +31,8 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}))
-  const slugFilter: string | null = body.slug || null   // sync single product
+  const slugFilter: string | null = body.slug || null
+  const skipSerp: boolean = body.skip_serp === true   // true = use only FMCG + pageviews
   const maxProducts: number = body.max || 30
 
   const products = PRODUCTS_CATALOG
@@ -41,74 +43,55 @@ export async function POST(req: NextRequest) {
   const results = {
     synced: 0,
     errors: 0,
-    skipped: 0,
-    products: [] as string[],
+    products: [] as { slug: string; score: number; direction: string; sources: string }[],
   }
 
   for (const product of products) {
     const slug = getProductSlug(product)
-    const keyword = product.name_en.replace(/\d+ml|\d+g|\d+kg|\d+L/gi, '').trim()
-    const keywordUAE = `${keyword} UAE`
+    const fmcgData = getProductFMCG(product)
+    const fmcg_score = fmcgData?.fmcg_score ?? 50
+    // Clean keyword: strip size/weight, add UAE
+    const keyword = `${product.name_en.replace(/\d+ml|\d+g|\d+kg|\d+l\b/gi, '').trim()} UAE`
 
     try {
-      // 1. Google Trends (always free)
-      const trend = await fetchUAETrend(keywordUAE)
-      if (!trend) { results.skipped++; continue }
+      const trend = await computeUAETrend({ keyword, productSlug: slug, fmcg_score, skipSerp })
 
-      await sleep(DELAY_MS)
-
-      // 2. SerpAPI availability check (uses quota — only for unregistered or discoveries)
-      let availability = null
-      if (product.registration_status === 'unregistered' && process.env.SERPAPI_KEY) {
-        availability = await checkUAEAvailability(keywordUAE)
-        await sleep(1000)
-      }
-
-      // 3. Upsert into product_trends
       const { error } = await supabase
         .from('product_trends')
         .upsert({
-          product_id: `prod-${product.id}-0000-0000-${String(parseInt(product.id.replace('p', ''))).padStart(12, '0')}`,
-          keyword: keywordUAE,
+          product_id: productUUID(product.id),
+          keyword,
           keyword_ar: product.name_ar,
-          search_volume_monthly: null,   // requires paid Keyword Planner
           trend_score: trend.trend_score,
           trend_direction: trend.trend_direction,
           uae_interest_pct: trend.uae_interest_pct,
-          related_queries: trend.related_queries,
+          related_queries: trend.sources.related_queries,
           gap_signal: trend.gap_signal,
-          is_available_uae: availability?.is_available_uae ?? (product.registration_status === 'registered_uae'),
-          retailer_mentions: availability?.retailer_mentions ?? [],
-          avg_price_aed: availability?.avg_price_aed ?? null,
+          is_available_uae: trend.sources.is_available_uae,
+          retailer_mentions: trend.sources.retailer_mentions,
+          avg_price_aed: trend.sources.avg_price_aed,
           fetched_at: trend.fetched_at,
-        }, {
-          onConflict: 'product_id,keyword',
-          ignoreDuplicates: false,
-        })
+        }, { onConflict: 'product_id,keyword', ignoreDuplicates: false })
 
       if (error) {
         console.error(`[trends/sync] DB error for ${slug}:`, error.message)
         results.errors++
       } else {
-        // Also update the cached trend_score on the product row itself
-        await supabase
-          .from('products')
-          .update({
-            trend_score_cached: trend.trend_score,
-            trend_direction: trend.trend_direction,
-            last_trend_sync: trend.fetched_at,
-          })
-          .eq('slug', slug)
-
         results.synced++
-        results.products.push(slug)
+        results.products.push({
+          slug,
+          score: trend.trend_score,
+          direction: trend.trend_direction,
+          sources: trend.source_label,
+        })
       }
     } catch (err) {
       console.error(`[trends/sync] Error for ${slug}:`, err)
       results.errors++
     }
 
-    await sleep(DELAY_MS)
+    // Small delay between products only when calling SerpAPI
+    if (!skipSerp) await new Promise(r => setTimeout(r, 500))
   }
 
   return NextResponse.json({
@@ -118,18 +101,13 @@ export async function POST(req: NextRequest) {
   })
 }
 
-export async function GET(req: NextRequest) {
-  // Health check / last sync status
-  const secret = req.headers.get('x-cron-secret')
-  if (secret !== process.env.CRON_SECRET && process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export async function GET() {
+  // Public read — returns cached trends (no secrets required)
   const { data } = await supabase
     .from('product_trends')
-    .select('product_id, keyword, trend_score, trend_direction, fetched_at')
+    .select('product_id, keyword, trend_score, trend_direction, uae_interest_pct, gap_signal, retailer_mentions, avg_price_aed, related_queries, fetched_at')
     .order('fetched_at', { ascending: false })
-    .limit(30)
+    .limit(60)
 
   return NextResponse.json({ trends: data || [], count: data?.length || 0 })
 }

@@ -8,8 +8,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { PRODUCTS_CATALOG, getProductSlug } from '@/lib/data/products-catalog'
-import { discoverUAETrends } from '@/lib/trends/google-trends'
-import { checkUAEAvailability } from '@/lib/trends/serpapi'
+import { computeUAETrend, UAE_FMCG_SEED_KEYWORDS, guessFMCGCategory } from '@/lib/trends/engine'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,38 +40,38 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const limit: number = Math.min(body.limit || 20, 30)
 
-  // 1. Scan UAE FMCG keywords via Google Trends
-  const discoveries = await discoverUAETrends(limit)
+  // 1. Scan UAE FMCG seed keywords using multi-source engine
+  const keywords = UAE_FMCG_SEED_KEYWORDS.slice(0, limit)
+  const newKeywords = keywords.filter(k => !matchesExistingProduct(k))
 
-  // 2. Filter out keywords that already have a matching product
-  const newDiscoveries = discoveries.filter(d => !matchesExistingProduct(d.keyword))
-
-  // 3. For high-gap keywords, verify UAE availability via SerpAPI
   const enriched = []
-  for (const disc of newDiscoveries) {
-    let availability_checked = false
-    let is_available_uae = false
+  for (const keyword of newKeywords) {
+    try {
+      const trend = await computeUAETrend({ keyword, productSlug: '', fmcg_score: 50 })
+      const gap_score = Math.min(Math.round(
+        trend.trend_score * 0.5 +
+        trend.uae_interest_pct * 0.3 +
+        (trend.trend_direction === 'rising' ? 20 : trend.trend_direction === 'stable' ? 10 : 0)
+      ), 100)
 
-    if (disc.gap_score >= 60 && process.env.SERPAPI_KEY) {
-      const avail = await checkUAEAvailability(disc.keyword)
-      availability_checked = true
-      is_available_uae = avail.is_available_uae
-      await sleep(800)
+      if (trend.trend_score >= 25) {
+        enriched.push({
+          keyword,
+          keyword_ar: null,
+          trend_score: trend.trend_score,
+          uae_interest_pct: trend.uae_interest_pct,
+          trend_direction: trend.trend_direction,
+          category_guess: guessFMCGCategory(keyword),
+          gap_score,
+          is_available_uae: trend.sources.is_available_uae,
+          status: 'pending',
+          discovered_at: new Date().toISOString(),
+        })
+      }
+    } catch {
+      continue
     }
-
-    enriched.push({
-      keyword: disc.keyword,
-      keyword_ar: null,     // TODO: translate via AI
-      search_volume_monthly: null,
-      trend_score: disc.trend_score,
-      uae_interest_pct: disc.uae_interest_pct,
-      trend_direction: disc.trend_direction,
-      category_guess: disc.category_guess,
-      gap_score: disc.gap_score,
-      is_available_uae: availability_checked ? is_available_uae : null,
-      status: 'pending',
-      discovered_at: new Date().toISOString(),
-    })
+    await sleep(300)
   }
 
   // 4. Upsert into trend_discoveries
@@ -88,7 +87,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     success: true,
     scanned: limit,
-    new_discoveries: newDiscoveries.length,
+    new_discoveries: enriched.length,
     inserted,
     top_opportunities: enriched
       .filter(d => d.gap_score >= 50)

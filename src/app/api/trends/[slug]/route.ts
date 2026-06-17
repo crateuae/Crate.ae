@@ -6,8 +6,8 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { PRODUCTS_CATALOG, getProductSlug } from '@/lib/data/products-catalog'
-import { fetchUAETrend } from '@/lib/trends/google-trends'
+import { PRODUCTS_CATALOG, getProductSlug, getProductFMCG } from '@/lib/data/products-catalog'
+import { computeUAETrend } from '@/lib/trends/engine'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -47,13 +47,14 @@ export async function GET(
     })
   }
 
-  // Live fetch from Google Trends
-  const keyword = `${product.name_en.replace(/\d+ml|\d+g|\d+kg|\d+L/gi, '').trim()} UAE`
-  const trend = await fetchUAETrend(keyword)
-
-  if (!trend) {
-    return NextResponse.json({ error: 'Could not fetch trends data' }, { status: 503 })
-  }
+  // Live fetch via multi-source engine
+  const fmcgData = getProductFMCG(product)
+  const keyword = `${product.name_en.replace(/\d+ml|\d+g|\d+kg|\d+l\b/gi, '').trim()} UAE`
+  const trend = await computeUAETrend({
+    keyword,
+    productSlug: slug,
+    fmcg_score: fmcgData?.fmcg_score ?? 50,
+  })
 
   // Save to cache
   await supabase.from('product_trends').upsert({
@@ -63,15 +64,25 @@ export async function GET(
     trend_score: trend.trend_score,
     trend_direction: trend.trend_direction,
     uae_interest_pct: trend.uae_interest_pct,
-    related_queries: trend.related_queries,
+    related_queries: trend.sources.related_queries,
     gap_signal: trend.gap_signal,
-    is_available_uae: product.registration_status === 'registered_uae',
+    is_available_uae: trend.sources.is_available_uae,
+    retailer_mentions: trend.sources.retailer_mentions,
+    avg_price_aed: trend.sources.avg_price_aed,
     fetched_at: trend.fetched_at,
   }, { onConflict: 'product_id,keyword' })
 
   return NextResponse.json({
     source: 'live',
     product_slug: slug,
-    ...trend,
+    source_label: trend.source_label,
+    trend_score: trend.trend_score,
+    trend_direction: trend.trend_direction,
+    uae_interest_pct: trend.uae_interest_pct,
+    gap_signal: trend.gap_signal,
+    related_queries: trend.sources.related_queries,
+    retailer_mentions: trend.sources.retailer_mentions,
+    avg_price_aed: trend.sources.avg_price_aed,
+    fetched_at: trend.fetched_at,
   })
 }
