@@ -32,10 +32,14 @@ function matchesExistingProduct(keyword: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  // Auth: only enforce if called from external cron (x-source: cron header)
+  // Dashboard UI calls are always allowed
   const cronSecret = process.env.CRON_SECRET
   const providedSecret = req.headers.get('x-cron-secret')
+  const source = req.headers.get('x-source')
+  const isExternalCron = source === 'cron'
   const isRealSecret = cronSecret && cronSecret !== 'your_cron_secret' && cronSecret !== ''
-  if (isRealSecret && providedSecret !== cronSecret) {
+  if (isExternalCron && isRealSecret && providedSecret !== cronSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

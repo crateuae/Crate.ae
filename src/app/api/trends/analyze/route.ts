@@ -12,6 +12,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import type {
+  GoogleTrendsResult, GoogleShoppingResult, GoogleSearchResult, RedditResult,
+  AnalysisSources, DecisionFactor, TradeAnalysis, AnalyzeResponse,
+} from '@/lib/types/analyze'
+
+export type { GoogleTrendsResult, GoogleShoppingResult, GoogleSearchResult, RedditResult,
+  AnalysisSources, DecisionFactor, TradeAnalysis, AnalyzeResponse }
 
 const SERPAPI_KEY  = process.env.SERPAPI_KEY  || ''
 const SERPAPI_BASE = 'https://serpapi.com/search'
@@ -20,83 +27,6 @@ function serpUrl(params: Record<string, string>) {
   const u = new URL(SERPAPI_BASE)
   Object.entries({ ...params, api_key: SERPAPI_KEY }).forEach(([k, v]) => u.searchParams.set(k, v))
   return u.toString()
-}
-
-// ─── Source types ────────────────────────────────────────────────────────────
-
-export interface GoogleTrendsResult {
-  interest_score:  number        // 0-100 Google's native scale
-  peak_score:      number        // highest weekly value in 3 months
-  direction:       'rising' | 'stable' | 'falling'
-  change_pct:      number        // % change recent 4 weeks vs older 8 weeks
-  weekly_values:   number[]      // raw timeline
-  related_queries: string[]
-}
-
-export interface GoogleShoppingResult {
-  listing_count:   number
-  price_min_aed:   number | null
-  price_max_aed:   number | null
-  price_avg_aed:   number | null
-  sellers:         string[]      // who's selling (amazon.ae, noon.com, ...)
-  top_product:     string | null
-  amazon_listings: number        // how many shopping results are from amazon.ae
-  noon_listings:   number
-}
-
-export interface GoogleSearchResult {
-  total_results:     number
-  retailer_mentions: string[]
-  price_mentions:    number[]    // raw AED prices found in snippets
-  avg_price_aed:     number | null
-  amazon_available:  boolean
-  noon_available:    boolean
-  top_snippet:       string | null
-}
-
-export interface RedditResult {
-  mention_count:  number
-  total_upvotes:  number
-  sentiment:      'positive' | 'neutral' | 'negative'
-  top_posts:      { title: string; score: number; subreddit: string; url: string }[]
-}
-
-export interface AnalysisSources {
-  google_trends:   GoogleTrendsResult   | null
-  google_shopping: GoogleShoppingResult | null
-  google_search:   GoogleSearchResult   | null
-  reddit:          RedditResult         | null
-}
-
-export interface DecisionFactor {
-  factor_ar: string
-  factor_en: string
-  impact:    'positive' | 'neutral' | 'negative'
-  data:      string
-}
-
-export interface TradeAnalysis {
-  opportunity_score:         number   // 0-100
-  market_gap:                boolean  // true = product not available in UAE
-  estimated_retail_price_aed: number | null
-  estimated_import_price_aed: number | null
-  estimated_margin_pct:       number | null
-  estimated_monthly_units:    string | null  // e.g. "200–500"
-  estimated_capex_aed:        string | null  // e.g. "15,000–30,000"
-  demand_level:    'high' | 'medium' | 'low'
-  competition_level: 'high' | 'medium' | 'low'
-  decision:        'strong_import' | 'investigate' | 'monitor' | 'skip'
-  decision_factors: DecisionFactor[]
-  recommendation_ar: string
-  recommendation_en: string
-}
-
-export interface AnalyzeResponse {
-  keyword:      string
-  analyzed_at:  string
-  sources_used: string[]
-  sources:      AnalysisSources
-  analysis:     TradeAnalysis
 }
 
 // ─── Source 1: Google Trends ─────────────────────────────────────────────────
@@ -257,8 +187,9 @@ async function fetchReddit(keyword: string): Promise<RedditResult | null> {
       title: string; selftext: string; score: number; subreddit: string; permalink: string
     })
 
+    type RedditPost = { title: string; selftext: string; score: number; subreddit: string; permalink: string }
     const mention_count = posts.length
-    const total_upvotes = posts.reduce((a, p) => a + (p.score || 0), 0)
+    const total_upvotes = posts.reduce((a: number, p: RedditPost) => a + (p.score || 0), 0)
 
     const posWords = ['love', 'amazing', 'great', 'where to buy', 'available', 'recommend', 'looking for', 'want', 'trying to find']
     const negWords = ['scam', 'fake', 'terrible', 'avoid', 'bad', 'expired', 'counterfeit']
@@ -270,7 +201,7 @@ async function fetchReddit(keyword: string): Promise<RedditResult | null> {
     }
     const sentiment = pos > neg ? 'positive' : neg > pos ? 'negative' : 'neutral'
 
-    const top_posts = posts.slice(0, 3).map(p => ({
+    const top_posts = posts.slice(0, 3).map((p: RedditPost) => ({
       title: p.title,
       score: p.score,
       subreddit: p.subreddit,

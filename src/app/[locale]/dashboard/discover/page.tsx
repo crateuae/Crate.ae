@@ -9,7 +9,7 @@ import {
   ChevronRight, Loader2,
 } from 'lucide-react'
 import { useParams } from 'next/navigation'
-import type { AnalyzeResponse, DecisionFactor } from '@/app/api/trends/analyze/route'
+import type { AnalyzeResponse, DecisionFactor } from '@/lib/types/analyze'
 
 // ─── Shared types (inline to avoid import issues) ────────────────────────────
 
