@@ -5,7 +5,9 @@ import {
   ArrowRight, ArrowLeft, Repeat2, Store, Search, Plus,
   ShieldCheck, Package, ExternalLink,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { getProviders } from '@/lib/supabase/cached'
+
+export const revalidate = 3600   // Vercel CDN caches full page 1 hour
 
 export const metadata: Metadata = {
   title: 'شبكة الموردين — Crate',
@@ -163,27 +165,17 @@ export default async function ProvidersPage({
   const from          = (page - 1) * PAGE_SIZE
   const to            = from + PAGE_SIZE - 1
 
-  const supabase = await createClient()
+  // Single cached RPC call — replaces 3 separate DB queries
+  const { rows: dbProviders, total: count, traders: totalTraders, repack: totalRepackagers } =
+    await getProviders({
+      type:    typeFilter    !== 'all' ? typeFilter    : undefined,
+      emirate: emirateFilter !== 'all' ? emirateFilter : undefined,
+      query:   query || undefined,
+      from,
+      to,
+    })
 
-  let dbQuery = supabase
-    .from('providers')
-    .select('id, slug, name_ar, name_en, type, category, emirate, license_no, issue_date, is_verified', { count: 'exact' })
-    .eq('is_active', true)
-    .order('is_verified', { ascending: false })
-    .order('name_en',     { ascending: true })
-    .range(from, to)
-
-  if (typeFilter !== 'all')    dbQuery = dbQuery.eq('type', typeFilter)
-  if (emirateFilter !== 'all') dbQuery = dbQuery.eq('emirate', emirateFilter)
-  if (query)                   dbQuery = dbQuery.textSearch('fts', query, { type: 'websearch' })
-
-  const { data: dbProviders = [], count = 0 } = await dbQuery
   const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE)
-
-  const [{ count: totalTraders }, { count: totalRepackagers }] = await Promise.all([
-    supabase.from('providers').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('type', 'trader'),
-    supabase.from('providers').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('type', 'repackager'),
-  ])
 
   // Show static providers only on page 1 with no filters
   const showStatic = page === 1 && typeFilter === 'all' && emirateFilter === 'all' && !query

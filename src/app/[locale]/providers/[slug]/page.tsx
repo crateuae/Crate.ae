@@ -6,6 +6,9 @@ import {
   Hash, Calendar, ShieldCheck, ExternalLink, Package,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { getProviderBySlug } from '@/lib/supabase/cached'
+
+export const revalidate = 86400   // Cache individual provider pages 24 hours
 
 // ─── Metadata ────────────────────────────────────────────────────────────────
 
@@ -15,12 +18,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string; slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
-  const supabase  = await createClient()
-  const { data }  = await supabase
-    .from('providers')
-    .select('name_en, name_ar, emirate, category')
-    .eq('slug', slug)
-    .single()
+  const data = await getProviderBySlug(slug)
 
   if (!data) return { title: 'Supplier — Crate' }
 
@@ -41,13 +39,7 @@ export default async function ProviderDetailPage({
   const isAr  = locale === 'ar'
   const Arrow = isAr ? ArrowLeft : ArrowRight
 
-  const supabase = await createClient()
-  const { data: p } = await supabase
-    .from('providers')
-    .select('*')
-    .eq('slug', slug)
-    .eq('is_active', true)
-    .single()
+  const p = await getProviderBySlug(slug)
 
   if (!p) notFound()
 
