@@ -31,7 +31,7 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} dir={dir}>
-      <head>
+      <body className="min-h-screen bg-[#F8F9FB] text-gray-900 font-sans">
         {/* Google tag (gtag.js) — GA4: G-D24S8N3VBP */}
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
@@ -45,8 +45,6 @@ export default async function LocaleLayout({
             gtag('config', '${GA_ID}', { page_path: window.location.pathname });
           `}
         </Script>
-      </head>
-      <body className="min-h-screen bg-[#F8F9FB] text-gray-900 font-sans">
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
             <Navbar />
