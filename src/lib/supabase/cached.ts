@@ -1,9 +1,19 @@
 /**
  * Cached Supabase queries — wraps heavy queries with Next.js cache.
  * Data revalidates every hour automatically (ISR).
+ *
+ * Uses a direct anon client (no cookies) because unstable_cache runs
+ * outside request context and cannot access next/headers cookies.
  */
 import { unstable_cache } from 'next/cache'
-import { createClient }   from './server'
+import { createClient as createBrowserClient } from '@supabase/supabase-js'
+
+function getClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
+}
 
 export type ProviderRow = {
   id: string
@@ -34,7 +44,7 @@ export const getProviders = unstable_cache(
     from: number
     to: number
   }): Promise<GetProvidersResult> => {
-    const supabase = await createClient()
+    const supabase = getClient()
     const { data, error } = await supabase.rpc('get_providers', {
       p_type:    opts.type    || null,
       p_emirate: opts.emirate || null,
@@ -62,7 +72,7 @@ export const getProviders = unstable_cache(
 /** Single provider by slug. Cached 24 hours. */
 export const getProviderBySlug = unstable_cache(
   async (slug: string) => {
-    const supabase = await createClient()
+    const supabase = getClient()
     const { data } = await supabase
       .from('providers')
       .select('*')
