@@ -100,15 +100,41 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status') || 'pending'
-  const limit = parseInt(searchParams.get('limit') || '50')
+  const limit  = parseInt(searchParams.get('limit') || '100')
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('trend_discoveries')
     .select('*')
-    .eq('status', status)
     .order('gap_score', { ascending: false })
     .limit(limit)
 
+  if (status !== 'all') {
+    query = query.eq('status', status)
+  }
+
+  const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ discoveries: data || [], count: data?.length || 0 })
+}
+
+export async function PATCH(req: NextRequest) {
+  const body = await req.json().catch(() => ({}))
+  const { id, status } = body as { id?: string; status?: string }
+
+  if (!id || !status) {
+    return NextResponse.json({ error: 'id and status required' }, { status: 400 })
+  }
+
+  const validStatuses = ['pending', 'reviewed', 'added', 'dismissed']
+  if (!validStatuses.includes(status)) {
+    return NextResponse.json({ error: 'invalid status' }, { status: 400 })
+  }
+
+  const { error } = await supabase
+    .from('trend_discoveries')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
 }
