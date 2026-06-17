@@ -43,6 +43,10 @@ export default async function ProviderDetailPage({
 
   if (!p) notFound()
 
+  // Packaging/repackaging companies are a hidden Crate-brokered service —
+  // never expose their public profile pages.
+  if (p.type === 'repackager') notFound()
+
   const isRepack  = p.type === 'repackager'
   const accentCls = isRepack ? 'indigo' : 'indigo'
 

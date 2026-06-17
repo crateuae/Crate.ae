@@ -3,7 +3,7 @@ import Link from 'next/link'
 import {
   MapPin, BadgeCheck, CheckCircle2,
   ArrowRight, ArrowLeft, Repeat2, Store, Search, Plus,
-  ShieldCheck, Package, ExternalLink,
+  ShieldCheck, ExternalLink,
 } from 'lucide-react'
 import { getProviders } from '@/lib/supabase/cached'
 
@@ -149,19 +149,11 @@ function ProviderCard({ p, isStatic, locale, isAr }: {
       )}
 
       <div className={`border-t border-gray-100 pt-3 flex items-center gap-2 flex-wrap ${specialties.length === 0 && services.length === 0 ? 'mt-auto' : ''}`}>
-        {isRepack ? (
-          <Link href={`/${locale}/packaging`}
-            className="flex items-center gap-1 text-[10px] font-bold text-orange-500 hover:text-orange-600">
-            <Package className="w-3 h-3" />
-            {isAr ? 'خطة التعبئة' : 'Packaging Plan'}
-          </Link>
-        ) : (
-          <Link href={`/${locale}/compliance`}
-            className="flex items-center gap-1 text-[10px] font-bold text-indigo-500 hover:text-indigo-600">
-            <ShieldCheck className="w-3 h-3" />
-            {isAr ? 'اشتراطات الاستيراد' : 'Import Requirements'}
-          </Link>
-        )}
+        <Link href={`/${locale}/compliance`}
+          className="flex items-center gap-1 text-[10px] font-bold text-indigo-500 hover:text-indigo-600">
+          <ShieldCheck className="w-3 h-3" />
+          {isAr ? 'اشتراطات الاستيراد' : 'Import Requirements'}
+        </Link>
         <Link href={`/${locale}/market`}
           className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-700">
           {isAr ? 'فرص السوق' : 'Market Gaps'}
@@ -183,7 +175,7 @@ export const revalidate = 3600
 
 export const metadata: Metadata = {
   title: 'شبكة الموردين — Crate',
-  description: 'شركات إعادة التعبئة والتغليف وشركات الاستيراد والتجارة العامة في الإمارات',
+  description: 'شركات التجارة العامة والمواد الغذائية المرخّصة في الإمارات',
 }
 
 const PAGE_SIZE = 24
@@ -251,18 +243,6 @@ const TRADING_CATEGORIES = [
   'Frozen Foods',
 ]
 
-// Packaging subcategory order (by count from classification)
-const PACKAGING_CATEGORIES = [
-  'Packaging Services',
-  'Packaging Materials Trading',
-  'Repackaging Services',
-  'Packaging Industries',
-  'Labeling & Printing',
-  'Fruits & Vegetables Packaging',
-  'Spices & Condiments Packaging',
-  'Sugar & Sweets Packaging',
-]
-
 // Static providers — cleared, all data now comes from DB
 const STATIC_PROVIDERS: StaticProvider[] = []
 
@@ -280,7 +260,9 @@ export default async function ProvidersPage({
   const isAr          = locale === 'ar'
   const Arrow         = isAr ? ArrowLeft : ArrowRight
 
-  const typeFilter     = (sp.type ?? 'all') as 'all' | 'trader' | 'repackager'
+  // Public directory shows GENERAL TRADING companies only.
+  // Repackaging/packaging companies are a hidden Crate-brokered service (admin-only).
+  const typeFilter = 'trader' as const
   const emirateFilter  = sp.emirate ?? 'all'
   const categoryFilter = sp.cat ?? 'all'
   const query          = (sp.q ?? '').trim()
@@ -289,9 +271,9 @@ export default async function ProvidersPage({
   const to             = from + PAGE_SIZE - 1
 
   // Single cached RPC call
-  const { rows: dbProviders, total: count, traders: totalTraders, repack: totalRepackagers, category_counts } =
+  const { rows: dbProviders, total: count, category_counts } =
     await getProviders({
-      type:     typeFilter     !== 'all' ? typeFilter     : undefined,
+      type:     typeFilter,
       emirate:  emirateFilter  !== 'all' ? emirateFilter  : undefined,
       category: categoryFilter !== 'all' ? categoryFilter : undefined,
       query:    query || undefined,
@@ -302,16 +284,15 @@ export default async function ProvidersPage({
   const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE)
 
   // Show static providers only on page 1 with no filters
-  const showStatic = page === 1 && typeFilter === 'all' && emirateFilter === 'all' && !query
+  const showStatic = page === 1 && emirateFilter === 'all' && !query
   const staticFiltered = STATIC_PROVIDERS.filter(p => {
-    const typeOk = typeFilter === 'all' || p.type === typeFilter
     const emOk   = emirateFilter === 'all' || p.emirate === emirateFilter
     const qOk    = !query || p.name_en.toLowerCase().includes(query.toLowerCase()) || p.name_ar.includes(query)
-    return typeOk && emOk && qOk
+    return emOk && qOk
   })
 
   function buildUrl(overrides: Record<string, string | undefined>) {
-    const base   = { type: typeFilter, emirate: emirateFilter, cat: categoryFilter, q: query || undefined, page: undefined }
+    const base   = { emirate: emirateFilter, cat: categoryFilter, q: query || undefined, page: undefined }
     const merged = { ...base, ...overrides }
     const p      = new URLSearchParams()
     for (const [k, v] of Object.entries(merged)) {
@@ -335,13 +316,12 @@ export default async function ProvidersPage({
           </h1>
           <p className="text-gray-500 max-w-2xl mx-auto mb-8 leading-relaxed text-sm">
             {isAr
-              ? `${((count ?? 0) + STATIC_PROVIDERS.length).toLocaleString('ar-EG')} شركة — شركات تجارة غذائية وإعادة تعبئة مرخّصة من السجل التجاري لدبي`
-              : `${((count ?? 0) + STATIC_PROVIDERS.length).toLocaleString()} companies — licensed food trading & packaging companies from Dubai's official registry`}
+              ? `${((count ?? 0) + STATIC_PROVIDERS.length).toLocaleString('ar-EG')} شركة تجارة غذائية مرخّصة من السجل التجاري الرسمي لدبي`
+              : `${((count ?? 0) + STATIC_PROVIDERS.length).toLocaleString()} licensed food trading companies from Dubai's official registry`}
           </p>
 
           {/* Search */}
           <form method="get" action={`/${locale}/providers`} className="max-w-xl mx-auto flex gap-2">
-            {typeFilter !== 'all'    && <input type="hidden" name="type"    value={typeFilter} />}
             {emirateFilter !== 'all' && <input type="hidden" name="emirate" value={emirateFilter} />}
             <div className="relative flex-1">
               <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -362,23 +342,8 @@ export default async function ProvidersPage({
       <div className="bg-white border-b border-gray-100 sticky top-[58px] z-30">
         <div className="max-w-6xl mx-auto px-6 py-3 space-y-2">
 
-          {/* Row 1: Type + Emirates + count */}
+          {/* Row 1: Emirates + count */}
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
-              {([
-                { val: 'all',        ar: 'الكل',                    en: 'All' },
-                { val: 'trader',     ar: 'شركات تجارية',            en: 'Trading Cos.' },
-                { val: 'repackager', ar: 'شركات تعبئة وتغليف',     en: 'Packaging Cos.' },
-              ] as const).map(opt => (
-                <Link key={opt.val} href={buildUrl({ type: opt.val, page: undefined })}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                    typeFilter === opt.val ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                  }`}>
-                  {isAr ? opt.ar : opt.en}
-                </Link>
-              ))}
-            </div>
-
             <div className="flex items-center gap-1 flex-wrap">
               {EMIRATES_EN.map((em, i) => {
                 const val    = i === 0 ? 'all' : em
@@ -400,19 +365,12 @@ export default async function ProvidersPage({
             </span>
           </div>
 
-          {/* Row 2: Subcategory chips — shown only when a type is selected */}
-          {typeFilter !== 'all' && (() => {
-            const isPackaging = typeFilter === 'repackager'
-            const chipList    = isPackaging ? PACKAGING_CATEGORIES : TRADING_CATEGORIES
-            const activeColor = isPackaging
-              ? 'bg-orange-500 text-white border-orange-500 font-bold'
-              : 'bg-indigo-600 text-white border-indigo-600 font-bold'
-            const hoverColor  = isPackaging
-              ? 'hover:border-orange-300 hover:text-orange-600'
-              : 'hover:border-indigo-300 hover:text-indigo-600'
-            const activeCount = isPackaging
-              ? 'text-orange-200'
-              : 'text-indigo-200'
+          {/* Row 2: Trading subcategory chips */}
+          {(() => {
+            const chipList    = TRADING_CATEGORIES
+            const activeColor = 'bg-indigo-600 text-white border-indigo-600 font-bold'
+            const hoverColor  = 'hover:border-indigo-300 hover:text-indigo-600'
+            const activeCount = 'text-indigo-200'
             return (
               <div className="flex items-center gap-1.5 flex-wrap pb-1">
                 <Link href={buildUrl({ cat: 'all', page: undefined })}
@@ -506,8 +464,8 @@ export default async function ProvidersPage({
           </h2>
           <p className="text-orange-100 text-sm mb-6 max-w-md mx-auto">
             {isAr
-              ? 'سواء كنت شركة إعادة تعبئة أو مستورداً — سجّل بياناتك ليجدك تجار الاستيراد والموردون في الإمارات'
-              : 'Whether you\'re a repackager or an importer — list your company for UAE traders and suppliers to find you'}
+              ? 'سجّل شركة التجارة العامة أو المواد الغذائية ليجدك المستوردون والموردون في الإمارات'
+              : 'List your general trading or foodstuff company so UAE importers and suppliers can find you'}
           </p>
           <Link href={`/${locale}/login`}
             className="bg-white text-orange-600 font-black px-6 py-2.5 rounded-xl text-sm hover:bg-orange-50 transition-colors inline-block">
