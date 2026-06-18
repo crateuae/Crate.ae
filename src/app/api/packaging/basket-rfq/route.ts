@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
   }).catch(e => console.error('admin email error:', e))
 
   // ── 3. WhatsApp notification via CallMeBot ──────────────────────────────────
-  const waPhone  = (process.env.ADMIN_WHATSAPP ?? '971589912609').replace(/\D/g, '')
+  const waPhone  = (process.env.ADMIN_WHATSAPP ?? '971543000415').replace(/\D/g, '')
   const waApiKey = process.env.CALLMEBOT_API_KEY
   if (waPhone && waApiKey) {
     const msg = encodeURIComponent(

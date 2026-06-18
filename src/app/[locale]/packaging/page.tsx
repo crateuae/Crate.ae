@@ -1250,7 +1250,7 @@ ${hasCost
               <p className="font-black text-emerald-800 text-sm mb-1">{isAr?'تم إرسال طلبك بنجاح!':'Request sent successfully!'}</p>
               <p className="text-xs text-emerald-600 leading-relaxed">{isAr?'شكراً لك! سيتواصل معك فريقنا فور تجهيز الأسعار.':'Thank you! Our team will contact you as soon as prices are ready.'}</p>
             </div>
-            <a href="https://wa.me/971589912609?text=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%20%D8%B4%D9%83%D8%B1%D8%A7%D9%8B%20%D9%84%D8%AA%D9%88%D8%A7%D8%B5%D9%84%D9%83%D9%85%20%D9%85%D8%B9%D9%86%D8%A7%2C%20%D9%82%D9%85%D8%AA%20%D8%A8%D8%AA%D9%82%D8%AF%D9%8A%D9%85%20%D8%B7%D9%84%D8%A8%20%D8%AA%D8%B3%D8%B9%D9%8A%D8%B1%20%D9%84%D9%83%D8%B1%D8%A7%D8%AA%D9%8A%D9%86%20%D8%A7%D9%84%D8%B3%D9%84%D8%A9%20%D8%A7%D9%84%D8%BA%D8%B0%D8%A7%D8%A6%D9%8A%D8%A9" target="_blank" rel="noopener noreferrer"
+            <a href="https://wa.me/971543000415?text=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%20%D8%B4%D9%83%D8%B1%D8%A7%D9%8B%20%D9%84%D8%AA%D9%88%D8%A7%D8%B5%D9%84%D9%83%D9%85%20%D9%85%D8%B9%D9%86%D8%A7%2C%20%D9%82%D9%85%D8%AA%20%D8%A8%D8%AA%D9%82%D8%AF%D9%8A%D9%85%20%D8%B7%D9%84%D8%A8%20%D8%AA%D8%B3%D8%B9%D9%8A%D8%B1%20%D9%84%D9%83%D8%B1%D8%A7%D8%AA%D9%8A%D9%86%20%D8%A7%D9%84%D8%B3%D9%84%D8%A9%20%D8%A7%D9%84%D8%BA%D8%B0%D8%A7%D8%A6%D9%8A%D8%A9" target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-2.5 rounded-xl text-sm transition-colors">
               <span>💬</span>
               {isAr?'تواصل معنا على واتساب':'Contact us on WhatsApp'}
