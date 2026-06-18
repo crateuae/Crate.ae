@@ -387,7 +387,7 @@ function CartonsCalculator({ isAr, primaryPacks, masterCartons, packagingOptions
                   <div className="flex items-center gap-2">
                     <input type="number" min="0" value={qtyMode==='weight'?weight:unitsInput} dir="ltr"
                       onChange={e=>qtyMode==='weight'?setWeight(e.target.value):setUnitsInput(e.target.value)}
-                      className="flex-1 border-2 border-slate-200 rounded-xl px-3 py-2 text-2xl font-black text-slate-900 focus:outline-none focus:border-orange-400 transition-colors tabular-nums"/>
+                      className="flex-1 border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none focus:border-orange-400 transition-colors tabular-nums"/>
                     {qtyMode==='weight'&&(
                       <div className="flex flex-col gap-1">
                         {(['ton','kg'] as WeightUnit[]).map(u=>(
