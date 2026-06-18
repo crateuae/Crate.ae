@@ -1,7 +1,7 @@
 /**
  * POST /api/packaging/basket-rfq
  * Saves a food-basket quote request from the public calculator.
- * Stores in packaging_plans (mode='basket_rfq') and emails the admin.
+ * Stores in packaging_plans (mode='basket_mix') and emails + WhatsApps the admin.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   const { data: row, error } = await supabase
     .from('packaging_plans')
     .insert({
-      mode: 'basket_rfq',
+      mode: 'basket_mix',
       input_data: {
         contact_name, contact_company, contact_email, contact_phone,
         basket_count, total_weight_kg, price_known,
@@ -142,6 +142,21 @@ export async function POST(req: NextRequest) {
 </div>
 </body></html>`,
   }).catch(e => console.error('admin email error:', e))
+
+  // ── 3. WhatsApp notification via CallMeBot ──────────────────────────────────
+  const waPhone  = (process.env.ADMIN_WHATSAPP ?? '971589912609').replace(/\D/g, '')
+  const waApiKey = process.env.CALLMEBOT_API_KEY
+  if (waPhone && waApiKey) {
+    const msg = encodeURIComponent(
+      `🧺 طلب سلة غذائية جديد — Crate.ae\n` +
+      `👤 ${contact_name || 'زائر'}${contact_company ? ' | ' + contact_company : ''}\n` +
+      `📦 ${basket_count} سلة\n` +
+      `📞 ${contact_phone || '—'}\n` +
+      `📧 ${contact_email || '—'}`
+    )
+    fetch(`https://api.callmebot.com/whatsapp.php?phone=${waPhone}&text=${msg}&apikey=${waApiKey}`)
+      .catch(e => console.error('callmebot error:', e))
+  }
 
   return NextResponse.json({ success: true, rfq_id: row?.id })
 }

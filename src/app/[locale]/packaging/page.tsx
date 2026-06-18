@@ -850,7 +850,7 @@ function BasketCalculator({ isAr, masterCartons }: { isAr: boolean; masterCarton
   const [cL, setCL] = useState(''); const [cW, setCW] = useState(''); const [cH, setCH] = useState('')
   const [cCost, setCCost] = useState(''); const [cName, setCName] = useState('')
   const [priceUnknown, setPriceUnknown] = useState(true)
-  const [actionOpen, setActionOpen] = useState(false)
+  const [actionOpen, setActionOpen] = useState(true)
   const [contact, setContact] = useState({ name:'', company:'', email:'', phone:'' })
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted]   = useState(false)
@@ -984,8 +984,8 @@ ${hasCost
 
   async function submitAndDownload() {
     if (!calc||!carton) return
-    if (!contact.name || (!contact.email && !contact.phone)) {
-      setSubmitErr(isAr?'الاسم وطريقة تواصل واحدة مطلوبة':'Name and one contact method required')
+    if (!contact.name || !contact.email || !contact.phone) {
+      setSubmitErr(isAr?'الاسم والبريد الإلكتروني ورقم الهاتف مطلوبة':'Name, email and phone are required')
       return
     }
     setSubmitting(true); setSubmitErr(null)
@@ -1244,10 +1244,17 @@ ${hasCost
 
         {/* ── Action card ── */}
         {submitted ? (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 text-center">
-            <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2"/>
-            <p className="font-black text-emerald-800 text-sm mb-1">{isAr?'تم إرسال طلبك!':'Request sent!'}</p>
-            <p className="text-xs text-emerald-600 mb-3">{isAr?'سيتواصل معك فريقنا قريباً':'Our team will contact you soon'}</p>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 text-center space-y-3">
+            <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto"/>
+            <div>
+              <p className="font-black text-emerald-800 text-sm mb-1">{isAr?'تم إرسال طلبك بنجاح!':'Request sent successfully!'}</p>
+              <p className="text-xs text-emerald-600 leading-relaxed">{isAr?'شكراً لك! سيتواصل معك فريقنا فور تجهيز الأسعار.':'Thank you! Our team will contact you as soon as prices are ready.'}</p>
+            </div>
+            <a href="https://wa.me/971589912609?text=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%20%D8%B4%D9%83%D8%B1%D8%A7%D9%8B%20%D9%84%D8%AA%D9%88%D8%A7%D8%B5%D9%84%D9%83%D9%85%20%D9%85%D8%B9%D9%86%D8%A7%2C%20%D9%82%D9%85%D8%AA%20%D8%A8%D8%AA%D9%82%D8%AF%D9%8A%D9%85%20%D8%B7%D9%84%D8%A8%20%D8%AA%D8%B3%D8%B9%D9%8A%D8%B1%20%D9%84%D9%83%D8%B1%D8%A7%D8%AA%D9%8A%D9%86%20%D8%A7%D9%84%D8%B3%D9%84%D8%A9%20%D8%A7%D9%84%D8%BA%D8%B0%D8%A7%D8%A6%D9%8A%D8%A9" target="_blank" rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-2.5 rounded-xl text-sm transition-colors">
+              <span>💬</span>
+              {isAr?'تواصل معنا على واتساب':'Contact us on WhatsApp'}
+            </a>
             <button onClick={()=>openPrintWindow(false)} className="w-full flex items-center justify-center gap-2 border-2 border-emerald-300 text-emerald-700 font-bold py-2.5 rounded-xl text-sm hover:bg-emerald-100 transition-colors">
               <Send className="w-4 h-4"/>
               {isAr?'تحميل نسخة المتطلبات':'Download requirements'}
@@ -1281,10 +1288,10 @@ ${hasCost
                   <p className="text-[10px] text-slate-400 leading-relaxed">{isAr?'أدخل بياناتك لإرسال طلب التسعير ونسخة المتطلبات للفريق، وتحميل نسخة للاستخدام الشخصي.':'Enter your details to send a quote request to our team and download your copy.'}</p>
                   <div className="space-y-2">
                     {[
-                      {k:'name',    ar:'الاسم *',             en:'Name *',    t:'text'},
-                      {k:'company', ar:'الشركة',              en:'Company',   t:'text'},
-                      {k:'email',   ar:'البريد الإلكتروني',   en:'Email',     t:'email'},
-                      {k:'phone',   ar:'الهاتف / واتساب',     en:'Phone / WhatsApp', t:'text'},
+                      {k:'name',    ar:'الاسم *',                    en:'Name *',          t:'text'},
+                      {k:'company', ar:'الشركة',                     en:'Company',          t:'text'},
+                      {k:'email',   ar:'البريد الإلكتروني *',        en:'Email *',          t:'email'},
+                      {k:'phone',   ar:'الهاتف / واتساب *',          en:'Phone / WhatsApp *', t:'text'},
                     ].map(f=>(
                       <input key={f.k} type={f.t} value={contact[f.k as keyof typeof contact]}
                         onChange={e=>setContact({...contact,[f.k]:e.target.value})}

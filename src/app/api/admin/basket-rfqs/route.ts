@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await db
     .from('packaging_plans')
     .select('id, created_at, input_data, output_data')
-    .eq('mode', 'basket_rfq')
+    .eq('mode', 'basket_mix')
     .order('created_at', { ascending: false })
     .limit(limit)
 
