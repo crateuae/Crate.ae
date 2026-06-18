@@ -102,3 +102,5 @@ insert into packaging_options (label_ar,label_en,carton_mult,per_unit_add,setup_
   ('مقاوم للرطوبة','Moisture Resistant',1.08,0,0,40),
   ('طباعة مخصصة (لوغو/ليبل)','Custom Print',1.15,0.08,1200,50)
 on conflict do nothing;
+-- Run this in Supabase SQL Editor if tables already exist
+ALTER TABLE packaging_master_cartons ADD COLUMN IF NOT EXISTS image_url text DEFAULT NULL;

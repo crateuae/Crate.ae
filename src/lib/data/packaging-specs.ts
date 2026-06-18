@@ -45,6 +45,7 @@ export interface MasterCarton {
   flute_ar: string
   flute_en: string
   cost_aed: number
+  image_url?: string | null
   suitable_for_ar?: string
   suitable_for_en?: string
   is_active?: boolean

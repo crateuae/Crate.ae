@@ -19,6 +19,7 @@ interface MasterCarton {
   l_cm: number; w_cm: number; h_cm: number
   max_weight_kg: number; default_units: number; cartons_per_pallet: number
   flute_ar: string; flute_en: string; cost_aed: number
+  image_url: string
   suitable_for_ar: string; suitable_for_en: string
   is_active: boolean; sort_order: number
 }
@@ -47,6 +48,7 @@ const EMPTY_CARTON: MasterCarton = {
   l_cm:0, w_cm:0, h_cm:0,
   max_weight_kg:0, default_units:12, cartons_per_pallet:40,
   flute_ar:'', flute_en:'', cost_aed:0,
+  image_url:'',
   suitable_for_ar:'', suitable_for_en:'',
   is_active:true, sort_order:0,
 }
@@ -310,7 +312,13 @@ function CartonsTab({ cartons, onAdd, onEdit, onDelete }: {
               <div className="flex justify-between"><span className="text-gray-400">النوع</span><span className="font-semibold">{c.flute_ar}</span></div>
               <div className="flex justify-between"><span className="text-gray-400">التكلفة</span><span className="font-bold text-indigo-500">{c.cost_aed} AED</span></div>
             </div>
-            {c.suitable_for_ar && <div className="mt-3 pt-3 border-t border-gray-100 text-[10px] text-gray-400">{c.suitable_for_ar}</div>}
+            {c.image_url && (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <img src={c.image_url} alt={c.name_ar}
+                  className="w-full h-28 object-contain rounded-xl bg-gray-50" />
+              </div>
+            )}
+            {c.suitable_for_ar && <div className="mt-2 text-[10px] text-gray-400">{c.suitable_for_ar}</div>}
           </div>
         ))}
       </div>
@@ -492,6 +500,18 @@ function CartonForm({ item, onChange, onSave, saving }: {
       </div>
       <Field label="التكلفة (AED)">
         <input type="number" step="0.1" value={item.cost_aed} onChange={e => set('cost_aed', +e.target.value)} className={numInp} dir="ltr" />
+      </Field>
+      <Field label="رابط صورة الكرتون (اختياري)">
+        <input value={item.image_url ?? ''} onChange={e => set('image_url', e.target.value)}
+          dir="ltr" placeholder="https://..." className={inp} />
+        {item.image_url && (
+          <div className="mt-2 relative">
+            <img src={item.image_url} alt="preview"
+              className="w-full h-32 object-contain rounded-xl bg-gray-50 border border-gray-200" />
+            <button type="button" onClick={() => set('image_url', '')}
+              className="absolute top-1 end-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[11px] font-bold leading-none">×</button>
+          </div>
+        )}
       </Field>
       <Field label="مناسب لـ (AR)">
         <input value={item.suitable_for_ar} onChange={e => set('suitable_for_ar', e.target.value)} className={inp} />
