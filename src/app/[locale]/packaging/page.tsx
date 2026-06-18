@@ -845,11 +845,11 @@ function BasketCalculator({ isAr, masterCartons }: { isAr: boolean; masterCarton
     { id: '2', name: isAr ? 'زيت' : 'Oil',  brand: '', weightKg: 1.8, qty: 1 },
   ])
   const [basketCount, setBasketCount] = useState('1000')
-  const [cartonMode, setCartonMode]   = useState<'db'|'custom'>('custom')
+  const [cartonMode, setCartonMode]   = useState<'db'|'custom'>('db')
   const [selCarton,  setSelCarton]    = useState<MasterCarton|null>(null)
-  const [cL, setCL] = useState('49'); const [cW, setCW] = useState('41.5'); const [cH, setCH] = useState('39')
-  const [cCost, setCCost] = useState('15'); const [cName, setCName] = useState('')
-  const [priceUnknown, setPriceUnknown] = useState(false)
+  const [cL, setCL] = useState(''); const [cW, setCW] = useState(''); const [cH, setCH] = useState('')
+  const [cCost, setCCost] = useState(''); const [cName, setCName] = useState('')
+  const [priceUnknown, setPriceUnknown] = useState(true)
   const [actionOpen, setActionOpen] = useState(false)
   const [contact, setContact] = useState({ name:'', company:'', email:'', phone:'' })
   const [submitting, setSubmitting] = useState(false)
@@ -864,7 +864,11 @@ function BasketCalculator({ isAr, masterCartons }: { isAr: boolean; masterCarton
   const baskets = parseInt(basketCount)||0
 
   const carton = useMemo<MasterCarton|null>(()=>{
-    if (cartonMode==='db') return selCarton
+    if (cartonMode==='db') {
+      if (!selCarton) return null
+      const cost = priceUnknown ? 0 : (parseFloat(cCost) || Number(selCarton.cost_aed) || 0)
+      return { ...selCarton, cost_aed: cost }
+    }
     const l=parseFloat(cL)||0, w=parseFloat(cW)||0, h=parseFloat(cH)||0
     const cost = priceUnknown ? 0 : (parseFloat(cCost)||0)
     if (!l||!w||!h) return null
@@ -1114,22 +1118,6 @@ ${hasCost
                     ))}
                   </div>
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 mb-1.5 block">{isAr?'سعر الكرتون الواحد (AED)':'Price per carton (AED)'}</label>
-                  <div className="flex items-center gap-2">
-                    <input type="number" min="0" step="0.5" value={cCost} dir="ltr" disabled={priceUnknown}
-                      onChange={e=>setCCost(e.target.value)}
-                      className="flex-1 border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:border-orange-400 tabular-nums disabled:opacity-40 disabled:bg-slate-50"/>
-                    <button onClick={()=>setPriceUnknown(p=>!p)}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 text-xs font-bold flex-shrink-0 transition-colors ${priceUnknown?'border-orange-500 bg-orange-50 text-orange-700':'border-slate-200 text-slate-400 hover:border-slate-300'}`}>
-                      <span className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center flex-shrink-0 ${priceUnknown?'bg-orange-500 border-orange-500':'border-slate-300'}`}>
-                        {priceUnknown&&<span className="text-white text-[9px] font-black">✓</span>}
-                      </span>
-                      {isAr?'لا أعلم السعر':'Price unknown'}
-                    </button>
-                  </div>
-                  {priceUnknown && <p className="text-[10px] text-orange-600 mt-1">{isAr?'سيظهر في الملف: مطلوب عرض سعر من المورد':'PDF will show: price quote required'}</p>}
-                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1157,6 +1145,30 @@ ${hasCost
                 })}
               </div>
             )}
+            {/* Price toggle — shown in both modes */}
+            <div className="mt-3 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[10px] font-bold text-slate-400">{isAr?'سعر الكرتون':'Carton price'}</label>
+                <button onClick={()=>setPriceUnknown(p=>!p)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-2 text-[10px] font-bold transition-colors ${!priceUnknown?'border-emerald-400 bg-emerald-50 text-emerald-700':'border-slate-200 text-slate-400 hover:border-slate-300'}`}>
+                  <span className={`w-3 h-3 rounded border-2 flex items-center justify-center flex-shrink-0 ${!priceUnknown?'bg-emerald-500 border-emerald-500':'border-slate-300'}`}>
+                    {!priceUnknown&&<span className="text-white text-[8px] font-black">✓</span>}
+                  </span>
+                  {isAr?'أعلم السعر':'I know the price'}
+                </button>
+              </div>
+              {priceUnknown ? (
+                <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">
+                  <span className="text-orange-400 text-sm">💬</span>
+                  <p className="text-[11px] text-orange-700 font-medium">{isAr?'سيظهر في الملف: مطلوب عرض سعر من المورد':'PDF will show: price quote required from supplier'}</p>
+                </div>
+              ) : (
+                <input type="number" min="0" step="0.5" value={cCost} dir="ltr"
+                  onChange={e=>setCCost(e.target.value)}
+                  placeholder={isAr?'أدخل السعر يدوياً...':'Enter price manually...'}
+                  className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:border-orange-400 tabular-nums"/>
+              )}
+            </div>
           </div>
         </div>
 
