@@ -306,7 +306,7 @@ function CartonsTab({ cartons, onAdd, onEdit, onDelete }: {
               <div className="flex justify-between"><span className="text-gray-400">الأبعاد</span><span className="font-semibold tabular-nums">{c.l_cm}×{c.w_cm}×{c.h_cm} سم</span></div>
               <div className="flex justify-between"><span className="text-gray-400">وزن أقصى</span><span className="font-semibold">{c.max_weight_kg} كجم</span></div>
               <div className="flex justify-between"><span className="text-gray-400">وحدة/كرتون</span><span className="font-semibold">{c.default_units}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400">كرتون/طبليّة</span><span className="font-semibold">{c.cartons_per_pallet}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400">كرتون/باليت</span><span className="font-semibold">{c.cartons_per_pallet}</span></div>
               <div className="flex justify-between"><span className="text-gray-400">النوع</span><span className="font-semibold">{c.flute_ar}</span></div>
               <div className="flex justify-between"><span className="text-gray-400">التكلفة</span><span className="font-bold text-indigo-500">{c.cost_aed} AED</span></div>
             </div>
@@ -478,7 +478,7 @@ function CartonForm({ item, onChange, onSave, saving }: {
         <Field label="وحدة/كرتون">
           <input type="number" value={item.default_units} onChange={e => set('default_units', +e.target.value)} className={numInp} dir="ltr" />
         </Field>
-        <Field label="كرتون/طبليّة">
+        <Field label="كرتون/باليت">
           <input type="number" value={item.cartons_per_pallet} onChange={e => set('cartons_per_pallet', +e.target.value)} className={numInp} dir="ltr" />
         </Field>
       </div>

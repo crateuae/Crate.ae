@@ -21,6 +21,10 @@ export interface PrimaryPack {
   cost_aed: number            // approx cost per empty primary unit (material + label + seal)
   material_ar: string
   material_en: string
+  suitable_for_ar?: string
+  suitable_for_en?: string
+  is_active?: boolean
+  sort_order?: number
 }
 
 // ─── Master cartons (the shipping/storage carton) ────────────────────────────
@@ -41,6 +45,10 @@ export interface MasterCarton {
   flute_ar: string
   flute_en: string
   cost_aed: number
+  suitable_for_ar?: string
+  suitable_for_en?: string
+  is_active?: boolean
+  sort_order?: number
 }
 
 // ─── Packaging options / specs (toggles that modify cost) ────────────────────
@@ -55,6 +63,8 @@ export interface PackagingOption {
   per_unit_add: number
   /** one-time setup fee (AED) — e.g. print plates */
   setup_aed: number
+  is_active?: boolean
+  sort_order?: number
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
