@@ -521,32 +521,32 @@ function CartonsCalculator({ isAr, primaryPacks, masterCartons, packagingOptions
 
             {/* Step 3 — carton */}
             <Step n={3} title={isAr?'كرتون الشحن والتخزين':'Master carton'} done={!!carton}>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {masterCartons.map((mc,idx)=>{
                   const sel = carton?.id===mc.id
                   const tint  = CARTON_TINTS[idx%CARTON_TINTS.length]
                   const stk   = CARTON_STROKES[idx%CARTON_STROKES.length]
                   return (
                     <button key={mc.id} onClick={()=>setCarton(mc)}
-                      className={`relative flex flex-col text-start rounded-2xl border-2 transition-all bg-white overflow-hidden ${sel?'border-orange-500 shadow-md':'border-slate-200 hover:border-orange-300 hover:shadow-sm'}`}>
-                      {sel&&<div className="absolute top-2 end-2 z-10 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center shadow"><div className="w-2 h-2 rounded-full bg-white"/></div>}
+                      className={`relative flex flex-row ${isAr?'flex-row-reverse':''} text-start rounded-2xl border-2 transition-all bg-white overflow-hidden ${sel?'border-orange-500 shadow-md':'border-slate-200 hover:border-orange-300 hover:shadow-sm'}`}>
+                      {sel&&<div className={`absolute top-2 ${isAr?'start-2':'end-2'} z-10 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center shadow`}><div className="w-2 h-2 rounded-full bg-white"/></div>}
 
-                      {/* Image area */}
-                      <div className={`w-full flex items-center justify-center p-3 ${mc.image_url?'bg-slate-50':'bg-slate-50'}`} style={{aspectRatio:'4/3'}}>
+                      {/* Image area — square left (en) / right (ar) */}
+                      <div className="flex-shrink-0 w-28 bg-slate-50 flex items-center justify-center p-2">
                         {mc.image_url?(
                           <img src={resolveImageUrl(mc.image_url)} alt={isAr?mc.name_ar:mc.name_en}
                             className="w-full h-full object-contain"/>
                         ):(
-                          <CartonSvg size={56} tint={tint} stroke={stk}/>
+                          <CartonSvg size={52} tint={tint} stroke={stk}/>
                         )}
                       </div>
 
                       {/* Info area */}
-                      <div className="px-3 py-2.5 border-t border-slate-100">
-                        <div className="font-black text-slate-900 text-xs leading-tight mb-1.5">{isAr?mc.name_ar:mc.name_en}</div>
+                      <div className={`flex-1 px-3 py-3 ${isAr?'border-r':'border-l'} border-slate-100 flex flex-col justify-center`}>
+                        <div className="font-black text-slate-900 text-sm leading-tight mb-1">{isAr?mc.name_ar:mc.name_en}</div>
                         <div className="text-[10px] text-slate-400 tabular-nums">{mc.l_cm}×{mc.w_cm}×{mc.h_cm} cm</div>
-                        <div className="text-[10px] text-slate-400 mb-1">{isAr?`حتى ${mc.max_weight_kg}كجم`:`up to ${mc.max_weight_kg}kg`}</div>
-                        <div className="text-xs font-black text-orange-500">{Number(mc.cost_aed).toFixed(1)} AED</div>
+                        <div className="text-[10px] text-slate-400 mb-1.5">{isAr?`حتى ${mc.max_weight_kg}كجم`:`up to ${mc.max_weight_kg}kg`}</div>
+                        <div className="text-sm font-black text-orange-500">{Number(mc.cost_aed).toFixed(1)} AED</div>
                       </div>
                     </button>
                   )
