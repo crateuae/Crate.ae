@@ -839,7 +839,14 @@ function calcBoxesPerPallet(l: number, w: number, h: number): number {
   return Math.max(a, b, 1) * layers
 }
 
+// weight formatter: ≥1000 kg → طن, else kg
+function fmtW(kg: number): string {
+  if (kg >= 1000) return `${(kg/1000).toFixed(2)} طن`
+  return `${kg.toFixed(1)} kg`
+}
+
 function BasketCalculator({ isAr, masterCartons }: { isAr: boolean; masterCartons: MasterCarton[] }) {
+  const [cartonOnly, setCartonOnly]   = useState(false)
   const [items, setItems] = useState<BasketItem[]>([
     { id: '1', name: isAr ? 'أرز' : 'Rice', brand: '', weightKg: 2, qty: 1 },
     { id: '2', name: isAr ? 'زيت' : 'Oil',  brand: '', weightKg: 1.8, qty: 1 },
@@ -849,6 +856,7 @@ function BasketCalculator({ isAr, masterCartons }: { isAr: boolean; masterCarton
   const [selCarton,  setSelCarton]    = useState<MasterCarton|null>(null)
   const [cL, setCL] = useState(''); const [cW, setCW] = useState(''); const [cH, setCH] = useState('')
   const [cCost, setCCost] = useState(''); const [cName, setCName] = useState('')
+  const [cEmptyW, setCEmptyW] = useState('')  // custom carton empty weight kg
   const [priceUnknown, setPriceUnknown] = useState(true)
   const [actionOpen, setActionOpen] = useState(true)
   const [contact, setContact] = useState({ name:'', company:'', email:'', phone:'' })
@@ -860,7 +868,9 @@ function BasketCalculator({ isAr, masterCartons }: { isAr: boolean; masterCarton
   function delItem(id:string) { setItems(p=>p.filter(i=>i.id!==id)) }
   function upd(id:string, f:keyof BasketItem, v:string|number) { setItems(p=>p.map(i=>i.id===id?{...i,[f]:v}:i)) }
 
-  const totalW = useMemo(()=>items.reduce((s,i)=>s+(i.weightKg||0)*(i.qty||0),0),[items])
+  const totalW = useMemo(()=>
+    cartonOnly ? 0 : items.reduce((s,i)=>s+(i.weightKg||0)*(i.qty||0),0)
+  ,[items, cartonOnly])
   const baskets = parseInt(basketCount)||0
 
   const carton = useMemo<MasterCarton|null>(()=>{
@@ -874,8 +884,16 @@ function BasketCalculator({ isAr, masterCartons }: { isAr: boolean; masterCarton
     if (!l||!w||!h) return null
     return { id:'custom', l_cm:l, w_cm:w, h_cm:h, cost_aed:cost,
              name_ar: cName||'كرتون مخصص', name_en: cName||'Custom carton',
-             max_weight_kg:50 } as unknown as MasterCarton
-  },[cartonMode,selCarton,cL,cW,cH,cCost,cName,priceUnknown])
+             max_weight_kg:50,
+             empty_weight_kg: parseFloat(cEmptyW)||null,
+           } as unknown as MasterCarton
+  },[cartonMode,selCarton,cL,cW,cH,cCost,cName,priceUnknown,cEmptyW])
+
+  // empty_weight_kg from selected carton or custom input
+  const cartonEmptyW = carton
+    ? ((carton as unknown as {empty_weight_kg?:number|null}).empty_weight_kg ?? null)
+    : null
+  const totalEmptyW  = (cartonEmptyW && baskets) ? cartonEmptyW * baskets : null
 
   const calc = useMemo(()=>{
     if (!carton||!baskets) return null
@@ -899,8 +917,74 @@ function BasketCalculator({ isAr, masterCartons }: { isAr: boolean; masterCarton
         <td style="text-align:center;font-weight:700;direction:ltr">${(i.weightKg*i.qty).toFixed(2)} kg</td>
        </tr>`
     ).join('')
-    const hasCost = !priceUnknown && calc.cost !== null
-    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8">
+    const hasCost   = !priceUnknown && calc.cost !== null
+    const loadMin   = cartonOnly ? (carton as unknown as {max_weight_kg?:number}).max_weight_kg || 30 : Math.ceil(totalW * 1.15)
+    const emptyWKg  = (carton as unknown as {empty_weight_kg?:number|null}).empty_weight_kg ?? null
+    const totalEW   = emptyWKg && baskets ? emptyWKg * baskets : null
+    const footer    = `<div style="border-top:1px solid #f1f5f9;padding-top:10px;margin-top:20px;font-size:10px;color:#94a3b8;display:flex;justify-content:center;gap:20px;flex-wrap:wrap">
+  <span>&#128222; +971 543 000 415</span>
+  <span>&#9993; uae@crate.ae</span>
+  <span>&#127760; crate.ae</span>
+</div>`
+
+    const html = cartonOnly
+    ? `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8">
+<title>طلب تسعير كرتون - ${ref}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;padding:32px;direction:rtl;max-width:750px;margin:0 auto}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #f97316;padding-bottom:16px;margin-bottom:20px}
+h2{font-size:13px;font-weight:800;color:#f97316;margin:18px 0 8px;border-bottom:1px solid #f1f5f9;padding-bottom:5px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+td{padding:8px 10px;border-bottom:1px solid #f1f5f9}
+.rfq-box{background:#f0fdf4;border:2px solid #bbf7d0;border-radius:10px;padding:14px;text-align:center;margin:14px 0}
+@media print{body{padding:16px}}</style></head><body>
+<div class="hdr">
+  <div>
+    <div style="font-size:22px;font-weight:900;color:#f97316">Crate.ae</div>
+    <div style="font-size:11px;color:#64748b;margin-top:2px">حلول التجهيز والتعبئة والتغليف</div>
+  </div>
+  <div style="text-align:left;font-size:12px;color:#64748b;line-height:1.8">
+    <div style="font-size:15px;font-weight:800;color:#1e293b;margin-bottom:4px">طلب تسعير كرتون</div>
+    <div>التاريخ: ${date}</div>
+    <div>Ref: ${ref}</div>
+  </div>
+</div>
+${showContact && contact.name ? `<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;line-height:1.8">
+  <strong>العميل:</strong> ${contact.name}${contact.company?' — '+contact.company:''}
+  ${contact.email?'<br><strong>البريد:</strong> '+contact.email:''}
+  ${contact.phone?'<br><strong>الهاتف:</strong> '+contact.phone:''}
+</div>` : ''}
+<h2>مواصفات الكرتون</h2>
+<table><tbody>
+<tr><td style="font-weight:700;width:200px">الاسم</td><td>${carton.name_ar}</td></tr>
+<tr><td style="font-weight:700">الأبعاد الداخلية</td><td style="direction:ltr;text-align:right">${Math.round(carton.l_cm*10)} × ${Math.round(carton.w_cm*10)} × ${Math.round(carton.h_cm*10)} mm (L×W×H)</td></tr>
+${emptyWKg ? `<tr><td style="font-weight:700">وزن الكرتون الفارغ</td><td style="direction:ltr;text-align:right">${emptyWKg} kg</td></tr>` : ''}
+<tr><td style="font-weight:700">تحمل الوزن الأدنى</td><td style="direction:ltr;text-align:right">≥ ${loadMin} kg</td></tr>
+${hasCost ? `<tr><td style="font-weight:700">سعر الكرتون</td><td style="direction:ltr;text-align:right">${Number(carton.cost_aed).toFixed(2)} AED</td></tr>` : ''}
+</tbody></table>
+<h2>مواصفات التوريد</h2>
+<table><tbody>
+<tr><td style="font-weight:700;width:200px">أبعاد داخلية / Internal Dims</td><td style="direction:ltr;text-align:right">${Math.round(carton.l_cm*10)} × ${Math.round(carton.w_cm*10)} × ${Math.round(carton.h_cm*10)} mm</td></tr>
+<tr><td style="font-weight:700">نوع الكرتون / Type</td><td>Double Wall — خماسي الطبقات (BC Flute) RSC</td></tr>
+<tr><td style="font-weight:700">Burst Strength</td><td>≥ 200 PSI</td></tr>
+<tr><td style="font-weight:700">ECT</td><td>≥ 44 ECT</td></tr>
+<tr><td style="font-weight:700">الليناء / Liner</td><td>Kraft Liner</td></tr>
+<tr><td style="font-weight:700">الكمية / Qty</td><td style="direction:ltr;text-align:right">${baskets.toLocaleString('en-US')} قطعة</td></tr>
+${totalEW ? `<tr><td style="font-weight:700">إجمالي وزن الكراتين الفارغة</td><td style="direction:ltr;text-align:right">${totalEW >= 1000 ? (totalEW/1000).toFixed(2)+' طن' : totalEW.toFixed(1)+' kg'}</td></tr>` : ''}
+<tr><td style="font-weight:700">التعبئة / Packing</td><td>على باليتات — stretch wrap — 4 طبقات</td></tr>
+</tbody></table>
+${hasCost
+  ? `<div style="background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;border-radius:10px;padding:14px;text-align:center;margin:14px 0">
+      <div style="font-size:11px;opacity:.85">التكلفة التقريبية الإجمالية</div>
+      <div style="font-size:24px;font-weight:900;direction:ltr">${(calc.cost??0).toLocaleString('en-US')} AED</div>
+     </div>`
+  : `<div class="rfq-box">
+      <div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:3px">احصل على عرض سعر مخصص</div>
+      <div style="font-size:11px;color:#15803d">يرجى التواصل معنا لتسعير الكمية المطلوبة</div>
+     </div>`}
+${footer}
+</body></html>`
+
+    : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8">
 <title>متطلبات كرتون السلة الغذائية - ${ref}</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;padding:32px;direction:rtl}
 .hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #f97316;padding-bottom:18px;margin-bottom:24px}
@@ -914,12 +998,11 @@ td{padding:9px 12px;border-bottom:1px solid #f1f5f9}
 .sv{font-size:20px;font-weight:900;color:#f97316;direction:ltr}.sl{font-size:10px;color:#94a3b8;margin-top:3px}
 .total{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;border-radius:12px;padding:18px;text-align:center;margin:16px 0}
 .rfq-box{background:#f0fdf4;border:2px solid #bbf7d0;border-radius:12px;padding:18px;text-align:center;margin:16px 0}
-.note{font-size:10px;color:#94a3b8;margin-top:20px;text-align:center;border-top:1px solid #f1f5f9;padding-top:12px}
 @media print{body{padding:16px}}</style></head><body>
 <div class="hdr">
   <div>
     <div style="font-size:22px;font-weight:900;color:#f97316">Crate.ae</div>
-    <div style="font-size:11px;color:#64748b;margin-top:3px">أدوات التعبئة والتغليف</div>
+    <div style="font-size:11px;color:#64748b;margin-top:3px">حلول التجهيز والتعبئة والتغليف</div>
   </div>
   <div class="docinfo">
     <div style="font-size:15px;font-weight:800;color:#1e293b;margin-bottom:4px">متطلبات كرتون السلة الغذائية</div>
@@ -943,7 +1026,8 @@ ${showContact && contact.name ? `<div style="background:#f0f9ff;border:1px solid
 <table><tbody>
 <tr><td style="font-weight:700;width:200px">الاسم</td><td>${carton.name_ar}</td></tr>
 <tr><td style="font-weight:700">الأبعاد الداخلية</td><td style="direction:ltr;text-align:right">${Math.round(carton.l_cm*10)} × ${Math.round(carton.w_cm*10)} × ${Math.round(carton.h_cm*10)} mm (L×W×H)</td></tr>
-<tr><td style="font-weight:700">تحمل الوزن الأدنى</td><td style="direction:ltr;text-align:right">≥ ${Math.ceil(totalW*1.15)} kg</td></tr>
+${emptyWKg ? `<tr><td style="font-weight:700">وزن الكرتون الفارغ</td><td style="direction:ltr;text-align:right">${emptyWKg} kg</td></tr>` : ''}
+<tr><td style="font-weight:700">تحمل الوزن الأدنى</td><td style="direction:ltr;text-align:right">≥ ${loadMin} kg</td></tr>
 ${hasCost ? `<tr><td style="font-weight:700">سعر الكرتون</td><td style="direction:ltr;text-align:right">${Number(carton.cost_aed).toFixed(2)} AED</td></tr>` : ''}
 </tbody></table>
 <h2>نتائج الحساب</h2>
@@ -951,7 +1035,8 @@ ${hasCost ? `<tr><td style="font-weight:700">سعر الكرتون</td><td style
 <div class="stat"><div class="sv">${baskets.toLocaleString('en-US')}</div><div class="sl">كرتون مطلوب</div></div>
 <div class="stat"><div class="sv">${calc.pals.toLocaleString('en-US')}</div><div class="sl">باليت</div></div>
 <div class="stat"><div class="sv">${calc.flr} m²</div><div class="sl">مساحة أرضية</div></div>
-<div class="stat"><div class="sv">${calc.ton.toFixed(1)} t</div><div class="sl">وزن إجمالي</div></div>
+${totalEW ? `<div class="stat"><div class="sv">${totalEW>=1000?(totalEW/1000).toFixed(2)+' طن':totalEW.toFixed(1)+' kg'}</div><div class="sl">وزن الكراتين الفارغة</div></div>` :
+`<div class="stat"><div class="sv">${calc.ton>=1?calc.ton.toFixed(2)+' طن':(calc.ton*1000).toFixed(1)+' kg'}</div><div class="sl">وزن المحتوى الإجمالي</div></div>`}
 </div>
 ${hasCost
   ? `<div class="total">
@@ -960,10 +1045,10 @@ ${hasCost
       <div style="font-size:11px;opacity:.75;margin-top:4px;direction:ltr">${baskets.toLocaleString('en-US')} × ${Number(carton.cost_aed).toFixed(2)} AED</div>
      </div>`
   : `<div class="rfq-box">
-      <div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:4px">مطلوب عرض سعر من مورد الكراتين</div>
-      <div style="font-size:11px;color:#15803d">يرجى تسعير الكمية المطلوبة وفق المواصفات أعلاه</div>
+      <div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:4px">احصل على عرض سعر مخصص</div>
+      <div style="font-size:11px;color:#15803d">يرجى التواصل معنا لتسعير الكمية المطلوبة</div>
      </div>`}
-<h2>مواصفات للمورد (Supplier Specs)</h2>
+<h2>مواصفات التوريد</h2>
 <table><tbody>
 <tr><td style="font-weight:700;width:220px">أبعاد داخلية / Internal Dims</td><td style="direction:ltr;text-align:right">${Math.round(carton.l_cm*10)} × ${Math.round(carton.w_cm*10)} × ${Math.round(carton.h_cm*10)} mm</td></tr>
 <tr><td style="font-weight:700">نوع الكرتون / Type</td><td>Double Wall — خماسي الطبقات (BC Flute) RSC</td></tr>
@@ -971,10 +1056,11 @@ ${hasCost
 <tr><td style="font-weight:700">ECT</td><td>≥ 44 ECT</td></tr>
 <tr><td style="font-weight:700">الليناء / Liner</td><td>Kraft Liner</td></tr>
 <tr><td style="font-weight:700">الكمية / Qty</td><td style="direction:ltr;text-align:right">${baskets.toLocaleString('en-US')} قطعة</td></tr>
+${totalEW ? `<tr><td style="font-weight:700">إجمالي وزن الكراتين الفارغة</td><td style="direction:ltr;text-align:right">${totalEW>=1000?(totalEW/1000).toFixed(2)+' طن':totalEW.toFixed(1)+' kg'}</td></tr>` : ''}
 <tr><td style="font-weight:700">الباليتات / Pallets</td><td style="direction:ltr;text-align:right">${calc.pals.toLocaleString('en-US')} باليت — ${calc.bpp} كرتون/باليت</td></tr>
 <tr><td style="font-weight:700">التعبئة / Packing</td><td>على باليتات — stretch wrap — 4 طبقات</td></tr>
 </tbody></table>
-<p class="note">${hasCost?'* الأسعار تقديرية · ':''}صادر عن Crate.ae · ${new Date().getFullYear()}</p>
+${footer}
 </body></html>`
     const w = window.open('','_blank')
     if (!w) return
@@ -1028,46 +1114,66 @@ ${hasCost
           <div className="flex items-center gap-2.5 px-4 py-3 border-b border-slate-100">
             <div className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-black">1</div>
             <span className="font-black text-slate-800 text-sm">{isAr?'محتويات السلة (لكل وحدة)':'Basket contents (per unit)'}</span>
+            <button onClick={()=>setCartonOnly(p=>!p)}
+              className={`ms-auto flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-bold transition-colors ${cartonOnly?'border-blue-400 bg-blue-50 text-blue-700':'border-slate-200 text-slate-400 hover:border-slate-300'}`}>
+              <span className={`w-3 h-3 rounded border-2 flex items-center justify-center flex-shrink-0 ${cartonOnly?'bg-blue-500 border-blue-500':'border-slate-300'}`}>
+                {cartonOnly&&<span className="text-white text-[8px] font-black">✓</span>}
+              </span>
+              {isAr?'تسعير الكرتون فقط':'Carton quote only'}
+            </button>
           </div>
           <div className="p-4 space-y-2">
-            {/* Header row */}
-            <div className="grid grid-cols-[1fr_1fr_80px_52px_32px] gap-2 text-[10px] font-bold text-slate-400 px-1">
-              <span>{isAr?'المنتج':'Product'}</span>
-              <span>{isAr?'البراند (اختياري)':'Brand (optional)'}</span>
-              <span className="text-center">{isAr?'وزن/وحدة kg':'Weight kg'}</span>
-              <span className="text-center">{isAr?'العدد':'Qty'}</span>
-              <span/>
-            </div>
-            {items.map((item,idx)=>(
-              <div key={item.id} className="grid grid-cols-[1fr_1fr_80px_52px_32px] gap-2 items-center">
-                <input value={item.name} onChange={e=>upd(item.id,'name',e.target.value)}
-                  placeholder={isAr?`منتج ${idx+1}`:`Item ${idx+1}`} dir={isAr?'rtl':'ltr'}
-                  className="border-2 border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-400 transition-colors"/>
-                <input value={item.brand} onChange={e=>upd(item.id,'brand',e.target.value)}
-                  placeholder={isAr?'مثال: Almarai':'e.g. Almarai'} dir={isAr?'rtl':'ltr'}
-                  className="border-2 border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-400 transition-colors text-slate-500 placeholder:text-slate-300"/>
-                <input type="number" min="0" step="0.1" value={item.weightKg||''} dir="ltr"
-                  onChange={e=>upd(item.id,'weightKg',parseFloat(e.target.value)||0)}
-                  className="border-2 border-slate-200 rounded-xl px-2 py-2 text-sm text-center font-bold focus:outline-none focus:border-orange-400 tabular-nums"/>
-                <input type="number" min="1" step="1" value={item.qty||''} dir="ltr"
-                  onChange={e=>upd(item.id,'qty',parseInt(e.target.value)||1)}
-                  className="border-2 border-slate-200 rounded-xl px-2 py-2 text-sm text-center font-bold focus:outline-none focus:border-orange-400 tabular-nums"/>
-                <button onClick={()=>delItem(item.id)} disabled={items.length===1}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-30">
-                  <span className="text-lg leading-none">×</span>
+            {cartonOnly ? (
+              <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+                <Boxes className="w-5 h-5 text-blue-400 flex-shrink-0"/>
+                <p className="text-xs text-blue-700 leading-relaxed">
+                  {isAr
+                    ? 'وضع تسعير الكرتون فقط — المنتجات غير مطلوبة. سيتضمن الطلب مواصفات الكرتون والكمية فقط.'
+                    : 'Carton-only quote mode — no products required. The request will include carton specs and quantity only.'}
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Header row */}
+                <div className="grid grid-cols-[1fr_1fr_80px_52px_32px] gap-2 text-[10px] font-bold text-slate-400 px-1">
+                  <span>{isAr?'المنتج':'Product'}</span>
+                  <span>{isAr?'البراند (اختياري)':'Brand (optional)'}</span>
+                  <span className="text-center">{isAr?'وزن/وحدة kg':'Weight kg'}</span>
+                  <span className="text-center">{isAr?'العدد':'Qty'}</span>
+                  <span/>
+                </div>
+                {items.map((item,idx)=>(
+                  <div key={item.id} className="grid grid-cols-[1fr_1fr_80px_52px_32px] gap-2 items-center">
+                    <input value={item.name} onChange={e=>upd(item.id,'name',e.target.value)}
+                      placeholder={isAr?`منتج ${idx+1}`:`Item ${idx+1}`} dir={isAr?'rtl':'ltr'}
+                      className="border-2 border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-400 transition-colors"/>
+                    <input value={item.brand} onChange={e=>upd(item.id,'brand',e.target.value)}
+                      placeholder={isAr?'مثال: Almarai':'e.g. Almarai'} dir={isAr?'rtl':'ltr'}
+                      className="border-2 border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-400 transition-colors text-slate-500 placeholder:text-slate-300"/>
+                    <input type="number" min="0" step="0.1" value={item.weightKg||''} dir="ltr"
+                      onChange={e=>upd(item.id,'weightKg',parseFloat(e.target.value)||0)}
+                      className="border-2 border-slate-200 rounded-xl px-2 py-2 text-sm text-center font-bold focus:outline-none focus:border-orange-400 tabular-nums"/>
+                    <input type="number" min="1" step="1" value={item.qty||''} dir="ltr"
+                      onChange={e=>upd(item.id,'qty',parseInt(e.target.value)||1)}
+                      className="border-2 border-slate-200 rounded-xl px-2 py-2 text-sm text-center font-bold focus:outline-none focus:border-orange-400 tabular-nums"/>
+                    <button onClick={()=>delItem(item.id)} disabled={items.length===1}
+                      className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-30">
+                      <span className="text-lg leading-none">×</span>
+                    </button>
+                  </div>
+                ))}
+                <button onClick={addItem}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border-2 border-dashed border-slate-200 text-xs font-bold text-slate-400 hover:border-orange-300 hover:text-orange-500 transition-colors">
+                  <span className="text-base leading-none">+</span>
+                  {isAr?'إضافة منتج':'Add item'}
                 </button>
-              </div>
-            ))}
-            <button onClick={addItem}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border-2 border-dashed border-slate-200 text-xs font-bold text-slate-400 hover:border-orange-300 hover:text-orange-500 transition-colors">
-              <span className="text-base leading-none">+</span>
-              {isAr?'إضافة منتج':'Add item'}
-            </button>
-            {totalW > 0 && (
-              <div className="flex items-center justify-between px-2 py-2 bg-orange-50 rounded-xl">
-                <span className="text-xs font-bold text-orange-700">{isAr?'إجمالي وزن السلة':'Total basket weight'}</span>
-                <span className="text-sm font-black text-orange-600 tabular-nums">{totalW.toFixed(2)} kg</span>
-              </div>
+                {totalW > 0 && (
+                  <div className="flex items-center justify-between px-2 py-2 bg-orange-50 rounded-xl">
+                    <span className="text-xs font-bold text-orange-700">{isAr?'إجمالي وزن السلة':'Total basket weight'}</span>
+                    <span className="text-sm font-black text-orange-600 tabular-nums">{totalW.toFixed(2)} kg</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -1126,6 +1232,20 @@ ${hasCost
                     ))}
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 mb-1 block">{isAr?'وزن الكرتون الفارغ (kg)':'Empty carton weight (kg)'}</label>
+                    <input type="number" min="0" step="0.1" value={cEmptyW} dir="ltr"
+                      onChange={e=>setCEmptyW(e.target.value)} placeholder="0.0"
+                      className="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:border-orange-400 tabular-nums"/>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 mb-1 block">{isAr?'طاقة تحمل الكرتون (kg)':'Load capacity (kg)'}</label>
+                    <input type="number" min="0" step="1" value="" dir="ltr"
+                      readOnly placeholder={isAr?'تلقائي':'Auto'}
+                      className="w-full border-2 border-slate-100 bg-slate-50 rounded-xl px-3 py-2 text-sm text-slate-400 tabular-nums cursor-default"/>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1168,7 +1288,7 @@ ${hasCost
               {priceUnknown ? (
                 <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">
                   <span className="text-orange-400 text-sm">💬</span>
-                  <p className="text-[11px] text-orange-700 font-medium">{isAr?'سيظهر في الملف: مطلوب عرض سعر من المورد':'PDF will show: price quote required from supplier'}</p>
+                  <p className="text-[11px] text-orange-700 font-medium">{isAr?'سيظهر في الملف: احصل على عرض سعر مخصص':'PDF will show: Get a custom quote'}</p>
                 </div>
               ) : (
                 <input type="number" min="0" step="0.5" value={cCost} dir="ltr"
@@ -1194,40 +1314,55 @@ ${hasCost
           <div className="p-4">
             {calc ? (
               <div className="space-y-3">
+                {/* Primary stats */}
                 <div className="grid grid-cols-2 gap-2">
-                  {[
-                    {v:fmt(baskets),              la:'كرتون مطلوب', en:'Cartons',      c:'text-orange-600'},
-                    {v:fmt(calc.pals),            la:'باليت',        en:'Pallets',      c:'text-purple-600'},
-                    {v:`${calc.flr} m²`,          la:'مساحة أرضية', en:'Floor area',   c:'text-slate-600'},
-                    {v:`${calc.ton.toFixed(1)} t`,la:'وزن إجمالي',  en:'Total weight', c:'text-blue-600'},
-                  ].map((s,i)=>(
-                    <div key={i} className="bg-slate-50 rounded-xl p-3 text-center">
-                      <div className={`text-xl font-black tabular-nums ltr ${s.c}`}>{s.v}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{isAr?s.la:s.en}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">{isAr?'توزيع الباليت':'Per pallet'}</span>
-                    <span className="font-semibold text-slate-700 tabular-nums">{calc.bpp} {isAr?'كرتون':'cartons'}</span>
+                  <div className="bg-orange-50 rounded-xl p-3 text-center">
+                    <div className="text-xl font-black tabular-nums text-orange-600" dir="ltr">{fmt(baskets)}</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">{isAr?'كرتون مطلوب':'Cartons'}</div>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">{isAr?'وزن السلة':'Basket weight'}</span>
-                    <span className="font-semibold text-slate-700 tabular-nums" dir="ltr">{totalW.toFixed(2)} kg</span>
-                  </div>
-                  {calc.cost !== null ? (
-                    <div className="border-t border-slate-100 pt-2 flex justify-between">
-                      <span className="text-xs font-bold text-slate-600">{isAr?'تكلفة الكراتين':'Carton cost'}</span>
-                      <span className="font-black text-emerald-600 tabular-nums" dir="ltr">{fmt(calc.cost)} AED</span>
+                  {totalEmptyW !== null ? (
+                    <div className="bg-slate-50 rounded-xl p-3 text-center">
+                      <div className="text-xl font-black tabular-nums text-slate-700" dir="ltr">{fmtW(totalEmptyW)}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">{isAr?'وزن الكراتين الفارغة':'Empty cartons weight'}</div>
                     </div>
                   ) : (
-                    <div className="border-t border-slate-100 pt-2 text-center">
-                      <span className="text-xs text-orange-500 font-bold">{isAr?'مطلوب عرض سعر من المورد':'Supplier quote required'}</span>
+                    <div className="bg-slate-50 rounded-xl p-3 text-center">
+                      <div className="text-[11px] font-bold text-slate-300 mt-2">{isAr?'أضف وزن الكرتون':'Add carton weight'}</div>
+                      <div className="text-[10px] text-slate-300 mt-0.5">{isAr?'لحساب الوزن الفارغ':'to calc empty weight'}</div>
                     </div>
                   )}
                 </div>
-                <p className="text-[10px] text-slate-300">{isAr?'* أسعار تقريبية':'* Approximate prices'}</p>
+
+                {/* Cost line */}
+                {calc.cost !== null ? (
+                  <div className="flex justify-between items-center bg-emerald-50 rounded-xl px-3 py-2.5">
+                    <span className="text-xs font-bold text-emerald-700">{isAr?'تكلفة الكراتين':'Carton cost'}</span>
+                    <span className="font-black text-emerald-600 tabular-nums text-sm" dir="ltr">{fmt(calc.cost)} AED</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 bg-orange-50 rounded-xl px-3 py-2.5">
+                    <span className="text-orange-400 text-sm">◎</span>
+                    <span className="text-xs text-orange-600 font-bold">{isAr?'احصل على عرض سعر مخصص':'Get a custom quote'}</span>
+                  </div>
+                )}
+
+                {/* Additional notes */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5">
+                  <p className="text-[10px] font-black text-slate-500 mb-2">{isAr?'ملاحظات إضافية':'Additional notes'}</p>
+                  {[
+                    {la:'توزيع الباليت',  en:'Per pallet',     v:`${calc.bpp} ${isAr?'كرتون':'cartons'}`},
+                    {la:'عدد الباليتات', en:'Pallets',         v:fmt(calc.pals)},
+                    {la:'مساحة أرضية',  en:'Floor area',      v:`${calc.flr} m²`},
+                    ...(!cartonOnly && totalW > 0 ? [{la:'وزن محتوى السلة', en:'Basket content weight', v:fmtW(totalW)}] : []),
+                    ...(!cartonOnly && calc.ton > 0 ? [{la:'إجمالي وزن المحتوى', en:'Total content weight', v:fmtW(calc.ton*1000)}] : []),
+                    {la:'تعبئة الشحن',   en:'Packing method',  v:'Stretch wrap · 4 طبقات'},
+                  ].map((r,i)=>(
+                    <div key={i} className="flex justify-between text-xs">
+                      <span className="text-slate-400">{isAr?r.la:r.en}</span>
+                      <span className="font-semibold text-slate-700 tabular-nums" dir="ltr">{r.v}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="py-8 text-center">
