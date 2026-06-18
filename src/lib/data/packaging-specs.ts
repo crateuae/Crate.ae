@@ -23,20 +23,6 @@ export interface PrimaryPack {
   material_en: string
 }
 
-export const PRIMARY_PACKS: PrimaryPack[] = [
-  { id: 'pp-bag-100g', type: 'bag', type_ar: 'كيس', type_en: 'Bag', icon: '👜', size_label: '100g', size_value: 0.1, unit: 'kg', cost_aed: 0.25, material_ar: 'بولي بروبيلين / لامينيت', material_en: 'PP / Laminate' },
-  { id: 'pp-bag-250g', type: 'bag', type_ar: 'كيس', type_en: 'Bag', icon: '👜', size_label: '250g', size_value: 0.25, unit: 'kg', cost_aed: 0.30, material_ar: 'بولي بروبيلين / لامينيت', material_en: 'PP / Laminate' },
-  { id: 'pp-bag-500g', type: 'bag', type_ar: 'كيس', type_en: 'Bag', icon: '👜', size_label: '500g', size_value: 0.5, unit: 'kg', cost_aed: 0.40, material_ar: 'بولي بروبيلين منسوج', material_en: 'PP Woven' },
-  { id: 'pp-bag-1kg',  type: 'bag', type_ar: 'كيس', type_en: 'Bag', icon: '🛍️', size_label: '1kg',  size_value: 1,   unit: 'kg', cost_aed: 0.55, material_ar: 'بولي بروبيلين منسوج', material_en: 'PP Woven' },
-  { id: 'pp-bag-2kg',  type: 'bag', type_ar: 'كيس', type_en: 'Bag', icon: '🛍️', size_label: '2kg',  size_value: 2,   unit: 'kg', cost_aed: 0.75, material_ar: 'بولي بروبيلين منسوج', material_en: 'PP Woven' },
-  { id: 'pp-bag-5kg',  type: 'bag', type_ar: 'كيس', type_en: 'Bag', icon: '🛍️', size_label: '5kg',  size_value: 5,   unit: 'kg', cost_aed: 1.30, material_ar: 'بولي بروبيلين منسوج', material_en: 'PP Woven' },
-  { id: 'pp-bag-10kg', type: 'bag', type_ar: 'كيس', type_en: 'Bag', icon: '🧺', size_label: '10kg', size_value: 10,  unit: 'kg', cost_aed: 2.00, material_ar: 'بولي بروبيلين منسوج', material_en: 'PP Woven' },
-  { id: 'pp-bot-500',  type: 'bottle', type_ar: 'زجاجة', type_en: 'Bottle', icon: '🍶', size_label: '500ml', size_value: 0.5, unit: 'L', cost_aed: 1.00, material_ar: 'PET', material_en: 'PET' },
-  { id: 'pp-bot-1l',   type: 'bottle', type_ar: 'زجاجة', type_en: 'Bottle', icon: '🍶', size_label: '1L',  size_value: 1, unit: 'L', cost_aed: 1.50, material_ar: 'PET', material_en: 'PET' },
-  { id: 'pp-jar-500',  type: 'jar', type_ar: 'برطمان', type_en: 'Jar', icon: '🫙', size_label: '500g', size_value: 0.5, unit: 'kg', cost_aed: 1.60, material_ar: 'PET / زجاج', material_en: 'PET / Glass' },
-  { id: 'pp-box-1kg',  type: 'box', type_ar: 'علبة', type_en: 'Box', icon: '📦', size_label: '1kg', size_value: 1, unit: 'kg', cost_aed: 2.80, material_ar: 'كرتون مطبوع', material_en: 'Printed carton' },
-]
-
 // ─── Master cartons (the shipping/storage carton) ────────────────────────────
 
 export interface MasterCarton {
@@ -57,13 +43,6 @@ export interface MasterCarton {
   cost_aed: number
 }
 
-export const MASTER_CARTONS: MasterCarton[] = [
-  { id: 'mc-s', name_ar: 'كرتون صغير', name_en: 'Small Carton', icon: '📦', l_cm: 30, w_cm: 20, h_cm: 15, max_weight_kg: 12, default_units: 12, cartons_per_pallet: 80, flute_ar: 'مموج B (جدار مفرد)', flute_en: 'B-flute (single wall)', cost_aed: 3.5 },
-  { id: 'mc-m', name_ar: 'كرتون متوسط', name_en: 'Medium Carton', icon: '📦', l_cm: 40, w_cm: 30, h_cm: 20, max_weight_kg: 20, default_units: 24, cartons_per_pallet: 50, flute_ar: 'مموج C (جدار مفرد)', flute_en: 'C-flute (single wall)', cost_aed: 5.0 },
-  { id: 'mc-l', name_ar: 'كرتون كبير', name_en: 'Large Carton', icon: '🗃️', l_cm: 60, w_cm: 40, h_cm: 30, max_weight_kg: 30, default_units: 48, cartons_per_pallet: 30, flute_ar: 'مموج BC (جدار مزدوج)', flute_en: 'BC-flute (double wall)', cost_aed: 8.0 },
-  { id: 'mc-xl', name_ar: 'كرتون كبير جداً', name_en: 'XL Carton', icon: '🗃️', l_cm: 60, w_cm: 40, h_cm: 40, max_weight_kg: 40, default_units: 60, cartons_per_pallet: 24, flute_ar: 'مموج BC (جدار مزدوج)', flute_en: 'BC-flute (double wall)', cost_aed: 10.5 },
-]
-
 // ─── Packaging options / specs (toggles that modify cost) ────────────────────
 
 export interface PackagingOption {
@@ -77,14 +56,6 @@ export interface PackagingOption {
   /** one-time setup fee (AED) — e.g. print plates */
   setup_aed: number
 }
-
-export const PACKAGING_OPTIONS: PackagingOption[] = [
-  { id: 'double-wall',  label_ar: 'جدار مزدوج (Double Wall)',     label_en: 'Double Wall',        carton_mult: 1.30, per_unit_add: 0,    setup_aed: 0 },
-  { id: 'recyclable',   label_ar: '100% قابل لإعادة التدوير',     label_en: '100% Recyclable',    carton_mult: 1.10, per_unit_add: 0,    setup_aed: 0 },
-  { id: 'food-grade',   label_ar: 'مبطّن غذائي (Food Grade)',     label_en: 'Food-Grade Liner',   carton_mult: 1.05, per_unit_add: 0.05, setup_aed: 0 },
-  { id: 'moisture',     label_ar: 'مقاوم للرطوبة',                label_en: 'Moisture Resistant', carton_mult: 1.08, per_unit_add: 0,    setup_aed: 0 },
-  { id: 'custom-print', label_ar: 'طباعة مخصصة (لوغو/ليبل)',      label_en: 'Custom Print',       carton_mult: 1.15, per_unit_add: 0.08, setup_aed: 1200 },
-]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

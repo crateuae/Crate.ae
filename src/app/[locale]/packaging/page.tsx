@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import {
   Package, Calculator, AlertCircle, CheckSquare, TrendingUp,
@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { RAW_MATERIALS, PKG_COSTS, type RawMaterial } from '@/lib/data/products-catalog'
 import {
-  PRIMARY_PACKS, MASTER_CARTONS, PACKAGING_OPTIONS, calcPackaging,
+  calcPackaging,
   type PrimaryPack, type MasterCarton, type PackagingOption, type PackagingCalcResult,
 } from '@/lib/data/packaging-specs'
 
@@ -156,27 +156,47 @@ function RfqSection({ isAr, payload }: { isAr: boolean; payload: RfqPayload }) {
 
 type WeightUnit = 'kg' | 'ton'
 
-function CartonsCalculator({ isAr }: { isAr: boolean }) {
+interface CartonsCalcProps {
+  isAr: boolean
+  primaryPacks: PrimaryPack[]
+  masterCartons: MasterCarton[]
+  packagingOptions: PackagingOption[]
+}
+
+function CartonsCalculator({ isAr, primaryPacks, masterCartons, packagingOptions }: CartonsCalcProps) {
   const [productLabel, setProductLabel] = useState('')
   const [qtyMode, setQtyMode]   = useState<'weight' | 'units'>('weight')
   const [weight, setWeight]     = useState('10')
   const [weightUnit, setWeightUnit] = useState<WeightUnit>('ton')
   const [unitsInput, setUnitsInput] = useState('5000')
-  const [primary, setPrimary]   = useState<PrimaryPack | null>(PRIMARY_PACKS.find(p => p.id === 'pp-bag-1kg') ?? null)
-  const [carton, setCarton]     = useState<MasterCarton>(MASTER_CARTONS[1])
-  const [options, setOptions]   = useState<PackagingOption[]>([])
+  const [primary, setPrimary]   = useState<PrimaryPack | null>(null)
+  const [carton, setCarton]     = useState<MasterCarton | null>(null)
+
+  // Set defaults once specs load
+  useEffect(() => {
+    if (primary === null && primaryPacks.length > 0) {
+      setPrimary(primaryPacks.find(p => p.size_label === '1kg') ?? primaryPacks[0])
+    }
+    if (carton === null && masterCartons.length > 1) {
+      setCarton(masterCartons[1])
+    } else if (carton === null && masterCartons.length > 0) {
+      setCarton(masterCartons[0])
+    }
+  }, [primaryPacks, masterCartons, primary, carton])
+  const [selOptions, setSelOptions] = useState<PackagingOption[]>([])
 
   function toggleOption(o: PackagingOption) {
-    setOptions(prev => prev.some(x => x.id === o.id) ? prev.filter(x => x.id !== o.id) : [...prev, o])
+    setSelOptions(prev => prev.some(x => x.id === o.id) ? prev.filter(x => x.id !== o.id) : [...prev, o])
   }
 
   const result = useMemo<PackagingCalcResult | null>(() => {
+    if (!carton) return null
     const totalWeightKg = qtyMode === 'weight'
       ? (parseFloat(weight) || 0) * (weightUnit === 'ton' ? 1000 : 1)
       : null
     const totalUnits = qtyMode === 'units' ? (parseInt(unitsInput) || 0) : null
-    return calcPackaging({ totalWeightKg, totalUnits, primary, carton, options })
-  }, [qtyMode, weight, weightUnit, unitsInput, primary, carton, options])
+    return calcPackaging({ totalWeightKg, totalUnits, primary, carton, options: selOptions })
+  }, [qtyMode, weight, weightUnit, unitsInput, primary, carton, selOptions])
 
   const fmt = (n: number) => n.toLocaleString(isAr ? 'ar-EG' : 'en-US')
 
@@ -240,7 +260,7 @@ function CartonsCalculator({ isAr }: { isAr: boolean }) {
                 className={`px-4 py-3 rounded-2xl border-2 text-sm font-bold transition-all ${!primary ? 'border-orange-400 bg-orange-50' : 'border-gray-200 hover:border-orange-200'}`}>
                 {isAr ? 'بدون — وزن سائب في الكرتون' : 'None — loose in carton'}
               </button>
-              {PRIMARY_PACKS.map(pp => {
+              {primaryPacks.map(pp => {
                 const sel = primary?.id === pp.id
                 return (
                   <button key={pp.id} onClick={() => setPrimary(pp)}
@@ -262,8 +282,8 @@ function CartonsCalculator({ isAr }: { isAr: boolean }) {
         <Step num={qtyMode === 'weight' ? 4 : 3} title={isAr ? 'الكرتون الماستر' : 'Master carton'} />
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {MASTER_CARTONS.map(mc => {
-              const sel = carton.id === mc.id
+            {masterCartons.map(mc => {
+              const sel = carton?.id === mc.id
               return (
                 <button key={mc.id} onClick={() => setCarton(mc)}
                   className={`text-start p-4 rounded-2xl border-2 transition-all ${sel ? 'border-orange-400 bg-orange-50 shadow-sm' : 'border-gray-200 hover:border-orange-200'}`}>
@@ -287,8 +307,8 @@ function CartonsCalculator({ isAr }: { isAr: boolean }) {
       <section>
         <Step num={qtyMode === 'weight' ? 5 : 4} title={isAr ? 'المواصفات والخيارات' : 'Specs & options'} />
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-wrap gap-2">
-          {PACKAGING_OPTIONS.map(o => {
-            const sel = options.some(x => x.id === o.id)
+          {packagingOptions.map(o => {
+            const sel = selOptions.some(x => x.id === o.id)
             return (
               <button key={o.id} onClick={() => toggleOption(o)}
                 className={`px-4 py-2 rounded-xl border-2 text-sm font-bold transition-all ${sel ? 'border-orange-400 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-500 hover:border-orange-200'}`}>
@@ -357,8 +377,8 @@ function CartonsCalculator({ isAr }: { isAr: boolean }) {
             product_label: productLabel || (isAr ? 'كراتين / تغليف فقط' : 'Cartons / packaging only'),
             calc: {
               mode: 'cartons', qtyMode, weight, weightUnit, unitsInput,
-              primary: primary?.id ?? null, carton: carton.id,
-              options: options.map(o => o.id), result,
+              primary: primary?.id ?? null, carton: carton?.id ?? null,
+              options: selOptions.map(o => o.id), result,
             },
           }} />
         </>
@@ -698,6 +718,20 @@ export default function PackagingPage() {
   const locale = (params.locale as string) || 'ar'
   const isAr = locale === 'ar'
   const [mode, setMode] = useState<'cartons' | 'repack'>('cartons')
+  const [primaryPacks,   setPrimaryPacks]   = useState<PrimaryPack[]>([])
+  const [masterCartons,  setMasterCartons]  = useState<MasterCarton[]>([])
+  const [packagingOptions, setPackagingOptions] = useState<PackagingOption[]>([])
+
+  useEffect(() => {
+    fetch('/api/packaging/specs')
+      .then(r => r.json())
+      .then(d => {
+        if (d.primary_packs)  setPrimaryPacks(d.primary_packs.filter((p: PrimaryPack & { is_active: boolean }) => p.is_active))
+        if (d.master_cartons) setMasterCartons(d.master_cartons.filter((c: MasterCarton & { is_active: boolean }) => c.is_active))
+        if (d.options)        setPackagingOptions(d.options.filter((o: PackagingOption & { is_active: boolean }) => o.is_active))
+      })
+      .catch(() => {/* silently fallback to empty — calc shows placeholder */})
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -738,7 +772,9 @@ export default function PackagingPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-8">
-        {mode === 'cartons' ? <CartonsCalculator isAr={isAr} /> : <RepackCalculator isAr={isAr} />}
+        {mode === 'cartons'
+          ? <CartonsCalculator isAr={isAr} primaryPacks={primaryPacks} masterCartons={masterCartons} packagingOptions={packagingOptions} />
+          : <RepackCalculator isAr={isAr} />}
       </div>
     </div>
   )
