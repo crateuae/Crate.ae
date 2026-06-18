@@ -34,12 +34,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'kind and data required' }, { status: 400 })
   }
   const supabase = await createAdminClient()
-  const { error, data: row } = await supabase
-    .from(table)
-    .upsert(data, { onConflict: 'id' })
-    .select()
-    .single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Strip undefined/empty id — use insert for new rows, upsert for existing
+  const { id, ...rest } = data
+  const isNew = !id || id === '' || id === 'undefined'
+
+  const query = isNew
+    ? supabase.from(table).insert(rest).select().single()
+    : supabase.from(table).upsert({ id, ...rest }, { onConflict: 'id' }).select().single()
+
+  const { error, data: row } = await query
+  if (error) {
+    console.error('[packaging/specs POST]', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   return NextResponse.json({ success: true, row })
 }
 

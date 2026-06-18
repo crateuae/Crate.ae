@@ -308,6 +308,8 @@ type WeightUnit = 'kg' | 'ton'
 function CartonsCalculator({ isAr, primaryPacks, masterCartons, packagingOptions }: {
   isAr: boolean; primaryPacks: PrimaryPack[]; masterCartons: MasterCarton[]; packagingOptions: PackagingOption[]
 }) {
+  // Phase: 'setup' = steps 1+2, 'carton' = steps 3+4 in same place
+  const [phase, setPhase]               = useState<'setup'|'carton'>('setup')
   const [productLabel, setProductLabel] = useState('')
   const [qtyMode, setQtyMode]           = useState<'weight'|'units'>('weight')
   const [weight, setWeight]             = useState('10')
@@ -320,15 +322,14 @@ function CartonsCalculator({ isAr, primaryPacks, masterCartons, packagingOptions
   const [selOptions, setSelOptions]     = useState<PackagingOption[]>([])
   const [printNotes, setPrintNotes]     = useState('')
 
-  // Unique pack types
   const packTypes = useMemo(()=>{
     const seen = new Set<string>()
     return primaryPacks.filter(p=>{ if(seen.has(p.type))return false; seen.add(p.type); return true })
   },[primaryPacks])
 
   const sizesForType = useMemo(()=>primaryPacks.filter(p=>p.type===selectedType),[primaryPacks,selectedType])
-
   const hasQty = qtyMode==='weight' ? parseFloat(weight)>0 : parseInt(unitsInput)>0
+  const canProceed = hasQty && primaryDone
 
   function pickType(type: string) { setSelectedType(type); setPrimary(null); setPrimaryDone(false) }
   function pickSize(pp: PrimaryPack) { setPrimary(pp); setPrimaryDone(true) }
@@ -336,6 +337,7 @@ function CartonsCalculator({ isAr, primaryPacks, masterCartons, packagingOptions
   function toggleOption(o: PackagingOption) {
     setSelOptions(prev=>prev.some(x=>x.id===o.id)?prev.filter(x=>x.id!==o.id):[...prev,o])
   }
+  function goBack() { setPhase('setup'); setCarton(null); setSelOptions([]) }
 
   const hasCustomPrint = selOptions.some(o=>Number(o.setup_aed)>0)
 
@@ -346,241 +348,267 @@ function CartonsCalculator({ isAr, primaryPacks, masterCartons, packagingOptions
     return calcPackaging({totalWeightKg,totalUnits,primary,carton,options:selOptions})
   },[qtyMode,weight,weightUnit,unitsInput,primary,carton,selOptions])
 
+  // Summary label for qty
+  const qtySummary = qtyMode==='weight'
+    ? `${weight} ${weightUnit==='ton'?(isAr?'طن':'ton'):'kg'}`
+    : `${parseInt(unitsInput).toLocaleString('en-US')} ${isAr?'وحدة':'units'}`
+  const pkgSummary = primary
+    ? `${primary.size_label} ${isAr?primary.type_ar:primary.type_en}`
+    : (isAr?'سائب':'Bulk')
+
   return (
     <div className="grid lg:grid-cols-[1fr_300px] gap-5 items-start">
 
-      {/* ── LEFT column: sequential steps ── */}
-      <div className="space-y-4">
+      {/* ── LEFT: wizard pane ── */}
+      <div>
 
-        {/* Step 1 — qty */}
-        <Step n={1} title={isAr?'الكمية والمنتج':'Quantity & Product'} done={hasQty}>
+        {/* ══ PHASE: SETUP (steps 1 + 2) ══ */}
+        {phase === 'setup' && (
           <div className="space-y-4">
-            <div>
-              <label className="text-[11px] font-bold text-slate-400 mb-1.5 block">{isAr?'وصف المنتج (اختياري)':'Product description (optional)'}</label>
-              <input value={productLabel} onChange={e=>setProductLabel(e.target.value)}
-                placeholder={isAr?'مثال: أرز بسمتي 1كجم':'e.g. Basmati Rice 1kg'}
-                dir={isAr?'rtl':'ltr'}
-                className="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-orange-400 transition-colors placeholder:text-slate-300"/>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="inline-flex bg-slate-100 rounded-xl p-0.5 gap-0.5">
-                {(['weight','units'] as const).map(m=>(
-                  <button key={m} onClick={()=>setQtyMode(m)}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${qtyMode===m?'bg-white text-slate-900 shadow-sm':'text-slate-500 hover:text-slate-700'}`}>
-                    {m==='weight'?(isAr?'وزن':'Weight'):(isAr?'عدد الوحدات':'Unit count')}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <input type="number" min="0" value={qtyMode==='weight'?weight:unitsInput} dir="ltr"
-                onChange={e=>qtyMode==='weight'?setWeight(e.target.value):setUnitsInput(e.target.value)}
-                className="flex-1 border-2 border-slate-200 rounded-xl px-4 py-3 text-3xl font-black text-slate-900 focus:outline-none focus:border-orange-400 transition-colors tabular-nums"/>
-              {qtyMode==='weight'&&(
-                <div className="flex flex-col gap-1.5">
-                  {(['ton','kg'] as WeightUnit[]).map(u=>(
-                    <button key={u} onClick={()=>setWeightUnit(u)}
-                      className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-colors ${weightUnit===u?'border-orange-500 text-orange-600 bg-orange-50':'border-slate-200 text-slate-400'}`}>
-                      {u==='ton'?(isAr?'طن':'ton'):'kg'}
+            {/* Step 1 — qty + label */}
+            <Step n={1} title={isAr?'الكمية والمنتج':'Quantity & Product'} done={hasQty}>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-400 mb-1.5 block">{isAr?'وصف المنتج (اختياري)':'Product description (optional)'}</label>
+                  <input value={productLabel} onChange={e=>setProductLabel(e.target.value)}
+                    placeholder={isAr?'مثال: أرز بسمتي 1كجم':'e.g. Basmati Rice 1kg'}
+                    dir={isAr?'rtl':'ltr'}
+                    className="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-orange-400 transition-colors placeholder:text-slate-300"/>
+                </div>
+                <div className="inline-flex bg-slate-100 rounded-xl p-0.5 gap-0.5">
+                  {(['weight','units'] as const).map(m=>(
+                    <button key={m} onClick={()=>setQtyMode(m)}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${qtyMode===m?'bg-white text-slate-900 shadow-sm':'text-slate-500 hover:text-slate-700'}`}>
+                      {m==='weight'?(isAr?'وزن':'Weight'):(isAr?'عدد الوحدات':'Unit count')}
                     </button>
                   ))}
                 </div>
-              )}
-              {qtyMode==='units'&&<span className="text-slate-400 text-sm font-semibold">{isAr?'وحدة':'units'}</span>}
-            </div>
-          </div>
-        </Step>
-
-        {/* Step 2 — primary pack: TYPE then SIZE */}
-        <Appear show={hasQty}>
-          <Step n={2} title={isAr?'التغليف الأساسي (الوحدة)':'Primary packaging'} done={primaryDone}>
-            <div className="space-y-4">
-
-              {/* Bulk option */}
-              <button onClick={pickBulk}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-sm font-bold transition-colors text-start ${primaryDone&&!primary?'border-orange-500 bg-orange-50 text-orange-700':'border-slate-200 text-slate-500 hover:border-orange-300 bg-white'}`}>
-                <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-                  <Package className="w-4 h-4 text-slate-400"/>
-                </div>
-                <div>
-                  <div className="font-black leading-tight">{isAr?'سائب — بدون تغليف أساسي':'Bulk — no primary packaging'}</div>
-                  <div className="text-[11px] font-normal text-slate-400 mt-0.5">{isAr?'مباشر إلى كرتون الشحن':'Directly into master carton'}</div>
-                </div>
-                {primaryDone&&!primary&&<div className="ms-auto w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center"><div className="w-2 h-2 rounded-full bg-white"/></div>}
-              </button>
-
-              {/* TYPE cards */}
-              {packTypes.length>0&&(
-                <>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 h-px bg-slate-100"/>
-                    <span className="text-[11px] text-slate-400 font-bold flex-shrink-0">{isAr?'أو اختر نوع التغليف':'or choose packaging type'}</span>
-                    <div className="flex-1 h-px bg-slate-100"/>
-                  </div>
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                    {packTypes.map(pp=>{
-                      const Svg = TYPE_SVGS[pp.type]??BagSvg
-                      const sel = selectedType===pp.type
-                      return (
-                        <button key={pp.type} onClick={()=>pickType(pp.type)}
-                          className={`group flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all bg-white ${sel?'border-orange-500':'border-slate-200 hover:border-orange-300'}`}>
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${sel?'bg-orange-50':'bg-slate-50 group-hover:bg-slate-100'}`}>
-                            <Svg size={40}/>
-                          </div>
-                          <span className={`text-xs font-black leading-tight text-center ${sel?'text-orange-700':'text-slate-700'}`}>
-                            {isAr?pp.type_ar:pp.type_en}
-                          </span>
-                          {sel&&<div className="w-1.5 h-1.5 rounded-full bg-orange-500"/>}
+                <div className="flex items-center gap-3">
+                  <input type="number" min="0" value={qtyMode==='weight'?weight:unitsInput} dir="ltr"
+                    onChange={e=>qtyMode==='weight'?setWeight(e.target.value):setUnitsInput(e.target.value)}
+                    className="flex-1 border-2 border-slate-200 rounded-xl px-4 py-3 text-3xl font-black text-slate-900 focus:outline-none focus:border-orange-400 transition-colors tabular-nums"/>
+                  {qtyMode==='weight'&&(
+                    <div className="flex flex-col gap-1.5">
+                      {(['ton','kg'] as WeightUnit[]).map(u=>(
+                        <button key={u} onClick={()=>setWeightUnit(u)}
+                          className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-colors ${weightUnit===u?'border-orange-500 text-orange-600 bg-orange-50':'border-slate-200 text-slate-400'}`}>
+                          {u==='ton'?(isAr?'طن':'ton'):'kg'}
                         </button>
-                      )
-                    })}
-                  </div>
-                </>
-              )}
-
-              {/* SIZE cards — appear after type selection */}
-              <Appear show={!!selectedType&&sizesForType.length>0}>
-                <div className="pt-1 space-y-3">
-                  <p className="text-[11px] font-bold text-slate-500">
-                    {isAr
-                      ? `اختر الحجم — ${packTypes.find(p=>p.type===selectedType)?.[isAr?'type_ar':'type_en']??''}`
-                      : `Choose size — ${packTypes.find(p=>p.type===selectedType)?.[isAr?'type_ar':'type_en']??''}`}
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    {sizesForType.map(pp=>{
-                      const sel = primary?.id===pp.id
-                      const totalKg = parseFloat(weight)*(weightUnit==='ton'?1000:1)
-                      const units = qtyMode==='weight'?Math.floor(totalKg/pp.size_value):parseInt(unitsInput)
-                      return (
-                        <button key={pp.id} onClick={()=>pickSize(pp)}
-                          className={`relative flex flex-col items-center gap-1 p-4 rounded-2xl border-2 transition-all bg-white ${sel?'border-orange-500':'border-slate-200 hover:border-orange-300'}`}>
-                          {sel&&(
-                            <div className="absolute -top-2 -end-2 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
-                              <div className="w-2 h-2 rounded-full bg-white"/>
-                            </div>
-                          )}
-                          <span className="text-2xl font-black text-slate-900 tabular-nums">{pp.size_label}</span>
-                          {units>0&&<span className="text-[11px] text-slate-400 tabular-nums">{fmt(units)} {isAr?'وحدة':'units'}</span>}
-                          <span className="text-[11px] font-semibold text-orange-500">{isAr?'غلاف ':'pkg '}AED {Number(pp.cost_aed).toFixed(2)}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                  {primary&&(
-                    <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
-                      <span className="w-1 h-3 bg-slate-200 rounded-full"/>
-                      {isAr?primary.material_ar:primary.material_en}
-                      {primary.suitable_for_ar?` · ${isAr?primary.suitable_for_ar:primary.suitable_for_en}`:''}
-                    </p>
+                      ))}
+                    </div>
                   )}
+                  {qtyMode==='units'&&<span className="text-slate-400 text-sm font-semibold">{isAr?'وحدة':'units'}</span>}
                 </div>
-              </Appear>
-            </div>
-          </Step>
-        </Appear>
+              </div>
+            </Step>
 
-        {/* Step 3 — master carton */}
-        <Appear show={primaryDone}>
-          <Step n={3} title={isAr?'كرتون الشحن والتخزين':'Master carton'} done={!!carton}>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {masterCartons.map((mc,idx)=>{
-                const sel = carton?.id===mc.id
-                const tint  = CARTON_TINTS[idx%CARTON_TINTS.length]
-                const stk   = CARTON_STROKES[idx%CARTON_STROKES.length]
-                return (
-                  <button key={mc.id} onClick={()=>setCarton(mc)}
-                    className={`relative flex flex-col text-start p-4 rounded-2xl border-2 transition-all bg-white ${sel?'border-orange-500':'border-slate-200 hover:border-orange-300'}`}>
-                    {sel&&(
-                      <div className="absolute -top-2 -end-2 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-white"/>
-                      </div>
-                    )}
-                    {mc.image_url?(
-                      <img src={mc.image_url} alt={isAr?mc.name_ar:mc.name_en}
-                        className="w-full h-20 object-contain mb-3 rounded-xl bg-slate-50"/>
-                    ):(
-                      <div className="w-full h-16 flex items-center justify-center mb-3">
-                        <CartonSvg size={52} tint={tint} stroke={stk}/>
-                      </div>
-                    )}
-                    <div className="font-black text-slate-900 text-xs leading-tight mb-1">{isAr?mc.name_ar:mc.name_en}</div>
-                    <div className="text-[10px] text-slate-400 tabular-nums">{mc.l_cm}×{mc.w_cm}×{mc.h_cm} cm</div>
-                    <div className="text-[10px] text-slate-400">{isAr?`حتى ${mc.max_weight_kg}كجم`:`up to ${mc.max_weight_kg}kg`}</div>
-                    <div className="text-[10px] font-bold text-orange-500 mt-1">{Number(mc.cost_aed).toFixed(1)} AED</div>
+            {/* Step 2 — primary pack type → size */}
+            <Appear show={hasQty}>
+              <Step n={2} title={isAr?'التغليف الأساسي (الوحدة)':'Primary packaging'} done={primaryDone}>
+                <div className="space-y-4">
+                  {/* Bulk */}
+                  <button onClick={pickBulk}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-sm font-bold transition-colors text-start ${primaryDone&&!primary?'border-orange-500 bg-orange-50 text-orange-700':'border-slate-200 text-slate-500 hover:border-orange-300 bg-white'}`}>
+                    <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                      <Package className="w-4 h-4 text-slate-400"/>
+                    </div>
+                    <div>
+                      <div className="font-black leading-tight">{isAr?'سائب — بدون تغليف أساسي':'Bulk — no primary packaging'}</div>
+                      <div className="text-[11px] font-normal text-slate-400 mt-0.5">{isAr?'مباشر إلى كرتون الشحن':'Directly into master carton'}</div>
+                    </div>
+                    {primaryDone&&!primary&&<div className="ms-auto w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0"><div className="w-2 h-2 rounded-full bg-white"/></div>}
                   </button>
-                )
-              })}
-            </div>
-          </Step>
-        </Appear>
 
-        {/* Step 4 — options */}
-        <Appear show={!!carton&&packagingOptions.length>0}>
-          <Step n={4} title={isAr?'المواصفات والخيارات (اختياري)':'Specs & options (optional)'}>
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {packagingOptions.map(o=>{
-                  const sel=selOptions.some(x=>x.id===o.id)
-                  return (
-                    <button key={o.id} onClick={()=>toggleOption(o)}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-bold transition-colors ${sel?'border-orange-500 text-orange-700 bg-orange-50':'border-slate-200 text-slate-600 hover:border-orange-300 bg-white'}`}>
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${sel?'border-orange-500 bg-orange-500':'border-slate-300'}`}>
-                        {sel&&<div className="w-1.5 h-1.5 rounded-full bg-white"/>}
+                  {/* Type cards */}
+                  {packTypes.length>0&&(
+                    <>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-px bg-slate-100"/>
+                        <span className="text-[11px] text-slate-400 font-bold flex-shrink-0">{isAr?'أو اختر نوع التغليف':'or choose type'}</span>
+                        <div className="flex-1 h-px bg-slate-100"/>
                       </div>
-                      {isAr?o.label_ar:o.label_en}
-                      {Number(o.setup_aed)>0&&<span className="text-[10px] text-slate-400 font-normal">{o.setup_aed} AED</span>}
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        {packTypes.map(pp=>{
+                          const Svg = TYPE_SVGS[pp.type]??BagSvg
+                          const sel = selectedType===pp.type
+                          return (
+                            <button key={pp.type} onClick={()=>pickType(pp.type)}
+                              className={`group flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all bg-white ${sel?'border-orange-500':'border-slate-200 hover:border-orange-300'}`}>
+                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${sel?'bg-orange-50':'bg-slate-50 group-hover:bg-slate-100'}`}>
+                                <Svg size={40}/>
+                              </div>
+                              <span className={`text-xs font-black leading-tight text-center ${sel?'text-orange-700':'text-slate-700'}`}>
+                                {isAr?pp.type_ar:pp.type_en}
+                              </span>
+                              {sel&&<div className="w-1.5 h-1.5 rounded-full bg-orange-500"/>}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Size cards (appear under type) */}
+                  <Appear show={!!selectedType&&sizesForType.length>0}>
+                    <div className="pt-1 space-y-3">
+                      <p className="text-[11px] font-bold text-slate-500">
+                        {isAr
+                          ?`اختر الحجم — ${packTypes.find(p=>p.type===selectedType)?.type_ar??''}`
+                          :`Choose size — ${packTypes.find(p=>p.type===selectedType)?.type_en??''}`}
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {sizesForType.map(pp=>{
+                          const sel = primary?.id===pp.id
+                          const totalKg = parseFloat(weight)*(weightUnit==='ton'?1000:1)
+                          const units = qtyMode==='weight'?Math.floor(totalKg/pp.size_value):parseInt(unitsInput)
+                          return (
+                            <button key={pp.id} onClick={()=>pickSize(pp)}
+                              className={`relative flex flex-col items-center gap-1 p-4 rounded-2xl border-2 transition-all bg-white ${sel?'border-orange-500':'border-slate-200 hover:border-orange-300'}`}>
+                              {sel&&<div className="absolute -top-2 -end-2 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center"><div className="w-2 h-2 rounded-full bg-white"/></div>}
+                              <span className="text-2xl font-black text-slate-900 tabular-nums">{pp.size_label}</span>
+                              {units>0&&<span className="text-[11px] text-slate-400 tabular-nums">{fmt(units)} {isAr?'وحدة':'units'}</span>}
+                              <span className="text-[11px] font-semibold text-orange-500">AED {Number(pp.cost_aed).toFixed(2)}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {primary&&(
+                        <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                          <span className="w-1 h-3 bg-slate-200 rounded-full"/>
+                          {isAr?primary.material_ar:primary.material_en}
+                          {primary.suitable_for_ar?` · ${isAr?primary.suitable_for_ar:primary.suitable_for_en}`:''}
+                        </p>
+                      )}
+                    </div>
+                  </Appear>
+                </div>
+              </Step>
+            </Appear>
+
+            {/* Continue button */}
+            <Appear show={canProceed}>
+              <button onClick={()=>setPhase('carton')}
+                className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-700 text-white font-black py-3.5 rounded-2xl text-sm transition-colors shadow-sm">
+                <span>{isAr?'التالي — اختر كرتون الشحن':'Next — Choose master carton'}</span>
+                <span className="text-slate-400 text-[11px] font-normal ms-1">({qtySummary} · {pkgSummary})</span>
+              </button>
+            </Appear>
+          </div>
+        )}
+
+        {/* ══ PHASE: CARTON + OPTIONS (same place, no scroll) ══ */}
+        {phase === 'carton' && (
+          <div className="space-y-4">
+
+            {/* Summary bar with back button */}
+            <div className="bg-white border border-slate-200 rounded-2xl px-5 py-3 flex items-center gap-3 shadow-sm">
+              <button onClick={goBack}
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors flex-shrink-0 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg">
+                {isAr?'↩ تعديل':'↩ Edit'}
+              </button>
+              <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                <span className="text-xs text-slate-400">{isAr?'الكمية:':'Qty:'}</span>
+                <span className="text-xs font-black text-slate-800 tabular-nums">{qtySummary}</span>
+                <span className="text-slate-200">·</span>
+                <span className="text-xs text-slate-400">{isAr?'التغليف:':'Pkg:'}</span>
+                <span className="text-xs font-black text-slate-800">{pkgSummary}</span>
+                {productLabel&&<><span className="text-slate-200">·</span><span className="text-xs text-slate-400 truncate">{productLabel}</span></>}
+              </div>
+            </div>
+
+            {/* Step 3 — carton */}
+            <Step n={3} title={isAr?'كرتون الشحن والتخزين':'Master carton'} done={!!carton}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {masterCartons.map((mc,idx)=>{
+                  const sel = carton?.id===mc.id
+                  const tint  = CARTON_TINTS[idx%CARTON_TINTS.length]
+                  const stk   = CARTON_STROKES[idx%CARTON_STROKES.length]
+                  return (
+                    <button key={mc.id} onClick={()=>setCarton(mc)}
+                      className={`relative flex flex-col text-start p-4 rounded-2xl border-2 transition-all bg-white ${sel?'border-orange-500':'border-slate-200 hover:border-orange-300'}`}>
+                      {sel&&<div className="absolute -top-2 -end-2 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center"><div className="w-2 h-2 rounded-full bg-white"/></div>}
+                      {mc.image_url?(
+                        <img src={mc.image_url} alt={isAr?mc.name_ar:mc.name_en}
+                          className="w-full h-20 object-contain mb-3 rounded-xl bg-slate-50"/>
+                      ):(
+                        <div className="w-full h-16 flex items-center justify-center mb-3">
+                          <CartonSvg size={52} tint={tint} stroke={stk}/>
+                        </div>
+                      )}
+                      <div className="font-black text-slate-900 text-xs leading-tight mb-1">{isAr?mc.name_ar:mc.name_en}</div>
+                      <div className="text-[10px] text-slate-400 tabular-nums">{mc.l_cm}×{mc.w_cm}×{mc.h_cm} cm</div>
+                      <div className="text-[10px] text-slate-400">{isAr?`حتى ${mc.max_weight_kg}كجم`:`up to ${mc.max_weight_kg}kg`}</div>
+                      <div className="text-[10px] font-bold text-orange-500 mt-1">{Number(mc.cost_aed).toFixed(1)} AED</div>
                     </button>
                   )
                 })}
               </div>
-              <Appear show={hasCustomPrint}>
-                <div className="pt-2">
-                  <label className="text-xs font-bold text-slate-600 mb-2 block">
-                    {isAr?'ملاحظات الطباعة (لوغو، ألوان، مواصفات...)':'Print notes (logo, colors, specs...)'}
-                  </label>
-                  <textarea value={printNotes} onChange={e=>setPrintNotes(e.target.value)}
-                    rows={2} dir={isAr?'rtl':'ltr'}
-                    placeholder={isAr?'مثال: ملف AI، ألوان CMYK، طباعة من وجهين':'e.g. AI file ready, CMYK colors, double-sided'}
-                    className="w-full border-2 border-orange-200 bg-orange-50 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-orange-400 resize-none placeholder:text-slate-400"/>
+            </Step>
+
+            {/* Step 4 — options */}
+            <Appear show={!!carton&&packagingOptions.length>0}>
+              <Step n={4} title={isAr?'المواصفات والخيارات (اختياري)':'Specs & options (optional)'}>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {packagingOptions.map(o=>{
+                      const sel=selOptions.some(x=>x.id===o.id)
+                      return (
+                        <button key={o.id} onClick={()=>toggleOption(o)}
+                          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-bold transition-colors ${sel?'border-orange-500 text-orange-700 bg-orange-50':'border-slate-200 text-slate-600 hover:border-orange-300 bg-white'}`}>
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${sel?'border-orange-500 bg-orange-500':'border-slate-300'}`}>
+                            {sel&&<div className="w-1.5 h-1.5 rounded-full bg-white"/>}
+                          </div>
+                          {isAr?o.label_ar:o.label_en}
+                          {Number(o.setup_aed)>0&&<span className="text-[10px] text-slate-400 font-normal">{o.setup_aed} AED</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <Appear show={hasCustomPrint}>
+                    <div className="pt-2">
+                      <label className="text-xs font-bold text-slate-600 mb-2 block">{isAr?'ملاحظات الطباعة':'Print notes'}</label>
+                      <textarea value={printNotes} onChange={e=>setPrintNotes(e.target.value)}
+                        rows={2} dir={isAr?'rtl':'ltr'}
+                        placeholder={isAr?'لوغو، ألوان CMYK، طباعة من وجهين...':'Logo, CMYK colors, double-sided...'}
+                        className="w-full border-2 border-orange-200 bg-orange-50 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-orange-400 resize-none placeholder:text-slate-400"/>
+                    </div>
+                  </Appear>
                 </div>
-              </Appear>
-            </div>
-          </Step>
-        </Appear>
+              </Step>
+            </Appear>
 
-        {/* Mobile-only results */}
-        <Appear show={!!result}>
-          <div className="lg:hidden">
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
-              <h3 className="font-black text-slate-800 text-sm mb-4 flex items-center gap-2">
-                <Calculator className="w-4 h-4 text-orange-500"/>
-                {isAr?'نتائج الحساب':'Results'}
-              </h3>
-              {result&&(
-                <>
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    {[
-                      {v:result.primaryUnits>0?fmt(result.primaryUnits):'—',la:'وحدة معبأة',en:'Primary units',c:'text-blue-600'},
-                      {v:fmt(result.totalCartons),la:'إجمالي الكراتين',en:'Total cartons',c:'text-orange-600'},
-                      {v:fmt(result.pallets),la:'باليت',en:'Pallets',c:'text-purple-600'},
-                      {v:`${result.floorAreaM2}m²`,la:'مساحة أرضية',en:'Floor area',c:'text-slate-600'},
-                    ].map((s,i)=>(
-                      <div key={i} className="bg-slate-50 rounded-xl p-3 text-center">
-                        <div className={`text-xl font-black tabular-nums ${s.c}`}>{s.v}</div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">{isAr?s.la:s.en}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex justify-between items-center border-t border-slate-100 pt-3">
-                    <span className="text-sm font-bold text-slate-600">{isAr?'إجمالي التغليف':'Total packaging'}</span>
-                    <span className="font-black text-emerald-600 tabular-nums">{fmt(result.totalPackagingAed)} AED</span>
-                  </div>
-                </>
-              )}
-            </div>
+            {/* Mobile-only results */}
+            <Appear show={!!result}>
+              <div className="lg:hidden bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+                <h3 className="font-black text-slate-800 text-sm mb-4 flex items-center gap-2">
+                  <Calculator className="w-4 h-4 text-orange-500"/>
+                  {isAr?'نتائج الحساب':'Results'}
+                </h3>
+                {result&&(
+                  <>
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      {[
+                        {v:result.primaryUnits>0?fmt(result.primaryUnits):'—',la:'وحدة معبأة',en:'Units',c:'text-blue-600'},
+                        {v:fmt(result.totalCartons),la:'كراتين',en:'Cartons',c:'text-orange-600'},
+                        {v:fmt(result.pallets),la:'باليت',en:'Pallets',c:'text-purple-600'},
+                        {v:`${result.floorAreaM2}m²`,la:'أرضية',en:'Floor',c:'text-slate-600'},
+                      ].map((s,i)=>(
+                        <div key={i} className="bg-slate-50 rounded-xl p-3 text-center">
+                          <div className={`text-xl font-black tabular-nums ${s.c}`}>{s.v}</div>
+                          <div className="text-[10px] text-slate-400 mt-0.5">{isAr?s.la:s.en}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between border-t border-slate-100 pt-3">
+                      <span className="text-sm font-bold text-slate-600">{isAr?'إجمالي التغليف':'Total packaging'}</span>
+                      <span className="font-black text-emerald-600 tabular-nums">{fmt(result.totalPackagingAed)} AED</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </Appear>
           </div>
-        </Appear>
-
+        )}
       </div>
 
       {/* ── RIGHT: sticky sidebar ── */}
