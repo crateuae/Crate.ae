@@ -10,6 +10,7 @@ import {
   calcPackaging,
   type PrimaryPack, type MasterCarton, type PackagingOption, type PackagingCalcResult,
 } from '@/lib/data/packaging-specs'
+import { resolveImageUrl } from '@/lib/resolve-image-url'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -530,7 +531,7 @@ function CartonsCalculator({ isAr, primaryPacks, masterCartons, packagingOptions
                       className={`relative flex flex-col text-start p-4 rounded-2xl border-2 transition-all bg-white ${sel?'border-orange-500':'border-slate-200 hover:border-orange-300'}`}>
                       {sel&&<div className="absolute -top-2 -end-2 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center"><div className="w-2 h-2 rounded-full bg-white"/></div>}
                       {mc.image_url?(
-                        <img src={mc.image_url} alt={isAr?mc.name_ar:mc.name_en}
+                        <img src={resolveImageUrl(mc.image_url)} alt={isAr?mc.name_ar:mc.name_en}
                           className="w-full h-14 object-contain mb-2 rounded-xl bg-slate-50"/>
                       ):(
                         <div className="w-full h-12 flex items-center justify-center mb-2">

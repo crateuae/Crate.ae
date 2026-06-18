@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Edit2, Trash2, X, Save, RefreshCw } from 'lucide-react'
+import { resolveImageUrl } from '@/lib/resolve-image-url'
 
 // ─── Types (mirror DB columns) ───────────────────────────────────────────────
 
@@ -325,7 +326,7 @@ function CartonsTab({ cartons, onAdd, onEdit, onDelete }: {
             </div>
             {c.image_url && (
               <div className="mt-3 pt-3 border-t border-gray-100">
-                <img src={c.image_url} alt={c.name_ar}
+                <img src={resolveImageUrl(c.image_url)} alt={c.name_ar}
                   className="w-full h-28 object-contain rounded-xl bg-gray-50" />
               </div>
             )}
@@ -517,7 +518,7 @@ function CartonForm({ item, onChange, onSave, saving }: {
           dir="ltr" placeholder="https://..." className={inp} />
         {item.image_url && (
           <div className="mt-2 relative">
-            <img src={item.image_url} alt="preview"
+            <img src={resolveImageUrl(item.image_url)} alt="preview"
               className="w-full h-32 object-contain rounded-xl bg-gray-50 border border-gray-200" />
             <button type="button" onClick={() => set('image_url', '')}
               className="absolute top-1 end-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[11px] font-bold leading-none">×</button>
