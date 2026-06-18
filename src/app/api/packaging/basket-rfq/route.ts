@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) {
-    console.error('basket-rfq insert error:', error)
-    return NextResponse.json({ error: 'Could not save request' }, { status: 500 })
+    console.error('basket-rfq insert error:', JSON.stringify(error))
+    return NextResponse.json({ error: error.message || 'Could not save request', detail: error }, { status: 500 })
   }
 
   // ── 2. Email admin ─────────────────────────────────────────────────────────

@@ -990,22 +990,30 @@ ${hasCost
     }
     setSubmitting(true); setSubmitErr(null)
     try {
-      await fetch('/api/packaging/basket-rfq', {
+      const res = await fetch('/api/packaging/basket-rfq', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
           contact_name: contact.name, contact_company: contact.company,
           contact_email: contact.email, contact_phone: contact.phone,
           basket_count: baskets, total_weight_kg: totalW, price_known: !priceUnknown,
-          carton_name: isAr ? carton.name_ar : (carton as unknown as {name_en:string}).name_en,
+          carton_name: carton.name_ar || carton.name_en || 'كرتون',
           carton_dims: `${Math.round(carton.l_cm*10)}×${Math.round(carton.w_cm*10)}×${Math.round(carton.h_cm*10)} mm`,
           carton_cost_aed: priceUnknown ? null : Number(carton.cost_aed),
           items, calc,
         }),
       })
+      if (!res.ok) {
+        const err = await res.json().catch(()=>({}))
+        setSubmitErr(err.error || (isAr?'خطأ من الخادم':'Server error'))
+        setSubmitting(false)
+        return
+      }
       setSubmitted(true)
-      openPrintWindow(true)
-    } catch { setSubmitErr(isAr?'تعذّر الإرسال، حمّل النسخة مباشرة':'Send failed, use download instead') }
-    finally { setSubmitting(false) }
+    } catch {
+      setSubmitErr(isAr?'تعذّر الاتصال بالخادم، تحقق من الإنترنت':'Connection failed, check your internet')
+    } finally { setSubmitting(false) }
+    // Open print window outside try/catch so any print error doesn't mask submit success
+    openPrintWindow(true)
   }
 
   const canAct = !!calc
