@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation'
 import {
   Package, AlertCircle, CheckSquare, TrendingUp, Boxes, Warehouse,
   Layers, Send, Truck, MapPin, Loader2, CheckCircle2, Calculator,
+  ShoppingBasket, RefreshCw, ChevronDown, Star, Shield, Clock,
 } from 'lucide-react'
 import { RAW_MATERIALS, PKG_COSTS, type RawMaterial } from '@/lib/data/products-catalog'
 import {
@@ -1309,14 +1310,210 @@ ${hasCost
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
+const TOOLS = [
+  {
+    v: 'cartons' as const,
+    ar: 'تغليف المنتجات',
+    en: 'Product Packaging',
+    descAr: 'احسب عدد الوحدات، اختر التغليف الأساسي والكرتون المناسب، واحصل على تكلفة دقيقة لكل وحدة.',
+    descEn: 'Calculate units, choose primary packaging and master carton, get accurate cost per unit.',
+    icon: Package,
+    color: 'orange',
+    tagAr: 'الأكثر استخداماً',
+    tagEn: 'Most popular',
+  },
+  {
+    v: 'basket' as const,
+    ar: 'سلة غذائية مختلطة',
+    en: 'Food Basket',
+    descAr: 'صمّم سلتك الغذائية، حدد المنتجات والأوزان، واحسب عدد الكراتين والباليت مع تكلفة التعبئة.',
+    descEn: 'Design your food basket, set products and weights, calculate cartons, pallets and packaging cost.',
+    icon: ShoppingBasket,
+    color: 'emerald',
+    tagAr: 'مناسب للمواسم',
+    tagEn: 'Perfect for seasons',
+  },
+  {
+    v: 'repack' as const,
+    ar: 'إعادة تعبئة',
+    en: 'Repackaging',
+    descAr: 'استورد مواد خام بالجملة وأعد تعبئتها تحت علامتك التجارية الخاصة في الإمارات بتكلفة مثالية.',
+    descEn: 'Import bulk raw materials and repackage under your own UAE brand at optimal cost.',
+    icon: RefreshCw,
+    color: 'blue',
+    tagAr: 'White Label',
+    tagEn: 'White Label',
+  },
+] as const
+
+const TOOL_COLORS: Record<string, { bg: string; border: string; text: string; badge: string; icon: string; ring: string }> = {
+  orange:  { bg:'bg-orange-50',  border:'border-orange-300',  text:'text-orange-600',  badge:'bg-orange-100 text-orange-700',  icon:'bg-orange-100 text-orange-600', ring:'ring-orange-400' },
+  emerald: { bg:'bg-emerald-50', border:'border-emerald-300', text:'text-emerald-600', badge:'bg-emerald-100 text-emerald-700',icon:'bg-emerald-100 text-emerald-600',ring:'ring-emerald-400'},
+  blue:    { bg:'bg-blue-50',    border:'border-blue-300',    text:'text-blue-600',    badge:'bg-blue-100 text-blue-700',    icon:'bg-blue-100 text-blue-600',    ring:'ring-blue-400'   },
+}
+
+function SeoSection({ isAr }: { isAr: boolean }) {
+  const features = [
+    { icon: Calculator, ar: 'حاسبة دقيقة ومجانية', en: 'Free & Accurate Calculator', dAr: 'احسب تكاليف التغليف الحقيقية بناءً على أبعاد الكرتون وعدد الوحدات وأسعار السوق.', dEn: 'Calculate real packaging costs based on carton dimensions, unit count, and market prices.' },
+    { icon: Truck,      ar: 'من المصنع إلى المستهلك', en: 'Factory to Consumer',       dAr: 'نغطي كامل سلسلة التوريد: استيراد، إعادة تعبئة، تخزين، وتوزيع داخل الإمارات.',              dEn: 'We cover the full supply chain: import, repackaging, storage, and UAE distribution.' },
+    { icon: Shield,     ar: 'مطابقة لمتطلبات الإمارات', en: 'UAE Compliant',           dAr: 'تغليف مطابق لاشتراطات هيئة الغذاء والدواء الإماراتية ومواصفات المنافذ التجارية.',        dEn: 'Packaging compliant with UAE Food & Drug Authority and retail outlet specifications.' },
+    { icon: Star,       ar: 'أكثر من 95 منتجاً جاهزاً', en: '95+ Ready Products',     dAr: 'مكتبة منتجات جاهزة للاستيراد والتعبئة الفورية، من المواد الغذائية إلى المنظفات.',         dEn: 'Ready product library for immediate import and packaging, from food to cleaning supplies.' },
+  ]
+
+  const faq = [
+    {
+      qAr: 'كيف أحسب عدد الكراتين المطلوبة لشحنتي؟',
+      qEn: 'How do I calculate the number of cartons needed for my shipment?',
+      aAr: 'استخدم حاسبة "تغليف المنتجات" أعلاه — أدخل عدد الوحدات أو الوزن، اختر التغليف الأساسي (كيس، زجاجة، برطمان...)، ثم اختر كرتون الشحن. ستحصل فوراً على عدد الكراتين المطلوبة وتكلفة التغليف الإجمالية.',
+      aEn: 'Use the "Product Packaging" calculator above — enter unit count or weight, choose primary packaging (bag, bottle, jar...), then select a master carton. You\'ll instantly get the number of cartons needed and total packaging cost.',
+    },
+    {
+      qAr: 'ما هو الفرق بين التغليف الأساسي وكرتون الشحن؟',
+      qEn: 'What is the difference between primary packaging and master carton?',
+      aAr: 'التغليف الأساسي هو العبوة المباشرة للمنتج (كيس، زجاجة، علبة) التي يراها المستهلك. أما كرتون الشحن (Master Carton) فهو الصندوق الخارجي الذي يحتوي على عدة وحدات من التغليف الأساسي ويُستخدم للنقل والتخزين.',
+      aEn: 'Primary packaging is the direct product container (bag, bottle, box) that the consumer sees. The master carton is the outer box containing multiple primary packaging units, used for transport and storage.',
+    },
+    {
+      qAr: 'هل يمكنني إعادة تعبئة المنتجات تحت علامتي التجارية في الإمارات؟',
+      qEn: 'Can I repackage products under my own brand in the UAE?',
+      aAr: 'نعم، هذه من أكثر الخدمات طلباً في Crate.ae. نستورد المواد الخام أو المنتجات بالجملة، ثم نُعيد تعبئتها بتصاميم وأحجام وعلامات تجارية مخصصة لك، متوافقة مع اشتراطات الاستيراد الإماراتية.',
+      aEn: 'Yes, this is one of Crate.ae\'s most requested services. We import raw materials or bulk products, then repackage them with your custom designs, sizes, and brand, compliant with UAE import requirements.',
+    },
+    {
+      qAr: 'كيف أحسب تكلفة سلة الرمضان أو السلة الغذائية المختلطة؟',
+      qEn: 'How do I calculate the cost of a Ramadan or mixed food basket?',
+      aAr: 'استخدم حاسبة "السلة الغذائية المختلطة" أعلاه. أضف المنتجات مع الكميات والأوزان، حدد كرتون التعبئة، وستحصل على عدد الكراتين المطلوبة، عدد الباليت، المساحة التخزينية، والتكلفة الإجمالية. يمكنك أيضاً تقديم طلب عرض سعر مباشرة.',
+      aEn: 'Use the "Food Basket" calculator above. Add products with quantities and weights, select the packaging carton, and you\'ll get required cartons, pallets, storage floor space, and total cost. You can also submit a quote request directly.',
+    },
+    {
+      qAr: 'ما الحد الأدنى لكمية الطلب في خدمات التعبئة والتغليف؟',
+      qEn: 'What is the minimum order quantity for packaging services?',
+      aAr: 'يختلف الحد الأدنى حسب نوع المنتج والتغليف. بشكل عام نبدأ من 500 وحدة للتغليف الأساسي، ومن 1000 سلة للسلات الغذائية. تواصل معنا للحصول على عرض سعر مخصص لكميتك.',
+      aEn: 'The minimum varies by product type and packaging. Generally we start from 500 units for primary packaging, and 1,000 baskets for food baskets. Contact us for a custom quote based on your quantity.',
+    },
+  ]
+
+  const [openFaq, setOpenFaq] = useState<number|null>(null)
+
+  return (
+    <div className="max-w-5xl mx-auto px-6 pb-20 space-y-16 mt-16">
+
+      {/* Why Crate */}
+      <section>
+        <div className="text-center mb-10">
+          <p className="text-xs font-bold text-orange-500 tracking-widest uppercase mb-2">{isAr?'لماذا Crate.ae':'Why Crate.ae'}</p>
+          <h2 className="text-2xl font-black text-slate-900">{isAr?'كل ما تحتاجه لتعبئة وتغليف منتجاتك في الإمارات':'Everything you need to package your products in the UAE'}</h2>
+          <p className="text-slate-500 mt-3 max-w-2xl mx-auto text-sm leading-relaxed">
+            {isAr
+              ? 'من الاستيراد إلى التغليف النهائي — نقدم أدوات حساب دقيقة وخدمات متكاملة لمساعدتك على إطلاق منتجاتك بكفاءة وتكلفة مثالية.'
+              : 'From import to final packaging — we provide accurate calculation tools and integrated services to help you launch products efficiently at optimal cost.'}
+          </p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {features.map((f,i)=>(
+            <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center mb-3">
+                <f.icon className="w-5 h-5"/>
+              </div>
+              <h3 className="font-black text-slate-900 text-sm mb-1.5">{isAr?f.ar:f.en}</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">{isAr?f.dAr:f.dEn}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Service Details */}
+      <section className="grid md:grid-cols-3 gap-6">
+        {[
+          {
+            icon: Package, color:'orange',
+            titleAr:'تغليف المنتجات الغذائية والاستهلاكية', titleEn:'Food & Consumer Product Packaging',
+            bodyAr:'نوفر تغليف أساسي بمواصفات دقيقة: أكياس مخصصة، زجاجات PET، برطمانات زجاجية، علب كرتون مع تصاميم طباعة باللغتين العربية والإنجليزية. نضمن مطابقة الملصقات لاشتراطات هيئة الغذاء والدواء الإماراتية.',
+            bodyEn:'We provide primary packaging with precise specifications: custom bags, PET bottles, glass jars, carton boxes with Arabic/English print designs. Labels comply with UAE Food & Drug Authority requirements.',
+          },
+          {
+            icon: ShoppingBasket, color:'emerald',
+            titleAr:'السلال الغذائية للمناسبات والشركات', titleEn:'Occasion & Corporate Food Baskets',
+            bodyAr:'متخصصون في تعبئة سلال رمضان والأعياد للشركات والتجزئة. نصمم السلة وفق ميزانيتك، نختار المنتجات، نعبّئها ونرتبها بشكل احترافي، ونوفر باليت كاملة جاهزة للتوزيع.',
+            bodyEn:'Specialists in Ramadan and occasion basket packaging for corporate and retail clients. We design the basket to your budget, select products, pack and arrange professionally, and provide full pallets ready for distribution.',
+          },
+          {
+            icon: RefreshCw, color:'blue',
+            titleAr:'إعادة التعبئة تحت العلامة التجارية الخاصة', titleEn:'Private Label Repackaging',
+            bodyAr:'استورد مواد خام أو منتجات سائبة بأسعار الجملة، ثم أعد تعبئتها تحت علامتك التجارية. نتولى كل شيء: تصميم العبوة، الطباعة، التعبئة، والمطابقة مع متطلبات الاستيراد في الإمارات.',
+            bodyEn:'Import raw materials or bulk products at wholesale prices, then repackage under your brand. We handle everything: packaging design, printing, packing, and UAE import compliance.',
+          },
+        ].map((s,i)=>{
+          const c = TOOL_COLORS[s.color]
+          return (
+            <div key={i} className={`${c.bg} border ${c.border} rounded-2xl p-5`}>
+              <div className={`w-10 h-10 ${c.icon} rounded-xl flex items-center justify-center mb-3`}>
+                <s.icon className="w-5 h-5"/>
+              </div>
+              <h3 className={`font-black text-slate-900 text-sm mb-2 leading-snug`}>{isAr?s.titleAr:s.titleEn}</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">{isAr?s.bodyAr:s.bodyEn}</p>
+            </div>
+          )
+        })}
+      </section>
+
+      {/* FAQ */}
+      <section>
+        <div className="text-center mb-8">
+          <p className="text-xs font-bold text-orange-500 tracking-widest uppercase mb-2">{isAr?'أسئلة شائعة':'FAQ'}</p>
+          <h2 className="text-2xl font-black text-slate-900">{isAr?'أسئلة متكررة عن التعبئة والتغليف':'Frequently Asked Questions About Packaging'}</h2>
+        </div>
+        <div className="space-y-2 max-w-3xl mx-auto">
+          {faq.map((item,i)=>(
+            <div key={i} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+              <button onClick={()=>setOpenFaq(openFaq===i?null:i)}
+                className="w-full flex items-center justify-between gap-3 px-5 py-4 text-right hover:bg-slate-50 transition-colors">
+                <h3 className="font-bold text-slate-900 text-sm text-right flex-1">{isAr?item.qAr:item.qEn}</h3>
+                <ChevronDown className={`w-4 h-4 text-slate-400 flex-shrink-0 transition-transform ${openFaq===i?'rotate-180':''}`}/>
+              </button>
+              {openFaq===i && (
+                <div className="px-5 pb-4 text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
+                  {isAr?item.aAr:item.aEn}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="bg-slate-900 rounded-3xl p-8 md:p-12 text-center">
+        <Clock className="w-10 h-10 text-orange-400 mx-auto mb-4"/>
+        <h2 className="text-xl md:text-2xl font-black text-white mb-3">
+          {isAr?'هل تحتاج عرض سعر مخصص لمشروعك؟':'Need a custom quote for your project?'}
+        </h2>
+        <p className="text-slate-400 text-sm mb-6 max-w-xl mx-auto leading-relaxed">
+          {isAr
+            ? 'فريقنا جاهز لمساعدتك في حساب تكاليف التغليف وتقديم حلول مخصصة لنشاطك التجاري في الإمارات.'
+            : 'Our team is ready to help you calculate packaging costs and offer custom solutions for your UAE business.'}
+        </p>
+        <a href={`mailto:crateuae@gmail.com?subject=${encodeURIComponent(isAr?'طلب عرض سعر تغليف':'Packaging Quote Request')}`}
+          className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-black px-6 py-3 rounded-xl transition-colors text-sm">
+          <Send className="w-4 h-4"/>
+          {isAr?'تواصل معنا الآن':'Contact Us Now'}
+        </a>
+      </section>
+
+    </div>
+  )
+}
+
+const calcRef = { current: null as HTMLDivElement | null }
+
 export default function PackagingPage() {
   const params = useParams()
   const locale = (params.locale as string)||'ar'
   const isAr   = locale==='ar'
-  const [mode, setMode]                         = useState<'cartons'|'repack'|'basket'>('cartons')
+  const [mode, setMode]                         = useState<'cartons'|'repack'|'basket'|null>(null)
   const [primaryPacks, setPrimaryPacks]         = useState<PrimaryPack[]>([])
   const [masterCartons, setMasterCartons]       = useState<MasterCarton[]>([])
   const [packagingOptions, setPackagingOptions] = useState<PackagingOption[]>([])
+  const calcSectionRef = useRef<HTMLDivElement>(null)
 
   useEffect(()=>{
     fetch('/api/packaging/specs').then(r=>r.json()).then(d=>{
@@ -1326,33 +1523,114 @@ export default function PackagingPage() {
     }).catch(()=>{})
   },[])
 
+  function selectMode(v: 'cartons'|'repack'|'basket') {
+    setMode(v)
+    // Scroll to calculator after state update
+    setTimeout(()=>{
+      calcSectionRef.current?.scrollIntoView({ behavior:'smooth', block:'start' })
+    }, 50)
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="bg-white border-b border-slate-100 px-6 py-3">
-        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4 flex-wrap gap-y-2">
-          <div>
-            <p className="text-[10px] font-bold text-orange-500 tracking-wider uppercase">Crate Tools</p>
-            <h1 className="text-lg font-black text-slate-900 tracking-tight">{isAr?'حاسبة التعبئة والتغليف':'Packaging Calculator'}</h1>
+
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <section className="bg-white border-b border-slate-100">
+        <div className="max-w-5xl mx-auto px-6 py-12 md:py-16 text-center">
+          <div className="inline-flex items-center gap-1.5 bg-orange-100 text-orange-700 text-[11px] font-bold px-3 py-1.5 rounded-full mb-5">
+            <Calculator className="w-3.5 h-3.5"/>
+            {isAr?'أدوات مجانية — لا تسجيل مطلوب':'Free Tools — No Registration Required'}
           </div>
-          <div className="inline-flex bg-slate-100 rounded-xl p-1 gap-1 flex-shrink-0 flex-wrap">
-            {([
-              {v:'cartons', ar:'تغليف المنتجات',    en:'Product Packaging'},
-              {v:'basket',  ar:'سلة غذائية مختلطة', en:'Food Basket'},
-              {v:'repack',  ar:'إعادة تعبئة',        en:'Repackaging'},
-            ] as const).map(t=>(
-              <button key={t.v} onClick={()=>setMode(t.v)}
-                className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors ${mode===t.v?'bg-white text-slate-900 shadow-sm':'text-slate-500 hover:text-slate-700'}`}>
-                {isAr?t.ar:t.en}
-              </button>
-            ))}
+          <h1 className="text-3xl md:text-4xl font-black text-slate-900 leading-tight mb-4">
+            {isAr
+              ? <><span className="text-orange-500">حاسبة التعبئة والتغليف</span><br/>في الإمارات العربية المتحدة</>
+              : <><span className="text-orange-500">Packaging Calculator</span><br/>for the UAE Market</>}
+          </h1>
+          <p className="text-slate-500 text-base md:text-lg max-w-2xl mx-auto leading-relaxed mb-8">
+            {isAr
+              ? 'احسب تكاليف تغليف منتجاتك، صمّم سلتك الغذائية، أو خطط لإعادة التعبئة تحت علامتك الخاصة — كل ذلك مجاناً وفي ثوانٍ.'
+              : 'Calculate your product packaging costs, design your food basket, or plan private-label repackaging — all free and in seconds.'}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-slate-400">
+            {(isAr
+              ? ['✓ تكاليف دقيقة', '✓ حساب الباليت', '✓ طلب عرض سعر', '✓ تصدير PDF']
+              : ['✓ Accurate costs', '✓ Pallet calculation', '✓ Request a quote', '✓ PDF export']
+            ).map((t,i)=><span key={i} className="font-medium">{t}</span>)}
           </div>
         </div>
-      </div>
-      <div className="max-w-5xl mx-auto px-6 py-4">
-        {mode==='cartons' && <CartonsCalculator isAr={isAr} primaryPacks={primaryPacks} masterCartons={masterCartons} packagingOptions={packagingOptions}/>}
-        {mode==='basket'  && <BasketCalculator  isAr={isAr} masterCartons={masterCartons}/>}
-        {mode==='repack'  && <RepackCalculator  isAr={isAr}/>}
-      </div>
+      </section>
+
+      {/* ── 3 TOOL CARDS ──────────────────────────────────────────────────── */}
+      <section className="max-w-5xl mx-auto px-6 py-10">
+        <p className="text-center text-xs font-bold text-slate-400 tracking-widest uppercase mb-6">
+          {isAr?'اختر الأداة المناسبة لك':'Choose Your Tool'}
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {TOOLS.map(t=>{
+            const c = TOOL_COLORS[t.color]
+            const active = mode === t.v
+            return (
+              <button key={t.v} onClick={()=>selectMode(t.v)}
+                className={`group text-right w-full rounded-2xl border-2 p-5 md:p-6 transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none
+                  ${active ? `${c.bg} ${c.border} ring-2 ${c.ring} ring-offset-2` : 'bg-white border-slate-200 hover:border-slate-300'}`}>
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${active ? c.icon : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'}`}>
+                    <t.icon className="w-5 h-5"/>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0 ${active ? c.badge : 'bg-slate-100 text-slate-400'}`}>
+                    {isAr?t.tagAr:t.tagEn}
+                  </span>
+                </div>
+                <h2 className={`font-black text-base mb-1.5 leading-snug transition-colors ${active ? c.text : 'text-slate-900'}`}>
+                  {isAr?t.ar:t.en}
+                </h2>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {isAr?t.descAr:t.descEn}
+                </p>
+                {active && (
+                  <div className={`mt-3 flex items-center gap-1 text-xs font-bold ${c.text}`}>
+                    <ChevronDown className="w-3.5 h-3.5"/>
+                    {isAr?'الحاسبة أدناه':'Calculator below'}
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* ── CALCULATOR ────────────────────────────────────────────────────── */}
+      {mode && (
+        <div ref={calcSectionRef} className="max-w-5xl mx-auto px-6 pb-10 scroll-mt-6">
+          <div className="bg-white border-2 border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+            {/* Calculator header strip */}
+            <div className="flex items-center gap-3 px-5 py-3 border-b border-slate-100 bg-slate-50">
+              {(() => {
+                const t = TOOLS.find(x=>x.v===mode)!
+                const c = TOOL_COLORS[t.color]
+                return (
+                  <>
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${c.icon}`}>
+                      <t.icon className="w-4 h-4"/>
+                    </div>
+                    <span className={`font-black text-sm ${c.text}`}>{isAr?t.ar:t.en}</span>
+                    <button onClick={()=>setMode(null)} className="ms-auto text-slate-400 hover:text-slate-600 text-lg font-bold leading-none px-1">×</button>
+                  </>
+                )
+              })()}
+            </div>
+            <div className="p-4 md:p-6">
+              {mode==='cartons' && <CartonsCalculator isAr={isAr} primaryPacks={primaryPacks} masterCartons={masterCartons} packagingOptions={packagingOptions}/>}
+              {mode==='basket'  && <BasketCalculator  isAr={isAr} masterCartons={masterCartons}/>}
+              {mode==='repack'  && <RepackCalculator  isAr={isAr}/>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SEO CONTENT ───────────────────────────────────────────────────── */}
+      <SeoSection isAr={isAr}/>
+
     </div>
   )
 }
