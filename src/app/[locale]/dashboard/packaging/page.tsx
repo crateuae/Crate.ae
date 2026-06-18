@@ -110,14 +110,25 @@ export default function DashboardPackaging() {
 
   async function save(kind: string, data: Record<string, unknown>) {
     setSaving(true); setErr(null)
-    const res = await fetch('/api/packaging/specs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kind, data }),
-    })
-    setSaving(false)
-    if (!res.ok) { setErr('حدث خطأ أثناء الحفظ'); return false }
-    await load(); setModal(null); return true
+    try {
+      const res = await fetch('/api/packaging/specs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind, data }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        const msg = json?.error || json?.hint || 'خطأ غير معروف'
+        setErr(`خطأ: ${msg}`)
+        return false
+      }
+      await load(); setModal(null); return true
+    } catch (e) {
+      setErr(`خطأ في الاتصال: ${e instanceof Error ? e.message : String(e)}`)
+      return false
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function del(kind: string, id: string) {
