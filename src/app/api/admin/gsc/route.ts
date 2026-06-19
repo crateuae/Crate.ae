@@ -11,14 +11,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { google } from 'googleapis'
 
 function getAuth() {
-  const email = process.env.GSC_SERVICE_ACCOUNT_EMAIL
-  const key   = (process.env.GSC_PRIVATE_KEY ?? '').replace(/\\n/g, '\n')
-  if (!email || !key) throw new Error('GSC_SERVICE_ACCOUNT_EMAIL or GSC_PRIVATE_KEY not set')
-  const jwt = new google.auth.JWT()
-  jwt.email  = email
-  jwt.key    = key
-  jwt.scopes = ['https://www.googleapis.com/auth/webmasters.readonly']
-  return jwt
+  const raw = process.env.GSC_CREDENTIALS_JSON
+  if (!raw) throw new Error('GSC_CREDENTIALS_JSON not set')
+  const creds = JSON.parse(raw)
+  return new google.auth.GoogleAuth({
+    credentials: creds,
+    scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
+  })
 }
 
 function dateStr(daysAgo: number) {
@@ -36,8 +35,9 @@ export async function GET(req: NextRequest) {
 
     if (!siteUrl) return NextResponse.json({ error: 'GSC_SITE_URL not set' }, { status: 500 })
 
-    const auth = getAuth()
-    const sc   = google.searchconsole({ version: 'v1', auth })
+    const auth    = getAuth()
+    const client  = await auth.getClient()
+    const sc      = google.searchconsole({ version: 'v1', auth: client as never })
 
     const endDate   = dateStr(3)    // GSC has ~3-day lag
     const startDate = dateStr(range + 3)
