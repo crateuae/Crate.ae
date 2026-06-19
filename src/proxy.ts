@@ -8,7 +8,7 @@ const intlMiddleware = createMiddleware(routing)
 const ADMIN_EMAIL = 'crateuae@gmail.com'
 const PROTECTED_PATHS = ['/dashboard']
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const pathWithoutLocale = pathname.replace(/^\/(ar|en)/, '')
   const isProtected = PROTECTED_PATHS.some(p => pathWithoutLocale.startsWith(p))
