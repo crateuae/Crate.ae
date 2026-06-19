@@ -81,8 +81,9 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'GSC error'
-    console.error('GSC API error:', msg)
-    return NextResponse.json({ error: msg }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    const stack = err instanceof Error ? err.stack : ''
+    console.error('GSC API error:', msg, stack)
+    return NextResponse.json({ error: msg, hint: stack?.split('\n')[1] ?? '' }, { status: 500 })
   }
 }
