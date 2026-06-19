@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
         endDate,
         dimensions: [dim],
         rowLimit: 500,
-        dataState: 'final',
+        dataState: 'all',
       },
     })
 
