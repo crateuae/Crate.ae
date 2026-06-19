@@ -228,6 +228,21 @@ function LiveSidebar({
                   </div>
                 )}
               </div>
+              {/* Weight breakdown */}
+              {(() => {
+                const cEW = carton?.empty_weight_kg
+                const pEW = primary?.weight_kg
+                const totalC = cEW && result.totalCartons ? cEW * result.totalCartons : null
+                const totalP = pEW && result.primaryUnits ? pEW * result.primaryUnits : null
+                if (!totalC && !totalP) return null
+                return (
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-1.5 mt-1">
+                    <p className="text-[10px] font-black text-slate-400">{isAr?'أوزان التغليف الفارغة':'Empty packaging weights'}</p>
+                    {totalP && <div className="flex justify-between text-xs"><span className="text-slate-400">{isAr?`وزن ${primary!.type_ar} فارغ`:`Empty ${primary!.type_en}`}</span><span className="font-semibold tabular-nums" dir="ltr">{totalP>=1000?(totalP/1000).toFixed(2)+' طن':totalP.toFixed(1)+' kg'}</span></div>}
+                    {totalC && <div className="flex justify-between text-xs"><span className="text-slate-400">{isAr?'وزن الكراتين فارغة':'Empty cartons'}</span><span className="font-semibold tabular-nums" dir="ltr">{totalC>=1000?(totalC/1000).toFixed(2)+' طن':totalC.toFixed(1)+' kg'}</span></div>}
+                  </div>
+                )
+              })()}
               <p className="text-[10px] text-slate-300">{isAr?'* أسعار تقريبية بمتوسط السوق الإماراتي':'* Approximate UAE market averages'}</p>
             </div>
           ) : (
@@ -321,6 +336,7 @@ function CartonsCalculator({ isAr, primaryPacks, masterCartons, packagingOptions
   const [primary, setPrimary]           = useState<PrimaryPack|null>(null)
   const [primaryDone, setPrimaryDone]   = useState(false)
   const [carton, setCarton]             = useState<MasterCarton|null>(null)
+  const [cartonSkipped, setCartonSkipped] = useState(false)
   const [selOptions, setSelOptions]     = useState<PackagingOption[]>([])
   const [printNotes, setPrintNotes]     = useState('')
 
@@ -339,7 +355,7 @@ function CartonsCalculator({ isAr, primaryPacks, masterCartons, packagingOptions
   function toggleOption(o: PackagingOption) {
     setSelOptions(prev=>prev.some(x=>x.id===o.id)?prev.filter(x=>x.id!==o.id):[...prev,o])
   }
-  function goBack() { setPhase('setup'); setCarton(null); setSelOptions([]) }
+  function goBack() { setPhase('setup'); setCarton(null); setCartonSkipped(false); setSelOptions([]) }
 
   const hasCustomPrint = selOptions.some(o=>Number(o.setup_aed)>0)
 
@@ -482,9 +498,13 @@ function CartonsCalculator({ isAr, primaryPacks, masterCartons, packagingOptions
                             <button key={pp.id} onClick={()=>pickSize(pp)}
                               className={`relative flex flex-col items-center gap-0.5 p-3 rounded-xl border-2 transition-all bg-white ${sel?'border-orange-500':'border-slate-200 hover:border-orange-300'}`}>
                               {sel&&<div className="absolute -top-1.5 -end-1.5 w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-white"/></div>}
-                              <span className="text-lg font-black text-slate-900 tabular-nums">{pp.size_label}</span>
+                              {pp.image_url
+                                ? <img src={resolveImageUrl(pp.image_url!)} alt={pp.size_label} className="w-10 h-10 object-contain rounded-lg mb-0.5"/>
+                                : <span className="text-2xl mb-0.5">{pp.icon}</span>}
+                              <span className="text-base font-black text-slate-900 tabular-nums">{pp.size_label}</span>
                               {units>0&&<span className="text-[10px] text-slate-400 tabular-nums">{fmt(units)} {isAr?'وحدة':'units'}</span>}
                               <span className="text-[10px] font-semibold text-orange-500">AED {Number(pp.cost_aed).toFixed(2)}</span>
+                              {pp.weight_kg ? <span className="text-[9px] text-slate-300">{pp.weight_kg}kg</span> : null}
                             </button>
                           )
                         })}
@@ -535,14 +555,23 @@ function CartonsCalculator({ isAr, primaryPacks, masterCartons, packagingOptions
             </div>
 
             {/* Step 3 — carton */}
-            <Step n={3} title={isAr?'كرتون الشحن والتخزين':'Master carton'} done={!!carton}>
+            <Step n={3} title={isAr?'كرتون الشحن والتخزين':'Master carton'} done={!!carton || cartonSkipped}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* No carton option */}
+                <button onClick={()=>{setCarton(null);setCartonSkipped(true)}}
+                  className={`relative flex flex-row ${isAr?'flex-row-reverse':''} text-start rounded-2xl border-2 transition-all bg-white overflow-hidden ${cartonSkipped?'border-slate-700 shadow-md':'border-slate-200 hover:border-slate-400'}`}>
+                  <div className="flex-shrink-0 w-28 bg-slate-50 flex items-center justify-center p-4 text-3xl">📦‍💬</div>
+                  <div className={`flex-1 px-3 py-3 ${isAr?'border-r':'border-l'} border-slate-100 flex flex-col justify-center`}>
+                    <div className="font-black text-slate-900 text-sm leading-tight mb-1">{isAr?'بدون كرتون':'No carton'}</div>
+                    <div className="text-[10px] text-slate-400">{isAr?'تغليف أساسي فقط — بدون كرتون شحن':'Primary packaging only'}</div>
+                  </div>
+                </button>
                 {masterCartons.map((mc,idx)=>{
                   const sel = carton?.id===mc.id
                   const tint  = CARTON_TINTS[idx%CARTON_TINTS.length]
                   const stk   = CARTON_STROKES[idx%CARTON_STROKES.length]
                   return (
-                    <button key={mc.id} onClick={()=>setCarton(mc)}
+                    <button key={mc.id} onClick={()=>{setCarton(mc);setCartonSkipped(false)}}
                       className={`relative flex flex-row ${isAr?'flex-row-reverse':''} text-start rounded-2xl border-2 transition-all bg-white overflow-hidden ${sel?'border-orange-500 shadow-md':'border-slate-200 hover:border-orange-300 hover:shadow-sm'}`}>
                       {sel&&<div className={`absolute top-2 ${isAr?'start-2':'end-2'} z-10 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center shadow`}><div className="w-2 h-2 rounded-full bg-white"/></div>}
 
@@ -560,7 +589,8 @@ function CartonsCalculator({ isAr, primaryPacks, masterCartons, packagingOptions
                       <div className={`flex-1 px-3 py-3 ${isAr?'border-r':'border-l'} border-slate-100 flex flex-col justify-center`}>
                         <div className="font-black text-slate-900 text-sm leading-tight mb-1">{isAr?mc.name_ar:mc.name_en}</div>
                         <div className="text-[10px] text-slate-400 tabular-nums">{mc.l_cm}×{mc.w_cm}×{mc.h_cm} cm</div>
-                        <div className="text-[10px] text-slate-400 mb-1.5">{isAr?`حتى ${mc.max_weight_kg}كجم`:`up to ${mc.max_weight_kg}kg`}</div>
+                        <div className="text-[10px] text-slate-400">{isAr?`تحمل: ${mc.max_weight_kg}كجم`:`load: ${mc.max_weight_kg}kg`}</div>
+                        {mc.empty_weight_kg ? <div className="text-[10px] text-slate-400 mb-1">{isAr?`فارغ: ${mc.empty_weight_kg}كجم`:`empty: ${mc.empty_weight_kg}kg`}</div> : <div className="mb-1"/>}
                         <div className="text-sm font-black text-orange-500">{Number(mc.cost_aed).toFixed(1)} AED</div>
                       </div>
                     </button>
@@ -1115,9 +1145,9 @@ ${footer}
             <div className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-black">1</div>
             <span className="font-black text-slate-800 text-sm">{isAr?'محتويات السلة (لكل وحدة)':'Basket contents (per unit)'}</span>
             <button onClick={()=>setCartonOnly(p=>!p)}
-              className={`ms-auto flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-bold transition-colors ${cartonOnly?'border-blue-400 bg-blue-50 text-blue-700':'border-slate-200 text-slate-400 hover:border-slate-300'}`}>
-              <span className={`w-3 h-3 rounded border-2 flex items-center justify-center flex-shrink-0 ${cartonOnly?'bg-blue-500 border-blue-500':'border-slate-300'}`}>
-                {cartonOnly&&<span className="text-white text-[8px] font-black">✓</span>}
+              className={`ms-auto flex items-center gap-2 px-3 py-1.5 rounded-xl border-2 text-xs font-black transition-all shadow-sm ${cartonOnly?'border-blue-500 bg-blue-500 text-white shadow-blue-200':'border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600 bg-white'}`}>
+              <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${cartonOnly?'bg-white border-white':'border-slate-300'}`}>
+                {cartonOnly&&<span className="text-blue-500 text-[9px] font-black">✓</span>}
               </span>
               {isAr?'تسعير الكرتون فقط':'Carton quote only'}
             </button>
@@ -1170,7 +1200,7 @@ ${footer}
                 {totalW > 0 && (
                   <div className="flex items-center justify-between px-2 py-2 bg-orange-50 rounded-xl">
                     <span className="text-xs font-bold text-orange-700">{isAr?'إجمالي وزن السلة':'Total basket weight'}</span>
-                    <span className="text-sm font-black text-orange-600 tabular-nums">{totalW.toFixed(2)} kg</span>
+                    <span className="text-sm font-black text-orange-600 tabular-nums" dir="ltr">{totalW.toFixed(2)} kg</span>
                   </div>
                 )}
               </>
@@ -1265,6 +1295,7 @@ ${footer}
                       <div className="flex-1 min-w-0">
                         <div className="font-black text-slate-900 text-xs truncate">{isAr?mc.name_ar:mc.name_en}</div>
                         <div className="text-[10px] text-slate-400">{mc.l_cm}×{mc.w_cm}×{mc.h_cm} cm</div>
+                        {mc.empty_weight_kg ? <div className="text-[10px] text-slate-400">{isAr?`فارغ: ${mc.empty_weight_kg}kg`:`empty: ${mc.empty_weight_kg}kg`}</div> : null}
                         <div className="text-[10px] font-black text-orange-500">{Number(mc.cost_aed).toFixed(1)} AED</div>
                       </div>
                       {sel && <div className="w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0"><div className="w-1.5 h-1.5 rounded-full bg-white"/></div>}
@@ -1325,10 +1356,15 @@ ${footer}
                       <div className="text-xl font-black tabular-nums text-slate-700" dir="ltr">{fmtW(totalEmptyW)}</div>
                       <div className="text-[10px] text-slate-400 mt-0.5">{isAr?'وزن الكراتين الفارغة':'Empty cartons weight'}</div>
                     </div>
+                  ) : cartonMode === 'custom' ? (
+                    <div className="bg-amber-50 rounded-xl p-3 text-center border border-amber-200">
+                      <div className="text-[10px] font-bold text-amber-600 mt-1">{isAr?'أدخل وزن الكرتون فارغ':'Enter empty carton weight'}</div>
+                      <div className="text-[9px] text-amber-400 mt-0.5">{isAr?'في حقل الأبعاد أعلاه':'in dims section above'}</div>
+                    </div>
                   ) : (
                     <div className="bg-slate-50 rounded-xl p-3 text-center">
-                      <div className="text-[11px] font-bold text-slate-300 mt-2">{isAr?'أضف وزن الكرتون':'Add carton weight'}</div>
-                      <div className="text-[10px] text-slate-300 mt-0.5">{isAr?'لحساب الوزن الفارغ':'to calc empty weight'}</div>
+                      <div className="text-[11px] font-bold text-slate-400 mt-2">{isAr?'باليتات':'Pallets'}</div>
+                      <div className="text-xl font-black tabular-nums text-purple-600" dir="ltr">{calc.pals}</div>
                     </div>
                   )}
                 </div>
@@ -1724,16 +1760,30 @@ export default function PackagingPage() {
 
       {/* ── 3 TOOL CARDS ──────────────────────────────────────────────────── */}
       <section className="max-w-5xl mx-auto px-6 py-10">
-        <p className="text-center text-xs font-bold text-slate-400 tracking-widest uppercase mb-6">
-          {isAr?'اختر الأداة المناسبة لك':'Choose Your Tool'}
-        </p>
+        <div className="text-center mb-6">
+          <p className="text-xs font-bold text-slate-400 tracking-widest uppercase mb-2">
+            {isAr?'اختر الأداة المناسبة لك':'Choose Your Tool'}
+          </p>
+          {/* Animated marketing nudge */}
+          <p className="text-sm font-semibold text-orange-600 animate-pulse">
+            {isAr
+              ? '← ابدأ باحتياجك وسنحسب لك كل شيء خلال ثوانٍ'
+              : 'Pick what fits your need — we\'ll do the math in seconds →'}
+          </p>
+          <div className="flex justify-center mt-2">
+            <svg className="w-6 h-6 text-orange-400 animate-bounce" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+          </div>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {TOOLS.map(t=>{
             const c = TOOL_COLORS[t.color]
             const active = mode === t.v
             return (
               <button key={t.v} onClick={()=>selectMode(t.v)}
-                className={`group text-right w-full rounded-2xl border-2 p-5 md:p-6 transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none
+                className={`group w-full rounded-2xl border-2 p-5 md:p-6 transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none
+                  ${isAr ? 'text-right' : 'text-left'}
                   ${active ? `${c.bg} ${c.border} ring-2 ${c.ring} ring-offset-2` : 'bg-white border-slate-200 hover:border-slate-300'}`}>
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${active ? c.icon : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'}`}>

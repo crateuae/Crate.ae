@@ -9,7 +9,8 @@ interface PrimaryPack {
   id?: string
   type: string; type_ar: string; type_en: string; icon: string
   size_label: string; size_value: number; unit: string
-  cost_aed: number; material_ar: string; material_en: string
+  cost_aed: number; weight_kg: number; image_url: string
+  material_ar: string; material_en: string
   suitable_for_ar: string; suitable_for_en: string
   is_active: boolean; sort_order: number
 }
@@ -18,7 +19,7 @@ interface MasterCarton {
   id?: string
   name_ar: string; name_en: string; icon: string
   l_cm: number; w_cm: number; h_cm: number
-  max_weight_kg: number; default_units: number; cartons_per_pallet: number
+  max_weight_kg: number; empty_weight_kg: number; default_units: number; cartons_per_pallet: number
   flute_ar: string; flute_en: string; cost_aed: number
   image_url: string
   suitable_for_ar: string; suitable_for_en: string
@@ -39,7 +40,7 @@ type Tab = 'packs' | 'cartons' | 'options'
 const EMPTY_PACK: PrimaryPack = {
   type:'bag', type_ar:'كيس', type_en:'Bag', icon:'👜',
   size_label:'', size_value:0, unit:'kg',
-  cost_aed:0, material_ar:'', material_en:'',
+  cost_aed:0, weight_kg:0, image_url:'', material_ar:'', material_en:'',
   suitable_for_ar:'', suitable_for_en:'',
   is_active:true, sort_order:0,
 }
@@ -47,7 +48,7 @@ const EMPTY_PACK: PrimaryPack = {
 const EMPTY_CARTON: MasterCarton = {
   name_ar:'', name_en:'', icon:'📦',
   l_cm:0, w_cm:0, h_cm:0,
-  max_weight_kg:0, default_units:12, cartons_per_pallet:40,
+  max_weight_kg:0, empty_weight_kg:0, default_units:12, cartons_per_pallet:40,
   flute_ar:'', flute_en:'', cost_aed:0,
   image_url:'',
   suitable_for_ar:'', suitable_for_en:'',
@@ -276,8 +277,15 @@ function PacksTab({ packs, onAdd, onEdit, onDelete }: {
               <div className="flex justify-between"><span className="text-gray-400">الحجم</span><span className="font-semibold">{p.size_value} {p.unit}</span></div>
               <div className="flex justify-between"><span className="text-gray-400">المادة</span><span className="font-semibold">{p.material_ar}</span></div>
               <div className="flex justify-between"><span className="text-gray-400">التكلفة</span><span className="font-bold text-orange-500">{p.cost_aed} AED</span></div>
+              {!!p.weight_kg && <div className="flex justify-between"><span className="text-gray-400">وزن فارغ</span><span className="font-semibold">{p.weight_kg} كجم</span></div>}
             </div>
-            {p.suitable_for_ar && <div className="mt-3 pt-3 border-t border-gray-100 text-[10px] text-gray-400">{p.suitable_for_ar}</div>}
+            {p.image_url && (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <img src={resolveImageUrl(p.image_url)} alt={p.type_ar}
+                  className="w-full h-24 object-contain rounded-xl bg-gray-50" />
+              </div>
+            )}
+            {p.suitable_for_ar && <div className="mt-2 text-[10px] text-gray-400">{p.suitable_for_ar}</div>}
           </div>
         ))}
       </div>
@@ -319,6 +327,7 @@ function CartonsTab({ cartons, onAdd, onEdit, onDelete }: {
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between"><span className="text-gray-400">الأبعاد</span><span className="font-semibold tabular-nums">{c.l_cm}×{c.w_cm}×{c.h_cm} سم</span></div>
               <div className="flex justify-between"><span className="text-gray-400">وزن أقصى</span><span className="font-semibold">{c.max_weight_kg} كجم</span></div>
+              {!!c.empty_weight_kg && <div className="flex justify-between"><span className="text-gray-400">وزن فارغ</span><span className="font-semibold">{c.empty_weight_kg} كجم</span></div>}
               <div className="flex justify-between"><span className="text-gray-400">وحدة/كرتون</span><span className="font-semibold">{c.default_units}</span></div>
               <div className="flex justify-between"><span className="text-gray-400">كرتون/باليت</span><span className="font-semibold">{c.cartons_per_pallet}</span></div>
               <div className="flex justify-between"><span className="text-gray-400">النوع</span><span className="font-semibold">{c.flute_ar}</span></div>
@@ -428,9 +437,27 @@ function PackForm({ item, onChange, onSave, saving }: {
           <input value={item.material_en} onChange={e => set('material_en', e.target.value)} dir="ltr" className={inp} />
         </Field>
       </div>
-      <Field label="التكلفة (AED)">
-        <input type="number" step="0.01" value={item.cost_aed} onChange={e => set('cost_aed', +e.target.value)}
-          className={numInp} dir="ltr" />
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="التكلفة (AED)">
+          <input type="number" step="0.01" value={item.cost_aed} onChange={e => set('cost_aed', +e.target.value)}
+            className={numInp} dir="ltr" />
+        </Field>
+        <Field label="وزن العبوة فارغة (كجم)">
+          <input type="number" step="0.001" value={item.weight_kg ?? 0} onChange={e => set('weight_kg', +e.target.value)}
+            className={numInp} dir="ltr" />
+        </Field>
+      </div>
+      <Field label="رابط صورة العبوة (اختياري)">
+        <input value={item.image_url ?? ''} onChange={e => set('image_url', e.target.value)}
+          dir="ltr" placeholder="https://..." className={inp} />
+        {item.image_url && (
+          <div className="mt-2 relative">
+            <img src={resolveImageUrl(item.image_url)} alt="preview"
+              className="w-full h-24 object-contain rounded-xl bg-gray-50 border border-gray-200" />
+            <button type="button" onClick={() => set('image_url', '')}
+              className="absolute top-1 end-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[11px] font-bold leading-none">×</button>
+          </div>
+        )}
       </Field>
       <Field label="مناسب لـ (AR)">
         <input value={item.suitable_for_ar} onChange={e => set('suitable_for_ar', e.target.value)} className={inp} />
@@ -491,9 +518,12 @@ function CartonForm({ item, onChange, onSave, saving }: {
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        <Field label="وزن أقصى (كجم)">
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="وزن تحمل أقصى (كجم)">
           <input type="number" step="0.5" value={item.max_weight_kg} onChange={e => set('max_weight_kg', +e.target.value)} className={numInp} dir="ltr" />
+        </Field>
+        <Field label="وزن الكرتون فارغ (كجم)">
+          <input type="number" step="0.01" value={item.empty_weight_kg ?? 0} onChange={e => set('empty_weight_kg', +e.target.value)} className={numInp} dir="ltr" />
         </Field>
         <Field label="وحدة/كرتون">
           <input type="number" value={item.default_units} onChange={e => set('default_units', +e.target.value)} className={numInp} dir="ltr" />

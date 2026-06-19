@@ -19,6 +19,8 @@ export interface PrimaryPack {
   size_value: number          // numeric size in kg or L
   unit: 'kg' | 'L'
   cost_aed: number            // approx cost per empty primary unit (material + label + seal)
+  weight_kg?: number | null   // empty weight of one primary pack (kg)
+  image_url?: string | null
   material_ar: string
   material_en: string
   suitable_for_ar?: string
@@ -39,6 +41,7 @@ export interface MasterCarton {
   w_cm: number
   h_cm: number
   max_weight_kg: number
+  empty_weight_kg?: number | null
   /** how many primary units of a *reference* fit — used as fallback when volume calc isn't possible */
   default_units: number
   cartons_per_pallet: number
