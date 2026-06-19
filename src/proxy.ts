@@ -48,6 +48,8 @@ export async function proxy(request: NextRequest) {
   return intlMiddleware(request)
 }
 
+export default proxy
+
 export const config = {
   matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
 }
