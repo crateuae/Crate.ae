@@ -16,7 +16,9 @@ function adminDb() {
   )
 }
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY)
+}
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'crateuae@gmail.com'
 const FROM_EMAIL  = process.env.RESEND_FROM_EMAIL ?? 'uae@crate.ae'
 
@@ -67,7 +69,7 @@ export async function POST(req: NextRequest) {
 
   const calcObj = (calc as Record<string, unknown>) ?? {}
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: ADMIN_EMAIL,
     subject: `🧺 طلب عرض سعر سلة غذائية — ${basket_count} سلة${contact_company ? ' | ' + contact_company : ''}`,

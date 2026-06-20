@@ -15,7 +15,9 @@ function adminDb() {
   )
 }
 
-const resend  = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY)
+}
 const FROM    = process.env.RESEND_FROM_EMAIL ?? 'uae@crate.ae'
 
 // ── GET ─────────────────────────────────────────────────────────────────────
@@ -55,7 +57,7 @@ export async function POST(req: NextRequest) {
   const { id, to_email, to_name, subject, body, update_status } = await req.json()
   if (!to_email || !body) return NextResponse.json({ error: 'to_email and body required' }, { status: 400 })
 
-  const { error: emailErr } = await resend.emails.send({
+  const { error: emailErr } = await getResend().emails.send({
     from: FROM,
     to: to_email,
     subject: subject || 'متابعة طلبك — Crate.ae',
