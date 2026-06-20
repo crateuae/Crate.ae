@@ -7,6 +7,7 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import VisitorTracker from '@/components/layout/VisitorTracker'
 import { AuthProvider } from '@/components/providers/AuthProvider'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import '../globals.css'
 
 const GT_ID = 'GT-K5M94L6R'   // Google Tag container (routes to GA4 + Ads)
@@ -50,6 +51,7 @@ export default async function LocaleLayout({
             <VisitorTracker />
           </AuthProvider>
         </NextIntlClientProvider>
+        <SpeedInsights />
       </body>
     </html>
   )
