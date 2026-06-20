@@ -11,14 +11,6 @@
     {
       "path": "/api/market/signals",
       "schedule": "0 5 * * *"
-    },
-    {
-      "path": "/api/campaigns/run",
-      "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/seo/reindex",
-      "schedule": "0 5 * * *"
     }
   ]
 }
