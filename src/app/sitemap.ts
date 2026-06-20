@@ -70,5 +70,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ])
 
-  return [...staticPages, ...productUrls, ...providerUrls]
+  // Dynamic insight pages (organism-published SEO content)
+  const { data: articles } = await supabase
+    .from('articles')
+    .select('slug, published_at')
+    .eq('is_published', true)
+
+  const articleUrls = (articles ?? []).flatMap(a => [
+    {
+      url: `${BASE}/ar/insights/${a.slug}`,
+      lastModified: a.published_at ? new Date(a.published_at) : new Date(),
+      priority: 0.7,
+      changeFrequency: 'weekly' as const,
+    },
+    {
+      url: `${BASE}/en/insights/${a.slug}`,
+      lastModified: a.published_at ? new Date(a.published_at) : new Date(),
+      priority: 0.7,
+      changeFrequency: 'weekly' as const,
+    },
+  ])
+
+  return [...staticPages, ...productUrls, ...providerUrls, ...articleUrls]
 }

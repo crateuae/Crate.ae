@@ -66,6 +66,7 @@ export default function OrganismPage() {
   const [data, setData] = useState<PipelineData | null>(null)
   const [loading, setLoading] = useState(true)
   const [pulsing, setPulsing] = useState(false)
+  const [publishing, setPublishing] = useState(false)
   const [lastBeat, setLastBeat] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -99,6 +100,22 @@ export default function OrganismPage() {
     }
   }
 
+  async function publish() {
+    setPublishing(true)
+    try {
+      const res = await fetch('/api/organism/publish', { method: 'GET', cache: 'no-store' })
+      const json = await res.json()
+      setLastBeat(
+        isAr
+          ? `نُشر ${json.published ?? 0} · حُجب ${json.blocked ?? 0}`
+          : `published ${json.published ?? 0} · blocked ${json.blocked ?? 0}`
+      )
+      await load()
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96 text-gray-400">
@@ -126,11 +143,18 @@ export default function OrganismPage() {
             </p>
           </div>
         </div>
-        <button onClick={pulse} disabled={pulsing}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-60 transition-colors">
-          {pulsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-          {isAr ? 'نبضة الآن' : 'Pulse now'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={pulse} disabled={pulsing}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-60 transition-colors">
+            {pulsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+            {isAr ? 'نبضة الآن' : 'Pulse now'}
+          </button>
+          <button onClick={publish} disabled={publishing}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 disabled:opacity-60 transition-colors">
+            {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Hand className="w-4 h-4" />}
+            {isAr ? 'نشر الطابور' : 'Publish queue'}
+          </button>
+        </div>
       </div>
 
       {lastBeat && (
