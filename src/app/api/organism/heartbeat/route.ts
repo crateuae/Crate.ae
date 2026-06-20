@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { organismDb, getActiveBrain, sense, scoreSensed } from '@/lib/organism/pipeline'
+import { captureOutcomes } from '@/lib/organism/learning'
 
 export const maxDuration = 60
 
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
 
     const senseResult = await sense(db)
     const scoreResult = await scoreSensed(db, brain)
+    const captureResult = await captureOutcomes(db)
 
     return NextResponse.json({
       ok: true,
@@ -37,6 +39,7 @@ export async function POST(req: NextRequest) {
       brain_version: brain.version,
       sense: senseResult,
       score: scoreResult,
+      capture: captureResult,
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

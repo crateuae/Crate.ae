@@ -53,6 +53,7 @@ export async function GET() {
       approve_threshold: brain.approve_threshold,
       quality_threshold: brain.quality_threshold,
       daily_publish_cap: brain.daily_publish_cap,
+      prediction_accuracy: brain.prediction_accuracy ?? null,
     },
     approved_queue: top('approved'),   // waiting for the hands (publish)
     scored_held: top('scored'),        // below gate — the radar's "maybe" pile

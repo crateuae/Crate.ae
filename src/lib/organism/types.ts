@@ -32,6 +32,7 @@ export interface BrainConfig {
   quality_threshold: number
   daily_publish_cap: number
   is_active: boolean
+  prediction_accuracy?: number | null
 }
 
 export interface Opportunity {

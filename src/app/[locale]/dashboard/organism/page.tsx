@@ -35,6 +35,7 @@ interface PipelineData {
     approve_threshold: number
     quality_threshold: number
     daily_publish_cap: number
+    prediction_accuracy: number | null
   }
   approved_queue: Opp[]
   scored_held: Opp[]
@@ -67,6 +68,7 @@ export default function OrganismPage() {
   const [loading, setLoading] = useState(true)
   const [pulsing, setPulsing] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [learning, setLearning] = useState(false)
   const [lastBeat, setLastBeat] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -116,6 +118,27 @@ export default function OrganismPage() {
     }
   }
 
+  async function learn() {
+    setLearning(true)
+    try {
+      const res = await fetch('/api/organism/learn', { method: 'GET', cache: 'no-store' })
+      const json = await res.json()
+      const l = json.learn ?? {}
+      setLastBeat(
+        l.status === 'relearned'
+          ? (isAr
+              ? `تعلّم ✓ نسخة ${l.new_version} · دقة ${Math.round((l.prediction_accuracy ?? 0) * 100)}% · التقط ${json.capture?.updated ?? 0}`
+              : `learned ✓ v${l.new_version} · acc ${Math.round((l.prediction_accuracy ?? 0) * 100)}% · captured ${json.capture?.updated ?? 0}`)
+          : (isAr
+              ? `بيانات غير كافية للتعلّم (${l.sample ?? 0}) · التقط ${json.capture?.updated ?? 0}`
+              : `insufficient data (${l.sample ?? 0}) · captured ${json.capture?.updated ?? 0}`)
+      )
+      await load()
+    } finally {
+      setLearning(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96 text-gray-400">
@@ -153,6 +176,11 @@ export default function OrganismPage() {
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 disabled:opacity-60 transition-colors">
             {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Hand className="w-4 h-4" />}
             {isAr ? 'نشر الطابور' : 'Publish queue'}
+          </button>
+          <button onClick={learn} disabled={learning}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-60 transition-colors">
+            {learning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+            {isAr ? 'تعلّم الآن' : 'Learn now'}
           </button>
         </div>
       </div>
@@ -219,6 +247,11 @@ export default function OrganismPage() {
             <span><ShieldCheck className="w-3 h-3 inline me-1" />{isAr ? 'عتبة الاعتماد' : 'Approve'}: {data.brain.approve_threshold}</span>
             <span>{isAr ? 'عتبة الجودة' : 'Quality'}: {data.brain.quality_threshold}</span>
             <span>{isAr ? 'سقف يومي' : 'Daily cap'}: {data.brain.daily_publish_cap}</span>
+            {data.brain.prediction_accuracy != null && (
+              <span className="text-violet-600 font-bold">
+                {isAr ? 'دقة التنبؤ' : 'Prediction acc'}: {Math.round(data.brain.prediction_accuracy * 100)}%
+              </span>
+            )}
           </div>
         </div>
       )}
