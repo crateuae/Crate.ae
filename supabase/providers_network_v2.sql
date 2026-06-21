@@ -228,7 +228,14 @@ grant execute on function log_provider_event to anon, authenticated, service_rol
 
 -- ─────────────────────────────────────────────────────────────
 -- 6. Link RFQs to a routed trader (optional FK)
+--    Guarded so this runs whether or not rfq_deal_layer.sql ran first.
 -- ─────────────────────────────────────────────────────────────
-alter table rfq_requests
-  add column if not exists provider_id uuid references providers(id) on delete set null;
-create index if not exists idx_rfq_provider on rfq_requests(provider_id);
+do $$
+begin
+  if exists (select 1 from information_schema.tables
+             where table_schema = 'public' and table_name = 'rfq_requests') then
+    alter table rfq_requests
+      add column if not exists provider_id uuid references providers(id) on delete set null;
+    create index if not exists idx_rfq_provider on rfq_requests(provider_id);
+  end if;
+end $$;
