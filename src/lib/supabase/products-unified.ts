@@ -60,24 +60,30 @@ export async function createSkeletonProduct(
     tags?: string[]
   }
 ): Promise<string | null> {
+  // Generate slug from title
+  const slug = opp.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 100) || `product-${Date.now()}`
+
   const { data, error } = await db
     .from('products')
     .insert({
+      slug,
       name_en: opp.title,
       name_ar: opp.title_ar || opp.title,
       source: 'organism_discovery',
       content_ar: opp.body_ar,
       content_en: opp.body_en,
       tags: opp.tags,
-      is_published: true, // Published immediately
+      is_published: true,
       published_at: new Date().toISOString(),
       organism_opportunity_id: opp.id,
-      // Minimal required fields (commerce data can be filled later)
-      brand: null,
+      // Minimal required fields (commerce data optional)
+      type_ar: 'منتج جديد',
+      type_en: 'New Product',
       country_origin: 'Unknown',
-      category_ar: 'منتج جديد',
-      category_en: 'New Product',
-      unit_size: 'unknown',
       page_views: 0,
       rfq_count: 0,
     })
@@ -85,7 +91,7 @@ export async function createSkeletonProduct(
     .single()
 
   if (error) {
-    console.error('[createSkeletonProduct] error:', error.message)
+    console.error('[createSkeletonProduct] insert failed:', error.message)
     return null
   }
 
