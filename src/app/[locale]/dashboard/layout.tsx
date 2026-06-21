@@ -1,12 +1,13 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Boxes, FolderTree, Package, ShieldCheck, LayoutDashboard, ArrowRight, LogOut, BarChart3, TrendingUp, Sparkles, Store, LineChart, Activity, FileText } from 'lucide-react'
+import { Boxes, FolderTree, Package, ShieldCheck, LayoutDashboard, ArrowRight, LogOut, BarChart3, TrendingUp, Sparkles, Store, LineChart, Activity, FileText, Megaphone } from 'lucide-react'
 
 const SIDEBAR_ITEMS = [
   { href: '/dashboard', icon: LayoutDashboard, label_ar: 'نظرة عامة', label_en: 'Overview', exact: true },
   { href: '/dashboard/organism', icon: Activity, label_ar: 'حالة الكائن', label_en: 'Organism' },
   { href: '/dashboard/rfq', icon: FileText, label_ar: 'صندوق الطلبات', label_en: 'Requests Inbox' },
+  { href: '/dashboard/campaigns', icon: Megaphone, label_ar: 'الحملات', label_en: 'Campaigns' },
   { href: '/dashboard/providers', icon: Store, label_ar: 'الموردون', label_en: 'Providers' },
   { href: '/dashboard/products', icon: Boxes, label_ar: 'المنتجات', label_en: 'Products' },
   { href: '/dashboard/products-categories', icon: FolderTree, label_ar: 'تصنيفات المنتجات', label_en: 'Product Categories' },
