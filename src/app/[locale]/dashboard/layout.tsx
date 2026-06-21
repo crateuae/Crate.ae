@@ -6,7 +6,7 @@ import { Boxes, FolderTree, Package, ShieldCheck, LayoutDashboard, ArrowRight, L
 const SIDEBAR_ITEMS = [
   { href: '/dashboard', icon: LayoutDashboard, label_ar: 'نظرة عامة', label_en: 'Overview', exact: true },
   { href: '/dashboard/organism', icon: Activity, label_ar: 'حالة الكائن', label_en: 'Organism' },
-  { href: '/dashboard/rfq', icon: FileText, label_ar: 'طلبات الأسعار', label_en: 'RFQ Requests' },
+  { href: '/dashboard/rfq', icon: FileText, label_ar: 'صندوق الطلبات', label_en: 'Requests Inbox' },
   { href: '/dashboard/providers', icon: Store, label_ar: 'الموردون', label_en: 'Providers' },
   { href: '/dashboard/products', icon: Boxes, label_ar: 'المنتجات', label_en: 'Products' },
   { href: '/dashboard/products-categories', icon: FolderTree, label_ar: 'تصنيفات المنتجات', label_en: 'Product Categories' },

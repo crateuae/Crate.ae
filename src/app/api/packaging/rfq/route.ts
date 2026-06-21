@@ -28,11 +28,16 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // Distinguish packaging-quote (cartons) from private-label repackaging so the
+  // unified requests dashboard can route each to its own section.
+  const kind = (calc as { kind?: string } | null)?.kind
+  const mode = kind === 'repack' ? 'repack' : 'cartons'
+
   const supabase = await createAdminClient()
   const { data, error } = await supabase
     .from('packaging_plans')
     .insert({
-      mode: 'rfq',
+      mode,
       input_data: { contact_name, company_name, email, phone, fulfilment, product_label, notes },
       output_data: calc ?? null,
       brand_name: (company_name as string) || null,

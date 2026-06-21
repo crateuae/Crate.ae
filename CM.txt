@@ -1,0 +1,13 @@
+feat(phase2): unified requests inbox — 4 sections, one tracking system
+
+- /api/admin/requests: one API over rfq_requests + packaging_plans
+  GET (normalized list + per-section counts), PATCH (status/admin_notes),
+  POST (reply via Resend), PUT (manually create a request in any section)
+- /dashboard/rfq rebuilt as a unified inbox with 4 sections:
+  trader RFQ · packaging · food baskets · repackaging
+  with stage tracking, internal notes, email reply, and new-request creation
+- /api/packaging/rfq now sets mode=cartons|repack (from calc.kind) so each
+  request routes to its own section cleanly
+- sidebar entry renamed to "صندوق الطلبات / Requests Inbox"
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
