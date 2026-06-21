@@ -77,14 +77,10 @@ export default function UnifiedProductEditor({ isAr }: { isAr: boolean }) {
   async function saveProduct() {
     if (!editor.product) return
 
-    // Validate
+    // Minimal validation: names only
     const errors: string[] = []
     if (!editor.product.name_en?.trim()) errors.push('English name required')
     if (!editor.product.name_ar?.trim()) errors.push('Arabic name required')
-    if (editor.product.source === 'organism_discovery') {
-      if (!editor.product.price_retail_aed) errors.push('Retail price required')
-      if (!editor.product.category_en) errors.push('Category required')
-    }
 
     if (errors.length > 0) {
       setEditor(prev => ({ ...prev, validationErrors: errors }))
@@ -370,27 +366,37 @@ export default function UnifiedProductEditor({ isAr }: { isAr: boolean }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {products.map(p => (
-                <tr key={p.id} className="hover:bg-gray-50">
+              {products.map(p => {
+                // Check if commerce data is incomplete
+                const missingData = p.source === 'organism_discovery' && (!p.price_retail_aed || !p.category_en)
+
+                return (
+                <tr key={p.id} className={`hover:bg-gray-50 ${missingData ? 'bg-yellow-50' : ''}`}>
                   <td className="px-4 py-3">
                     <div className="font-bold text-gray-900">{p.name_en}</div>
                     <div className="text-xs text-gray-400">{p.name_ar}</div>
+                    {missingData && (
+                      <div className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {isAr ? 'بيانات ناقصة' : 'Incomplete data'}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {p.source === 'organism_discovery' ? (
-                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">🤖 Organism</span>
+                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">🤖 {isAr ? 'من الكائن' : 'Organism'}</span>
                     ) : (
-                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Manual</span>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">{isAr ? 'يدوي' : 'Manual'}</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
                     {p.is_published ? (
                       <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded flex items-center gap-1 w-fit">
-                        <Eye className="w-3 h-3" /> Live
+                        <Eye className="w-3 h-3" /> {isAr ? 'مُنشور' : 'Live'}
                       </span>
                     ) : (
                       <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded flex items-center gap-1 w-fit">
-                        <EyeOff className="w-3 h-3" /> Draft
+                        <EyeOff className="w-3 h-3" /> {isAr ? 'مسودة' : 'Draft'}
                       </span>
                     )}
                   </td>
@@ -404,7 +410,8 @@ export default function UnifiedProductEditor({ isAr }: { isAr: boolean }) {
                     </button>
                   </td>
                 </tr>
-              ))}
+              )
+              })}
             </tbody>
           </table>
         </div>

@@ -46,10 +46,8 @@ export function matchProductInCatalog(keyword: string): string | null {
 }
 
 /**
- * Create a skeleton product from an approved organism opportunity.
- *
- * Skeleton = minimal product record with organism content, waiting for
- * human to fill in commerce data (prices, registration, etc.)
+ * Create a new product from an organism discovery.
+ * Published immediately with organism content (commerce data optional, editable later).
  */
 export async function createSkeletonProduct(
   db: SupabaseClient,
@@ -62,7 +60,6 @@ export async function createSkeletonProduct(
     tags?: string[]
   }
 ): Promise<string | null> {
-  // Let Supabase generate the UUID (not crypto.randomUUID which fails in some contexts)
   const { data, error } = await db
     .from('products')
     .insert({
@@ -72,12 +69,12 @@ export async function createSkeletonProduct(
       content_ar: opp.body_ar,
       content_en: opp.body_en,
       tags: opp.tags,
-      is_published: false,
-      published_at: null,
+      is_published: true, // Published immediately
+      published_at: new Date().toISOString(),
       organism_opportunity_id: opp.id,
-      // Minimal required fields
-      brand: 'TBD',
-      country_origin: 'TBD',
+      // Minimal required fields (commerce data can be filled later)
+      brand: null,
+      country_origin: 'Unknown',
       category_ar: 'منتج جديد',
       category_en: 'New Product',
       unit_size: 'unknown',

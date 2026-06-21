@@ -31,20 +31,10 @@ export async function POST(
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    // Validate
-    const missing = []
-    if (!product.name_en?.trim()) missing.push('name_en')
-    if (!product.name_ar?.trim()) missing.push('name_ar')
-    if (!product.price_retail_aed && product.source === 'organism_discovery') {
-      missing.push('price_retail_aed')
-    }
-    if (!product.category_en && product.source === 'organism_discovery') {
-      missing.push('category_en')
-    }
-
-    if (missing.length > 0) {
+    // Minimal validation: names required only
+    if (!product.name_en?.trim() || !product.name_ar?.trim()) {
       return NextResponse.json(
-        { error: `Missing fields: ${missing.join(', ')}` },
+        { error: 'Name (EN and AR) are required' },
         { status: 400 }
       )
     }

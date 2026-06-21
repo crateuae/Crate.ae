@@ -104,11 +104,19 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
         continue
       }
 
-      // ① Try to match with existing product in catalog
+      // Determine opportunity type based on composite_score
+      const determineType = (score: number): 'verified' | 'high' | 'opportunity' => {
+        if (score >= 75) return 'verified'
+        if (score >= 65) return 'high'
+        return 'opportunity'
+      }
+      const oppType = determineType(o.composite_score)
+
+      // ① Try to match with existing product
       const matchedProductId = matchProductInCatalog(keyword)
 
       if (matchedProductId) {
-        // ② MATCHED: Update existing product with organism content
+        // MATCHED: Update existing product with organism content
         const success = await updateProductContent(db, matchedProductId, {
           content_ar: art.body_ar,
           content_en: art.body_en,
@@ -116,22 +124,22 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
         })
 
         if (success) {
-          // Link opportunity to matched product
           await linkOpportunityToProduct(db, matchedProductId, o.id)
 
-          // Mark opportunity published (link to product page, not /insights)
+          // Mark as published → Verified opportunity
+          const publishedUrl = `/products/${matchedProductId}?type=${oppType}`
           await db.from('opportunities').update({
             stage: 'published',
-            published_url: `/products/${matchedProductId}`,
+            published_url: publishedUrl,
             published_at: new Date().toISOString(),
             blocked_reason: null,
             stage_changed_at: new Date().toISOString(),
           }).eq('id', o.id)
 
           await logEvent(db, o.id, 'published', 'approved', 'published', {
-            type: 'matched_product',
+            type: oppType,
             product_id: matchedProductId,
-            url: `/products/${matchedProductId}`,
+            url: publishedUrl,
           })
 
           published++; budget--
@@ -139,8 +147,8 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
         }
       }
 
-      // ③ NO MATCH: Create skeleton product + article (for discovery)
-      const skeletonId = await createSkeletonProduct(db, {
+      // ② NO MATCH: Create new product directly (no skeleton, publish immediately)
+      const newProductId = await createSkeletonProduct(db, {
         id: o.id,
         title: keyword,
         title_ar: o.title_ar,
@@ -149,56 +157,30 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
         tags: art.tags,
       })
 
-      if (!skeletonId) {
+      if (!newProductId) {
         await logEvent(db, o.id, 'blocked', 'approved', 'approved', {
-          reason: 'skeleton_creation_failed',
+          reason: 'product_creation_failed',
         })
         blocked++
         continue
       }
 
-      // Also create article for SEO discovery (in /insights)
-      let slug = art.slug?.trim() ? slugify(art.slug) : slugify(keyword)
-      const { data: clash } = await db.from('articles').select('id').eq('slug', slug).maybeSingle()
-      if (clash) slug = `${slug}-${o.id.slice(0, 6)}`
-
-      const { error: insErr } = await db.from('articles').insert({
-        slug,
-        title_ar: art.title_ar,
-        title_en: art.title_en,
-        body_ar: art.body_ar,
-        body_en: art.body_en,
-        tags: art.tags ?? [],
-        is_published: true,
-        published_at: new Date().toISOString(),
-      })
-
-      if (insErr) {
-        await logEvent(db, o.id, 'blocked', 'approved', 'approved', {
-          reason: `article_insert:${insErr.message}`,
-        })
-        blocked++
-        continue
-      }
-
-      // Link both: product (via organism_opportunity_id) and article (via published_url)
-      const url = `/products/${skeletonId}`
+      // Publish immediately → High or Opportunity type
+      const publishedUrl = `/products/${newProductId}?type=${oppType}`
       await db.from('opportunities').update({
         stage: 'published',
-        published_url: url,
+        published_url: publishedUrl,
         published_at: new Date().toISOString(),
         blocked_reason: null,
         stage_changed_at: new Date().toISOString(),
       }).eq('id', o.id)
 
       await logEvent(db, o.id, 'published', 'approved', 'published', {
-        type: 'new_skeleton_product',
-        product_id: skeletonId,
-        article_slug: slug,
-        url,
+        type: oppType,
+        product_id: newProductId,
+        url: publishedUrl,
       })
 
-      await pingIndexNow(slug)
       published++; budget--
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
