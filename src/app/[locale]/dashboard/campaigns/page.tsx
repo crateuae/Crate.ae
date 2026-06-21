@@ -68,14 +68,19 @@ export default function CampaignsPage() {
 
   async function generate() {
     if (!brief.trim()) return
-    setGen(true)
+    setGen(true); setMsg(null)
     try {
-      const d = await (await fetch('/api/admin/campaigns/generate', {
+      const res = await fetch('/api/admin/campaigns/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ brief, audience_hint: src === 'providers' ? 'UAE food companies' : 'past requesters', lang: isAr ? 'ar' : 'en' }),
-      })).json()
+      })
+      const d = await res.json()
+      if (!res.ok) { setMsg((isAr ? 'فشل التوليد: ' : 'Generate failed: ') + (d.error ?? res.status)); return }
       if (d.subject) setSubject(d.subject)
       if (d.body_html) setBody(d.body_html)
+      setMsg(isAr ? '✓ تم توليد الموضوع والنص بالأسفل — راجِعهما ثم أنشئ مسودّة' : '✓ Subject & body filled below')
+    } catch (e) {
+      setMsg((isAr ? 'خطأ: ' : 'Error: ') + (e instanceof Error ? e.message : 'failed'))
     } finally { setGen(false) }
   }
 
@@ -87,7 +92,14 @@ export default function CampaignsPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, subject, body_html: body, audience: audienceSpec() }),
       })
-      if (r.ok) { setName(''); setSubject(''); setBody(''); setBrief(''); setAudience(null); setMsg(isAr ? 'تم إنشاء الحملة كمسودّة' : 'Campaign created as draft'); await load() }
+      const d = await r.json().catch(() => ({}))
+      if (r.ok) {
+        setName(''); setSubject(''); setBody(''); setBrief(''); setAudience(null)
+        setMsg(isAr ? '✓ أُنشئت الحملة — تجدها في قائمة «الحملات» بالأسفل لتجربتها وإرسالها' : '✓ Created — see it in the list below')
+        await load()
+      } else {
+        setMsg((isAr ? 'فشل الإنشاء: ' : 'Create failed: ') + (d.error ?? r.status))
+      }
     } finally { setCreating(false) }
   }
 
