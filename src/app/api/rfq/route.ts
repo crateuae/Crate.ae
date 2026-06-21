@@ -47,11 +47,21 @@ export async function POST(req: NextRequest) {
 
   const { opportunity_id, product_name, product_name_ar, quantity, destination,
           budget_aed, notes, contact_name, contact_email, contact_phone,
-          company_name, source_page, locale } = body
+          company_name, source_page, locale, provider_id, intent } = body
 
   if (!contact_name?.trim() || !product_name?.trim()) {
     return NextResponse.json({ error: 'contact_name and product_name are required' }, { status: 422 })
   }
+
+  // Fold the request intent into the notes so it survives without a schema change.
+  const INTENT_AR: Record<string, string> = {
+    quote: 'طلب عرض سعر', product: 'سؤال عن منتج', requirement: 'متطلب توريد',
+  }
+  const intentLabel = intent ? (INTENT_AR[intent] ?? intent) : null
+  const composedNotes = [
+    intentLabel ? `[${intentLabel}]` : null,
+    notes?.trim() || null,
+  ].filter(Boolean).join(' ') || null
 
   const supabase = db()
 
@@ -59,12 +69,13 @@ export async function POST(req: NextRequest) {
     .from('rfq_requests')
     .insert({
       opportunity_id: opportunity_id || null,
+      provider_id: provider_id || null,
       product_name: product_name.trim(),
       product_name_ar: product_name_ar?.trim() || null,
       quantity: quantity?.trim() || null,
       destination: destination?.trim() || null,
       budget_aed: budget_aed ? Number(budget_aed) : null,
-      notes: notes?.trim() || null,
+      notes: composedNotes,
       contact_name: contact_name.trim(),
       contact_email: contact_email?.trim() || null,
       contact_phone: contact_phone?.trim() || null,
@@ -83,6 +94,17 @@ export async function POST(req: NextRequest) {
   // Bump rfq_count on the opportunity (best-effort, non-blocking)
   if (opportunity_id) {
     supabase.rpc('increment_rfq_count', { opp_id: opportunity_id }).maybeSingle()
+  }
+
+  // Record the demand against the provider (the broker spine).
+  if (provider_id) {
+    supabase.rpc('log_provider_event', {
+      p_provider_id: provider_id,
+      p_event_type: 'rfq_received',
+      p_actor: 'merchant',
+      p_rfq_id: rfq.id,
+      p_payload: { intent: intent ?? null, product: product_name.trim() },
+    }).then(({ error: e }) => { if (e) console.error('[rfq] log_provider_event:', e.message) })
   }
 
   // Notify admin (non-blocking)

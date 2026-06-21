@@ -217,6 +217,102 @@ function ProviderForm({ item, onSave, onClose, isAr }: {
   )
 }
 
+// ─── Provider activity log (drill-down) ──────────────────────────────────────
+
+interface PEvent { id: string; event_type: string; actor: string | null; payload: Record<string, unknown> | null; created_at: string }
+interface PRfq { id: string; product_name: string; status: string; contact_name: string; notes: string | null; created_at: string }
+
+const EVENT_AR: Record<string, string> = {
+  page_view: 'مشاهدة صفحة', rfq_received: 'طلب وارد', rfq_submitted: 'طلب صادر',
+  email_sent: 'إيميل مُرسل', email_opened: 'إيميل مفتوح', note: 'ملاحظة', verified: 'توثيق',
+}
+
+function ActivityLog({ provider, isAr, onClose }: { provider: Provider; isAr: boolean; onClose: () => void }) {
+  const [events, setEvents] = useState<PEvent[]>([])
+  const [rfqs, setRfqs] = useState<PRfq[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/admin/providers/events?provider_id=${provider.id}`)
+      .then(r => r.json())
+      .then(d => { setEvents(d.events ?? []); setRfqs(d.rfqs ?? []) })
+      .finally(() => setLoading(false))
+  }, [provider.id])
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto" dir={isAr ? 'rtl' : 'ltr'}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl my-6">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <div>
+            <h2 className="font-black text-slate-800 text-sm">{provider.name_en}</h2>
+            {provider.name_ar && <p className="text-xs text-slate-400" dir="rtl">{provider.name_ar}</p>}
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-100">
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+
+        {/* Counters */}
+        <div className="grid grid-cols-4 gap-2 p-4 border-b border-slate-100">
+          {[
+            { Icon: Eye,   v: provider.views_count ?? 0,         l: isAr ? 'مشاهدات' : 'Views' },
+            { Icon: Inbox, v: provider.rfq_received_count ?? 0,  l: isAr ? 'طلبات واردة' : 'RFQ in' },
+            { Icon: Send,  v: provider.rfq_submitted_count ?? 0, l: isAr ? 'طلبات صادرة' : 'RFQ out' },
+            { Icon: Mail,  v: provider.emails_count ?? 0,        l: isAr ? 'إيميلات' : 'Emails' },
+          ].map((c, i) => (
+            <div key={i} className="text-center bg-slate-50 rounded-xl p-2">
+              <c.Icon className="w-3.5 h-3.5 text-slate-400 mx-auto mb-1" />
+              <div className="text-lg font-black text-slate-700 tabular-nums">{c.v}</div>
+              <div className="text-[9px] text-slate-400">{c.l}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="p-5 max-h-[50vh] overflow-y-auto">
+          {loading ? (
+            <div className="flex justify-center py-10"><RefreshCw className="w-5 h-5 animate-spin text-slate-300" /></div>
+          ) : (
+            <>
+              {/* RFQs */}
+              {rfqs.length > 0 && (
+                <div className="mb-5">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">{isAr ? 'الطلبات' : 'Requests'}</p>
+                  <div className="space-y-1.5">
+                    {rfqs.map(r => (
+                      <div key={r.id} className="flex items-start justify-between gap-2 text-xs bg-slate-50 rounded-xl px-3 py-2">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-700 truncate">{r.product_name}</div>
+                          <div className="text-slate-400">{r.contact_name}{r.notes ? ` · ${r.notes}` : ''}</div>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-500 flex-shrink-0">{r.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Event timeline */}
+              <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">{isAr ? 'سجل النشاط' : 'Activity log'}</p>
+              {events.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-6">{isAr ? 'لا نشاط بعد' : 'No activity yet'}</p>
+              ) : (
+                <div className="space-y-1">
+                  {events.map(e => (
+                    <div key={e.id} className="flex items-center justify-between gap-2 text-xs py-1.5 border-b border-slate-50 last:border-0">
+                      <span className="text-slate-600">{isAr ? (EVENT_AR[e.event_type] ?? e.event_type) : e.event_type}</span>
+                      <span className="text-[10px] text-slate-400">{new Date(e.created_at).toLocaleString(isAr ? 'ar-AE' : 'en-AE')}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 interface Stats { total: number; active: number; verified: number; traders: number; repack: number; pending: number }
@@ -230,6 +326,7 @@ export default function ProvidersAdminPage() {
   const [statusFilter, setStatusFilter] = useState<'all'|'active'|'inactive'|'pending'>('all')
   const [editing, setEditing]       = useState<Provider | null>(null)
   const [deleting, setDeleting]     = useState<string | null>(null)
+  const [viewing, setViewing]       = useState<Provider | null>(null)
   const [total, setTotal]           = useState(0)
   const [page, setPage]             = useState(1)
   const [stats, setStats]           = useState<Stats>({ total: 0, active: 0, verified: 0, traders: 0, repack: 0, pending: 0 })
@@ -398,12 +495,14 @@ export default function ProvidersAdminPage() {
                       <span className="text-xs text-slate-500">{p.emirate ?? '—'}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2.5 text-[11px] text-slate-500" title={isAr ? 'مشاهدات · طلبات واردة · طلبات صادرة · إيميلات' : 'views · RFQ in · RFQ out · emails'}>
+                      <button onClick={() => setViewing(p)}
+                        className="flex items-center gap-2.5 text-[11px] text-slate-500 hover:text-indigo-600 transition-colors"
+                        title={isAr ? 'عرض السجل الكامل' : 'Open full log'}>
                         <span className="flex items-center gap-0.5"><Eye className="w-3 h-3 text-slate-400"/>{p.views_count ?? 0}</span>
                         <span className="flex items-center gap-0.5"><Inbox className="w-3 h-3 text-indigo-400"/>{p.rfq_received_count ?? 0}</span>
                         <span className="flex items-center gap-0.5"><Send className="w-3 h-3 text-orange-400"/>{p.rfq_submitted_count ?? 0}</span>
                         <span className="flex items-center gap-0.5"><Mail className="w-3 h-3 text-emerald-400"/>{p.emails_count ?? 0}</span>
-                      </div>
+                      </button>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
@@ -453,6 +552,11 @@ export default function ProvidersAdminPage() {
             {isAr ? 'التالي' : 'Next'}
           </button>
         </div>
+      )}
+
+      {/* Activity Log Drawer */}
+      {viewing && (
+        <ActivityLog provider={viewing} isAr={isAr} onClose={() => setViewing(null)} />
       )}
 
       {/* Edit Modal */}

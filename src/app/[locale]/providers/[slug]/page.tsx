@@ -5,8 +5,8 @@ import {
   MapPin, BadgeCheck, ArrowLeft, ArrowRight, Repeat2, Store,
   Hash, Calendar, ShieldCheck, ExternalLink, Package,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
 import { getProviderBySlug } from '@/lib/supabase/cached'
+import ViewBeacon from './ViewBeacon'
 
 export const revalidate = 86400   // Cache individual provider pages 24 hours
 
@@ -64,6 +64,7 @@ export default async function ProviderDetailPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ViewBeacon providerId={p.id} />
 
       {/* ── Breadcrumb ── */}
       <div className="bg-white border-b border-gray-100 px-6 py-3">
