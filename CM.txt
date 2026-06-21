@@ -1,0 +1,10 @@
+feat(campaigns): editable drafts + manual audience + 3rd "manual" source
+
+- audience.ts: AudienceSpec gains manual_emails (always merged on top of the
+  chosen source) and a 'manual' source (emails only)
+- /api/admin/campaigns: PATCH (edit a draft) + DELETE (remove a campaign)
+- dashboard: 3-way source toggle (requesters/companies/manual), a manual-emails
+  textarea on every source, edit + delete buttons on draft rows, save-changes
+  mode with cancel — a stronger, more flexible audience builder
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>

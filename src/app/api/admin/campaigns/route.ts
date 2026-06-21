@@ -34,3 +34,30 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, id: data.id })
 }
+
+// PATCH → edit a DRAFT campaign (name/subject/body/audience)
+export async function PATCH(req: NextRequest) {
+  const { id, name, subject, body_html, audience } = await req.json()
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const patch: Record<string, unknown> = {}
+  if (name !== undefined) patch.name = name
+  if (subject !== undefined) patch.subject = subject
+  if (body_html !== undefined) patch.body_html = body_html
+  if (audience !== undefined) patch.audience = audience
+  const { error } = await db()
+    .from('email_campaigns')
+    .update(patch)
+    .eq('id', id)
+    .eq('status', 'draft')   // only drafts are editable
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
+// DELETE → remove a draft campaign
+export async function DELETE(req: NextRequest) {
+  const { id } = await req.json()
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const { error } = await db().from('email_campaigns').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

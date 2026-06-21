@@ -10,7 +10,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export interface AudienceSpec {
-  source: 'requesters' | 'providers'
+  source: 'requesters' | 'providers' | 'manual'
   // requesters
   request_sources?: string[]   // ['trader','packaging','repack','basket']
   statuses?: string[]          // ['new','contacted',...]
@@ -18,6 +18,8 @@ export interface AudienceSpec {
   provider_type?: 'trader' | 'repackager'
   category?: string
   emirate?: string
+  // manual addresses — always merged in, on top of the chosen source
+  manual_emails?: string[]
   limit?: number
 }
 
@@ -30,6 +32,14 @@ const MODE_BY_SOURCE: Record<string, string> = {
 export async function resolveAudience(db: SupabaseClient, spec: AudienceSpec): Promise<Recipient[]> {
   const limit = Math.min(spec.limit ?? 5000, 10000)
   const map = new Map<string, Recipient>()
+
+  // Manually-entered emails are always merged in, regardless of the source.
+  for (const raw of spec.manual_emails ?? []) {
+    const email = String(raw).trim().toLowerCase()
+    if (email.includes('@') && !map.has(email)) map.set(email, { email, name: null, company: null })
+  }
+
+  if (spec.source === 'manual') return [...map.values()]
 
   if (spec.source === 'requesters') {
     const wantTrader = !spec.request_sources?.length || spec.request_sources.includes('trader')
