@@ -1,9 +1,0 @@
-fix(phase1): unblock packaging quote, add repackaging request button, admin category filter
-
-- packaging quote (cartons mode) was rejected by packaging_plans_mode_check
-  constraint (only allowed basket_mix); SQL widens it to rfq/repack/cartons
-- repackaging calculator now has a request-a-quote form posting to
-  /api/packaging/rfq (previously calc-only with no way to contact)
-- admin providers dashboard: added category filter via get_providers_admin
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
