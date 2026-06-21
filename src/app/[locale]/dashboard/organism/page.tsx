@@ -71,6 +71,7 @@ export default function OrganismPage() {
   const [publishing, setPublishing] = useState(false)
   const [learning, setLearning] = useState(false)
   const [lastBeat, setLastBeat] = useState<string | null>(null)
+  const [publishMsg, setPublishMsg] = useState<{ ok: boolean; msg: string } | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -105,17 +106,33 @@ export default function OrganismPage() {
 
   async function publish() {
     setPublishing(true)
+    setPublishMsg(null)
     try {
       const res = await fetch('/api/organism/publish', { method: 'GET', cache: 'no-store' })
       const json = await res.json()
-      setLastBeat(
-        isAr
-          ? `نُشر ${json.published ?? 0} · حُجب ${json.blocked ?? 0}`
-          : `published ${json.published ?? 0} · blocked ${json.blocked ?? 0}`
-      )
+      const pub = json.published ?? 0
+      const blocked = json.blocked ?? 0
+      const capReached = json.cap_reached ?? false
+      setPublishMsg({
+        ok: pub > 0 || capReached,
+        msg: isAr
+          ? pub > 0
+            ? `✓ نُشرت ${pub} صفحة${blocked > 0 ? ` · حُجب ${blocked} (لم تجتز بوابة الجودة)` : ''}`
+            : capReached
+              ? 'وصلت حدّ اليوم — ستُنشر المزيد غداً تلقائياً'
+              : `لا شيء جاهز للنشر (طابور الاعتماد فارغ)`
+          : pub > 0
+            ? `✓ Published ${pub} page${blocked > 0 ? ` · ${blocked} blocked (quality gate)` : ''}`
+            : capReached
+              ? 'Daily cap reached — more will publish tomorrow automatically'
+              : 'Nothing ready (approved queue empty)',
+      })
       await load()
+    } catch {
+      setPublishMsg({ ok: false, msg: isAr ? 'خطأ في الاتصال' : 'Connection error' })
     } finally {
       setPublishing(false)
+      setTimeout(() => setPublishMsg(null), 8000)
     }
   }
 
@@ -187,8 +204,19 @@ export default function OrganismPage() {
       </div>
 
       {lastBeat && (
-        <div className="mb-4 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-3 py-2">
+        <div className="mb-3 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-3 py-2">
           {isAr ? 'آخر نبضة: ' : 'Last beat: '}{lastBeat}
+        </div>
+      )}
+      {publishing && (
+        <div className="mb-3 text-xs bg-orange-50 text-orange-700 border border-orange-200 rounded-lg px-3 py-2 flex items-center gap-2">
+          <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+          {isAr ? 'جارٍ النشر — يولّد الكائن المحتوى بـ Claude (≈ 30 ث)…' : 'Publishing — organism generating content with Claude (≈ 30s)…'}
+        </div>
+      )}
+      {publishMsg && (
+        <div className={`mb-3 text-xs border rounded-lg px-3 py-2 ${publishMsg.ok ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+          {publishMsg.msg}
         </div>
       )}
 
