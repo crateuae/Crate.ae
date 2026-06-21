@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
-import { Plus, Edit2, Trash2, X, Save, RefreshCw, Search, CheckCircle, XCircle, Store, Repeat2, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Plus, Edit2, Trash2, X, Save, RefreshCw, Search, CheckCircle, XCircle, Eye, Inbox, Send, Mail } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -16,7 +16,14 @@ interface Provider {
   city: string | null
   is_verified: boolean; is_active: boolean
   created_at?: string
+  views_count?: number
+  rfq_received_count?: number
+  rfq_submitted_count?: number
+  emails_count?: number
+  last_activity_at?: string | null
 }
+
+const PAGE_SIZE = 50
 
 const EMPTY: Provider = {
   name_ar: '', name_en: '', slug: '',
@@ -37,8 +44,8 @@ const CATEGORIES = [
 
 // ─── Supabase client (service role via API route) ─────────────────────────────
 
-async function apiCall(method: string, body?: object) {
-  const res = await fetch('/api/admin/providers', {
+async function apiCall(method: string, body?: object, qs?: string) {
+  const res = await fetch(`/api/admin/providers${qs ? '?' + qs : ''}`, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
@@ -212,6 +219,8 @@ function ProviderForm({ item, onSave, onClose, isAr }: {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+interface Stats { total: number; active: number; verified: number; traders: number; repack: number; pending: number }
+
 export default function ProvidersAdminPage() {
   const [isAr] = useState(true)
   const [providers, setProviders]   = useState<Provider[]>([])
@@ -222,65 +231,61 @@ export default function ProvidersAdminPage() {
   const [editing, setEditing]       = useState<Provider | null>(null)
   const [deleting, setDeleting]     = useState<string | null>(null)
   const [total, setTotal]           = useState(0)
+  const [page, setPage]             = useState(1)
+  const [stats, setStats]           = useState<Stats>({ total: 0, active: 0, verified: 0, traders: 0, repack: 0, pending: 0 })
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { page?: number; q?: string; type?: string; status?: string }) => {
     setLoading(true)
+    const p = opts?.page ?? page
+    const qs = new URLSearchParams({ page: String(p), size: String(PAGE_SIZE) })
+    const q = opts?.q ?? search
+    const t = opts?.type ?? typeFilter
+    const s = opts?.status ?? statusFilter
+    if (q) qs.set('q', q)
+    if (t !== 'all') qs.set('type', t)
+    if (s !== 'all') qs.set('status', s)
     try {
-      const data = await apiCall('GET')
+      const data = await apiCall('GET', undefined, qs.toString())
       setProviders(data.rows ?? [])
       setTotal(data.total ?? 0)
+      setStats({
+        total: data.total ?? 0,
+        active: data.active ?? 0,
+        verified: data.verified ?? 0,
+        traders: data.traders ?? 0,
+        repack: data.repack ?? 0,
+        pending: data.pending ?? 0,
+      })
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
-  }, [])
+  }, [page, search, typeFilter, statusFilter])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load({ page: 1 }); setPage(1) /* eslint-disable-next-line */ }, [])
+
+  // Debounced server search
+  function onSearch(v: string) {
+    setSearch(v)
+    if (debounce.current) clearTimeout(debounce.current)
+    debounce.current = setTimeout(() => { setPage(1); load({ page: 1, q: v }) }, 350)
+  }
+  function onType(v: 'all'|'trader'|'repackager') { setTypeFilter(v); setPage(1); load({ page: 1, type: v }) }
+  function onStatus(v: 'all'|'active'|'inactive'|'pending') { setStatusFilter(v); setPage(1); load({ page: 1, status: v }) }
+  function goPage(p: number) { setPage(p); load({ page: p }) }
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   async function save(p: Provider) {
-    if (p.id) {
-      await apiCall('PATCH', p)
-    } else {
-      await apiCall('POST', p)
-    }
+    if (p.id) { await apiCall('PATCH', p) } else { await apiCall('POST', p) }
     setEditing(null)
     await load()
   }
+  async function remove(id: string) { await apiCall('DELETE', { id }); setDeleting(null); await load() }
+  async function toggleActive(p: Provider)   { await apiCall('PATCH', { id: p.id, is_active: !p.is_active }); await load() }
+  async function toggleVerified(p: Provider) { await apiCall('PATCH', { id: p.id, is_verified: !p.is_verified }); await load() }
 
-  async function remove(id: string) {
-    await apiCall('DELETE', { id })
-    setDeleting(null)
-    await load()
-  }
-
-  async function toggleActive(p: Provider) {
-    await apiCall('PATCH', { ...p, is_active: !p.is_active })
-    await load()
-  }
-
-  async function toggleVerified(p: Provider) {
-    await apiCall('PATCH', { ...p, is_verified: !p.is_verified })
-    await load()
-  }
-
-  // Filter client-side
-  const filtered = providers.filter(p => {
-    const q = search.toLowerCase()
-    const matchQ = !q || p.name_en.toLowerCase().includes(q) || p.name_ar.includes(q) || (p.license_no ?? '').toLowerCase().includes(q)
-    const matchT = typeFilter === 'all' || p.type === typeFilter
-    const matchS = statusFilter === 'all'
-      || (statusFilter === 'active'   && p.is_active)
-      || (statusFilter === 'inactive' && !p.is_active)
-      || (statusFilter === 'pending'  && p.is_active && !p.is_verified)
-    return matchQ && matchT && matchS
-  })
-
-  const stats = {
-    total:    providers.length,
-    active:   providers.filter(p => p.is_active).length,
-    verified: providers.filter(p => p.is_verified).length,
-    traders:  providers.filter(p => p.type === 'trader').length,
-    repack:   providers.filter(p => p.type === 'repackager').length,
-    pending:  providers.filter(p => p.is_active && !p.is_verified).length,
-  }
+  // Server already filters — render rows as-is.
+  const filtered = providers
 
   return (
     <div className="p-6 space-y-5">
@@ -325,25 +330,25 @@ export default function ProvidersAdminPage() {
       <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap gap-3">
         <div className="flex items-center gap-2 flex-1 min-w-[200px] border border-slate-200 rounded-xl px-3">
           <Search className="w-4 h-4 text-slate-400 flex-shrink-0"/>
-          <input value={search} onChange={e => setSearch(e.target.value)}
+          <input value={search} onChange={e => onSearch(e.target.value)}
             placeholder={isAr ? 'بحث بالاسم أو رقم الرخصة...' : 'Search by name or license...'}
             className="flex-1 py-2 text-sm focus:outline-none" dir={isAr ? 'rtl' : 'ltr'}/>
-          {search && <button onClick={() => setSearch('')}><X className="w-3.5 h-3.5 text-slate-400"/></button>}
+          {search && <button onClick={() => onSearch('')}><X className="w-3.5 h-3.5 text-slate-400"/></button>}
         </div>
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as typeof typeFilter)}
+        <select value={typeFilter} onChange={e => onType(e.target.value as typeof typeFilter)}
           className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none bg-white">
           <option value="all">{isAr ? 'كل الأنواع' : 'All types'}</option>
           <option value="trader">{isAr ? 'تجار' : 'Traders'}</option>
           <option value="repackager">{isAr ? 'معبئون' : 'Repackers'}</option>
         </select>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
+        <select value={statusFilter} onChange={e => onStatus(e.target.value as typeof statusFilter)}
           className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none bg-white">
           <option value="all">{isAr ? 'كل الحالات' : 'All status'}</option>
           <option value="active">{isAr ? 'نشط' : 'Active'}</option>
           <option value="inactive">{isAr ? 'غير نشط' : 'Inactive'}</option>
           <option value="pending">{isAr ? 'بانتظار التوثيق' : 'Pending verification'}</option>
         </select>
-        <span className="text-xs text-slate-400 self-center">{filtered.length} {isAr ? 'نتيجة' : 'results'}</span>
+        <span className="text-xs text-slate-400 self-center">{total.toLocaleString()} {isAr ? 'نتيجة' : 'results'}</span>
       </div>
 
       {/* Table */}
@@ -365,7 +370,7 @@ export default function ProvidersAdminPage() {
                     isAr?'النوع':'Type',
                     isAr?'التصنيف':'Category',
                     isAr?'الإمارة':'Emirate',
-                    isAr?'الرخصة':'License',
+                    isAr?'النشاط':'Activity',
                     isAr?'الحالة':'Status',
                     isAr?'إجراءات':'Actions',
                   ].map((h, i) => (
@@ -392,8 +397,13 @@ export default function ProvidersAdminPage() {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="text-xs text-slate-500">{p.emirate ?? '—'}</span>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="text-xs font-mono text-slate-500">{p.license_no ?? '—'}</span>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-2.5 text-[11px] text-slate-500" title={isAr ? 'مشاهدات · طلبات واردة · طلبات صادرة · إيميلات' : 'views · RFQ in · RFQ out · emails'}>
+                        <span className="flex items-center gap-0.5"><Eye className="w-3 h-3 text-slate-400"/>{p.views_count ?? 0}</span>
+                        <span className="flex items-center gap-0.5"><Inbox className="w-3 h-3 text-indigo-400"/>{p.rfq_received_count ?? 0}</span>
+                        <span className="flex items-center gap-0.5"><Send className="w-3 h-3 text-orange-400"/>{p.rfq_submitted_count ?? 0}</span>
+                        <span className="flex items-center gap-0.5"><Mail className="w-3 h-3 text-emerald-400"/>{p.emails_count ?? 0}</span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
@@ -427,6 +437,23 @@ export default function ProvidersAdminPage() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <button disabled={page <= 1} onClick={() => goPage(page - 1)}
+            className="px-3 py-1.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            {isAr ? 'السابق' : 'Prev'}
+          </button>
+          <span className="text-sm text-slate-500 px-2 tabular-nums">
+            {isAr ? `صفحة ${page.toLocaleString('ar-EG')} من ${totalPages.toLocaleString('ar-EG')}` : `Page ${page} of ${totalPages}`}
+          </span>
+          <button disabled={page >= totalPages} onClick={() => goPage(page + 1)}
+            className="px-3 py-1.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            {isAr ? 'التالي' : 'Next'}
+          </button>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {editing && (

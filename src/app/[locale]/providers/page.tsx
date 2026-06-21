@@ -365,9 +365,14 @@ export default async function ProvidersPage({
             </span>
           </div>
 
-          {/* Row 2: Trading subcategory chips */}
+          {/* Row 2: Trading subcategory chips — data-driven from live counts */}
           {(() => {
-            const chipList    = TRADING_CATEGORIES
+            // Prefer the curated order, then append any other category that has rows.
+            const known   = TRADING_CATEGORIES.filter(c => (category_counts[c] ?? 0) > 0)
+            const extras  = Object.keys(category_counts)
+              .filter(c => !TRADING_CATEGORIES.includes(c) && (category_counts[c] ?? 0) > 0)
+              .sort((a, b) => (category_counts[b] ?? 0) - (category_counts[a] ?? 0))
+            const chipList    = [...known, ...extras]
             const activeColor = 'bg-indigo-600 text-white border-indigo-600 font-bold'
             const hoverColor  = 'hover:border-indigo-300 hover:text-indigo-600'
             const activeCount = 'text-indigo-200'

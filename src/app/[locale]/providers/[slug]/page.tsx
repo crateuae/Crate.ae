@@ -43,11 +43,10 @@ export default async function ProviderDetailPage({
 
   if (!p) notFound()
 
-  // Packaging/repackaging companies are a hidden Crate-brokered service —
-  // never expose their public profile pages.
-  if (p.type === 'repackager') notFound()
-
+  // Packaging/repackaging companies are a hidden Crate-brokered service.
+  // Their page EXISTS but sensitive details are gated for non-subscribers.
   const isRepack  = p.type === 'repackager'
+  const gated     = isRepack   // TODO: unlock when the viewer is an authenticated subscriber
   const accentCls = isRepack ? 'indigo' : 'indigo'
 
   const EMIRATES_LABELS_AR: Record<string, string> = {
@@ -138,7 +137,27 @@ export default async function ProviderDetailPage({
               )}
             </div>
 
-            {/* License Details */}
+            {/* Gated notice for repackagers */}
+            {gated && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
+                <ShieldCheck className="w-8 h-8 text-amber-500 mx-auto mb-3" />
+                <h2 className="text-sm font-black text-gray-900 mb-1">
+                  {isAr ? 'شركة تعبئة — وصول مقيّد' : 'Packaging company — restricted access'}
+                </h2>
+                <p className="text-xs text-gray-500 mb-4 max-w-sm mx-auto leading-relaxed">
+                  {isAr
+                    ? 'بيانات شركات إعادة التعبئة متاحة للمشتركين فقط. اشترك للوصول إلى تفاصيل الرخصة والتواصل وطلب خدمة التعبئة عبر Crate.'
+                    : 'Repackaging company details are available to subscribers only. Subscribe to view license, contact, and request packaging via Crate.'}
+                </p>
+                <Link href={`/${locale}/login`}
+                  className="inline-block bg-amber-500 text-white font-black text-xs px-5 py-2.5 rounded-xl hover:bg-amber-600 transition-colors">
+                  {isAr ? 'اشترك للوصول' : 'Subscribe to access'}
+                </Link>
+              </div>
+            )}
+
+            {/* License Details — hidden for gated repackagers */}
+            {!gated && (
             <div className="bg-white border border-gray-200 rounded-2xl p-6">
               <h2 className="text-sm font-black text-gray-900 mb-4 flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-indigo-500" />
@@ -186,6 +205,7 @@ export default async function ProviderDetailPage({
                 </a>
               )}
             </div>
+            )}
           </div>
 
           {/* ── Sidebar ── */}
