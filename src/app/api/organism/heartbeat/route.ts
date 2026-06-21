@@ -26,6 +26,22 @@ export async function POST(req: NextRequest) {
     const db = organismDb()
     const brain = await getActiveBrain(db)
 
+    // ① PERCEIVE — refresh the radar each pulse (best-effort, time-boxed so a
+    //    slow external call never starves the rest of the beat).
+    let discovered = 0
+    try {
+      const base = process.env.NEXT_PUBLIC_APP_URL || 'https://www.crate.ae'
+      const ctrl = new AbortController()
+      const t = setTimeout(() => ctrl.abort(), 30000)
+      const dr = await fetch(`${base}/api/trends/discover`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit: 20 }), signal: ctrl.signal,
+      }).catch(() => null)
+      clearTimeout(t)
+      if (dr?.ok) discovered = (await dr.json().catch(() => ({}))).inserted ?? 0
+    } catch { /* non-fatal */ }
+
+    // ② SENSE → SCORE → CAPTURE
     const senseResult = await sense(db)
     const scoreResult = await scoreSensed(db, brain)
     const captureResult = await captureOutcomes(db)
@@ -35,6 +51,7 @@ export async function POST(req: NextRequest) {
       beat_at: new Date().toISOString(),
       duration_ms: Date.now() - startedAt,
       brain_version: brain.version,
+      discovered,
       sense: senseResult,
       score: scoreResult,
       capture: captureResult,
