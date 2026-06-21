@@ -853,6 +853,87 @@ function RepackCalculator({ isAr }: { isAr: boolean }) {
           </div>
         </div>
       )}
+      {showResults && results.length > 0 && (
+        <PackagingQuoteRequest
+          isAr={isAr}
+          productLabel={material ? (isAr ? material.name_ar : material.name_en) : 'repackaging'}
+          calc={{ kind: 'repack', material: material?.id ?? null, bulkQty, bulkPrice, sizes }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── Shared: request a quote / contact via Crate (packaging & repackaging) ────
+
+function PackagingQuoteRequest({ isAr, productLabel, calc }: {
+  isAr: boolean; productLabel: string; calc: unknown
+}) {
+  const [open, setOpen]       = useState(false)
+  const [done, setDone]       = useState(false)
+  const [sending, setSending] = useState(false)
+  const [f, setF] = useState({ contact_name: '', company_name: '', email: '', phone: '', notes: '' })
+  const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }))
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!f.contact_name.trim() || (!f.email.trim() && !f.phone.trim())) return
+    setSending(true)
+    try {
+      await fetch('/api/packaging/rfq', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...f, product_label: productLabel, calc }),
+      })
+      setDone(true)
+    } finally { setSending(false) }
+  }
+
+  if (done) return (
+    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center">
+      <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+      <p className="text-sm font-bold text-slate-800">
+        {isAr ? 'وصلنا طلبك! سنتواصل معك قريباً عبر Crate.' : 'Request received! Crate will contact you soon.'}
+      </p>
+    </div>
+  )
+
+  const inp = "w-full rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+  return (
+    <div className="bg-orange-50 border border-orange-200 rounded-2xl p-5">
+      {!open ? (
+        <div className="text-center">
+          <p className="text-sm font-bold text-slate-800 mb-3">
+            {isAr ? 'أعجبتك الأرقام؟ اطلب عرض سعر فعلياً عبر Crate' : 'Like the numbers? Request a real quote via Crate'}
+          </p>
+          <button onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-black px-6 py-2.5 rounded-xl text-sm">
+            <Send className="w-4 h-4" />{isAr ? 'اطلب عرض سعر' : 'Request a quote'}
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="space-y-3" dir={isAr ? 'rtl' : 'ltr'}>
+          <p className="text-sm font-black text-slate-800">
+            {isAr ? `طلب عرض سعر — ${productLabel}` : `Quote request — ${productLabel}`}
+          </p>
+          <div className="grid sm:grid-cols-2 gap-2">
+            <input required value={f.contact_name} onChange={e => set('contact_name', e.target.value)} placeholder={isAr ? 'اسمك *' : 'Your name *'} className={inp} />
+            <input value={f.company_name} onChange={e => set('company_name', e.target.value)} placeholder={isAr ? 'الشركة' : 'Company'} className={inp} />
+            <input type="email" value={f.email} onChange={e => set('email', e.target.value)} placeholder={isAr ? 'البريد الإلكتروني' : 'Email'} className={inp} />
+            <input value={f.phone} onChange={e => set('phone', e.target.value)} placeholder={isAr ? 'هاتف / واتساب' : 'Phone / WhatsApp'} className={inp} />
+          </div>
+          <textarea value={f.notes} onChange={e => set('notes', e.target.value)} rows={2} placeholder={isAr ? 'تفاصيل إضافية…' : 'Additional details…'} className={inp + ' resize-none'} />
+          <p className="text-[10px] text-slate-400">{isAr ? 'يلزم الاسم وبريد أو هاتف واحد على الأقل.' : 'Name and at least one of email/phone required.'}</p>
+          <div className="flex gap-2">
+            <button type="submit" disabled={sending}
+              className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2">
+              {sending && <Loader2 className="w-4 h-4 animate-spin" />}{isAr ? 'إرسال عبر Crate' : 'Send via Crate'}
+            </button>
+            <button type="button" onClick={() => setOpen(false)} className="px-4 py-2.5 rounded-xl border border-orange-200 text-sm text-slate-600">
+              {isAr ? 'إلغاء' : 'Cancel'}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   )
 }

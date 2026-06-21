@@ -25,6 +25,16 @@ interface Provider {
 
 const PAGE_SIZE = 50
 
+// Real category values present in the DB (for the admin category filter).
+const CAT_OPTIONS = [
+  'Foodstuff Trading', 'Restaurant', 'Café & Coffee', 'Catering',
+  'Beverages & Juices', 'Oils & Fats', 'Bakery & Pastry', 'Supermarket',
+  'Seafood', 'Meat & Poultry', 'Grains & Flour', 'Health & Nutrition',
+  'Chocolate & Sweets', 'Spices & Condiments', 'Dairy', 'Snacks',
+  'Fast Food', 'Frozen Foods', 'General Trading', 'Grocery',
+  'Packaging Services', 'Repackaging Services',
+]
+
 const EMPTY: Provider = {
   name_ar: '', name_en: '', slug: '',
   type: 'trader', category: 'Foodstuff Trading',
@@ -329,19 +339,22 @@ export default function ProvidersAdminPage() {
   const [viewing, setViewing]       = useState<Provider | null>(null)
   const [total, setTotal]           = useState(0)
   const [page, setPage]             = useState(1)
+  const [categoryFilter, setCategoryFilter] = useState('all')
   const [stats, setStats]           = useState<Stats>({ total: 0, active: 0, verified: 0, traders: 0, repack: 0, pending: 0 })
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const load = useCallback(async (opts?: { page?: number; q?: string; type?: string; status?: string }) => {
+  const load = useCallback(async (opts?: { page?: number; q?: string; type?: string; status?: string; category?: string }) => {
     setLoading(true)
     const p = opts?.page ?? page
     const qs = new URLSearchParams({ page: String(p), size: String(PAGE_SIZE) })
     const q = opts?.q ?? search
     const t = opts?.type ?? typeFilter
     const s = opts?.status ?? statusFilter
+    const c = opts?.category ?? categoryFilter
     if (q) qs.set('q', q)
     if (t !== 'all') qs.set('type', t)
     if (s !== 'all') qs.set('status', s)
+    if (c !== 'all') qs.set('category', c)
     try {
       const data = await apiCall('GET', undefined, qs.toString())
       setProviders(data.rows ?? [])
@@ -356,7 +369,7 @@ export default function ProvidersAdminPage() {
       })
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
-  }, [page, search, typeFilter, statusFilter])
+  }, [page, search, typeFilter, statusFilter, categoryFilter])
 
   useEffect(() => { load({ page: 1 }); setPage(1) /* eslint-disable-next-line */ }, [])
 
@@ -368,6 +381,7 @@ export default function ProvidersAdminPage() {
   }
   function onType(v: 'all'|'trader'|'repackager') { setTypeFilter(v); setPage(1); load({ page: 1, type: v }) }
   function onStatus(v: 'all'|'active'|'inactive'|'pending') { setStatusFilter(v); setPage(1); load({ page: 1, status: v }) }
+  function onCategory(v: string) { setCategoryFilter(v); setPage(1); load({ page: 1, category: v }) }
   function goPage(p: number) { setPage(p); load({ page: p }) }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
@@ -444,6 +458,11 @@ export default function ProvidersAdminPage() {
           <option value="active">{isAr ? 'نشط' : 'Active'}</option>
           <option value="inactive">{isAr ? 'غير نشط' : 'Inactive'}</option>
           <option value="pending">{isAr ? 'بانتظار التوثيق' : 'Pending verification'}</option>
+        </select>
+        <select value={categoryFilter} onChange={e => onCategory(e.target.value)}
+          className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none bg-white">
+          <option value="all">{isAr ? 'كل التصنيفات' : 'All categories'}</option>
+          {CAT_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         <span className="text-xs text-slate-400 self-center">{total.toLocaleString()} {isAr ? 'نتيجة' : 'results'}</span>
       </div>
