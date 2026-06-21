@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { ChevronLeft, Tag, Clock } from 'lucide-react'
+import RfqForm from './RfqForm'
 
 export const revalidate = 3600
 
@@ -27,6 +28,15 @@ async function getArticle(slug: string): Promise<Article | null> {
     .eq('is_published', true)
     .maybeSingle()
   return (data as Article) ?? null
+}
+
+async function getOpportunityId(slug: string): Promise<string | null> {
+  const { data } = await db()
+    .from('opportunities')
+    .select('id')
+    .eq('published_url', `/insights/${slug}`)
+    .maybeSingle()
+  return data?.id ?? null
 }
 
 export async function generateMetadata(
@@ -62,14 +72,17 @@ export default async function InsightPage(
 ) {
   const { locale, slug } = await params
   const isAr = locale === 'ar'
-  const a = await getArticle(slug)
+
+  const [a, opportunityId] = await Promise.all([
+    getArticle(slug),
+    getOpportunityId(slug),
+  ])
   if (!a) notFound()
 
   const title = isAr ? a.title_ar : a.title_en
   const body = isAr ? a.body_ar : a.body_en
   const paragraphs = body.split(/\n{2,}|\n/).map(p => p.trim()).filter(Boolean)
 
-  // JSON-LD Article schema for richer Google results
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -115,16 +128,15 @@ export default async function InsightPage(
           ))}
         </div>
 
-        <div className="mt-10 p-5 bg-orange-50 border border-orange-200 rounded-2xl text-center">
-          <p className="text-sm font-bold text-gray-900 mb-3">
-            {isAr ? 'مهتم بهذا المنتج؟ ابدأ صفقتك عبر Crate' : 'Interested in this product? Start your deal via Crate'}
-          </p>
-          <Link href={`/${locale}/providers`}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 transition-colors">
-            {isAr ? 'تواصل مع مورّد موثّق' : 'Contact a verified supplier'}
-            <ChevronLeft className={`w-4 h-4 ${isAr ? '' : 'rotate-180'}`} />
-          </Link>
-        </div>
+        {/* RFQ Form — the deal capture point */}
+        <RfqForm
+          opportunityId={opportunityId}
+          productName={isAr ? (a.title_ar ?? a.title_en) : a.title_en}
+          productNameAr={a.title_ar}
+          sourcePage={`/${locale}/insights/${slug}`}
+          isAr={isAr}
+          locale={locale}
+        />
       </div>
     </article>
   )
