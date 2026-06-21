@@ -1,4 +1,6 @@
-﻿import createMiddleware from 'next-intl/middleware'
+﻿// Next.js 16 proxy (formerly middleware). Turbopack requires a named `proxy`
+// function export — declared below. Cache-bust: 2026-06-21.
+import createMiddleware from 'next-intl/middleware'
 import { NextRequest, NextResponse } from 'next/server'
 import { routing } from './i18n/routing'
 import { createServerClient } from '@supabase/ssr'
