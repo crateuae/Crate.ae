@@ -46,7 +46,7 @@ export default function UnifiedProductEditor({ isAr }: { isAr: boolean }) {
     validationErrors: [],
   })
 
-  // Load products
+  // Load products on mount and when filters change
   useEffect(() => {
     loadProducts()
   }, [filter, search])
@@ -66,9 +66,12 @@ export default function UnifiedProductEditor({ isAr }: { isAr: boolean }) {
       }
       if (search) query.append('q', search)
 
-      const res = await fetch(`/api/admin/products/unified?${query.toString()}`)
+      const url = `/api/admin/products/unified?${query.toString()}`
+      const res = await fetch(url, { cache: 'no-store' })
       const data = await res.json()
       setProducts(data.products || [])
+    } catch (e) {
+      console.error('[loadProducts] error:', e)
     } finally {
       setLoading(false)
     }
@@ -121,8 +124,10 @@ export default function UnifiedProductEditor({ isAr }: { isAr: boolean }) {
 
     setEditor(prev => ({ ...prev, isSaving: true }))
     try {
-      const res = await fetch(`/api/admin/products/${editor.product.id}/publish`, {
+      const res = await fetch('/api/admin/products/publish', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editor.product.id, publish: true }),
       })
 
       if (res.ok) {
