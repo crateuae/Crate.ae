@@ -18,6 +18,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { BrainConfig } from './types'
 import { generateArticle } from '@/lib/ai/claude'
+import { matchProductInCatalog, createSkeletonProduct, updateProductContent, linkOpportunityToProduct } from '@/lib/supabase/products-unified'
 
 const MIN_BODY_CHARS = 400          // quality gate: each language must be substantial
 const MIN_TAGS = 2
@@ -103,31 +104,90 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
         continue
       }
 
-      // Ensure a unique slug
+      // ① Try to match with existing product in catalog
+      const matchedProductId = matchProductInCatalog(keyword)
+
+      if (matchedProductId) {
+        // ② MATCHED: Update existing product with organism content
+        const success = await updateProductContent(db, matchedProductId, {
+          content_ar: art.body_ar,
+          content_en: art.body_en,
+          tags: art.tags,
+        })
+
+        if (success) {
+          // Link opportunity to matched product
+          await linkOpportunityToProduct(db, matchedProductId, o.id)
+
+          // Mark opportunity published (link to product page, not /insights)
+          await db.from('opportunities').update({
+            stage: 'published',
+            published_url: `/products/${matchedProductId}`,
+            published_at: new Date().toISOString(),
+            blocked_reason: null,
+            stage_changed_at: new Date().toISOString(),
+          }).eq('id', o.id)
+
+          await logEvent(db, o.id, 'published', 'approved', 'published', {
+            type: 'matched_product',
+            product_id: matchedProductId,
+            url: `/products/${matchedProductId}`,
+          })
+
+          published++; budget--
+          continue
+        }
+      }
+
+      // ③ NO MATCH: Create skeleton product + article (for discovery)
+      const skeletonId = await createSkeletonProduct(db, {
+        id: o.id,
+        title: keyword,
+        title_ar: o.title_ar,
+        body_ar: art.body_ar,
+        body_en: art.body_en,
+        tags: art.tags,
+      })
+
+      // Also create article for SEO discovery (in /insights)
       let slug = art.slug?.trim() ? slugify(art.slug) : slugify(keyword)
       const { data: clash } = await db.from('articles').select('id').eq('slug', slug).maybeSingle()
       if (clash) slug = `${slug}-${o.id.slice(0, 6)}`
 
       const { error: insErr } = await db.from('articles').insert({
         slug,
-        title_ar: art.title_ar, title_en: art.title_en,
-        body_ar: art.body_ar, body_en: art.body_en,
+        title_ar: art.title_ar,
+        title_en: art.title_en,
+        body_ar: art.body_ar,
+        body_en: art.body_en,
         tags: art.tags ?? [],
         is_published: true,
         published_at: new Date().toISOString(),
       })
+
       if (insErr) {
-        await logEvent(db, o.id, 'blocked', 'approved', 'approved', { reason: `db:${insErr.message}` })
+        await logEvent(db, o.id, 'blocked', 'approved', 'approved', {
+          reason: `db:${insErr.message}`,
+        })
         blocked++
         continue
       }
 
-      const url = `/ar/insights/${slug}`
+      const url = `/insights/${slug}`
       await db.from('opportunities').update({
-        stage: 'published', published_url: url, published_at: new Date().toISOString(),
-        blocked_reason: null, stage_changed_at: new Date().toISOString(),
+        stage: 'published',
+        published_url: url,
+        published_at: new Date().toISOString(),
+        blocked_reason: null,
+        stage_changed_at: new Date().toISOString(),
       }).eq('id', o.id)
-      await logEvent(db, o.id, 'published', 'approved', 'published', { slug, url })
+
+      await logEvent(db, o.id, 'published', 'approved', 'published', {
+        type: 'new_skeleton_product',
+        product_id: skeletonId,
+        article_slug: slug,
+        url,
+      })
 
       await pingIndexNow(slug)
       published++; budget--
