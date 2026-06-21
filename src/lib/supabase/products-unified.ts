@@ -62,10 +62,12 @@ export async function createSkeletonProduct(
     tags?: string[]
   }
 ): Promise<string | null> {
+  const productId = crypto.randomUUID()
+
   const { data, error } = await db
     .from('products')
     .insert({
-      id: crypto.randomUUID(),
+      id: productId,
       name_en: opp.title,
       name_ar: opp.title_ar || opp.title,
       source: 'organism_discovery',
@@ -73,6 +75,7 @@ export async function createSkeletonProduct(
       content_en: opp.body_en,
       tags: opp.tags,
       is_published: false,
+      published_at: null,
       organism_opportunity_id: opp.id,
       // Minimal required fields
       brand: 'TBD',
@@ -80,6 +83,8 @@ export async function createSkeletonProduct(
       category_ar: 'منتج جديد',
       category_en: 'New Product',
       unit_size: 'unknown',
+      page_views: 0,
+      rfq_count: 0,
     })
     .select('id')
     .single()
@@ -89,7 +94,7 @@ export async function createSkeletonProduct(
     return null
   }
 
-  return data?.id ?? null
+  return data?.id || productId
 }
 
 /**

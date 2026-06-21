@@ -149,6 +149,14 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
         tags: art.tags,
       })
 
+      if (!skeletonId) {
+        await logEvent(db, o.id, 'blocked', 'approved', 'approved', {
+          reason: 'skeleton_creation_failed',
+        })
+        blocked++
+        continue
+      }
+
       // Also create article for SEO discovery (in /insights)
       let slug = art.slug?.trim() ? slugify(art.slug) : slugify(keyword)
       const { data: clash } = await db.from('articles').select('id').eq('slug', slug).maybeSingle()
@@ -167,13 +175,14 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
 
       if (insErr) {
         await logEvent(db, o.id, 'blocked', 'approved', 'approved', {
-          reason: `db:${insErr.message}`,
+          reason: `article_insert:${insErr.message}`,
         })
         blocked++
         continue
       }
 
-      const url = `/insights/${slug}`
+      // Link both: product (via organism_opportunity_id) and article (via published_url)
+      const url = `/products/${skeletonId}`
       await db.from('opportunities').update({
         stage: 'published',
         published_url: url,
