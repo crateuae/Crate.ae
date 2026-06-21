@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
+import Link from 'next/link'
 import {
   Activity, Brain, Eye, Hand, Zap, RefreshCw, Loader2, TrendingUp,
-  CheckCircle2, Clock, ShieldCheck, Sparkles, Package, AlertCircle,
+  CheckCircle2, Clock, ShieldCheck, Sparkles, Package, AlertCircle, Lightbulb, Radar,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -190,6 +191,47 @@ export default function OrganismPage() {
           {isAr ? 'آخر نبضة: ' : 'Last beat: '}{lastBeat}
         </div>
       )}
+
+      {/* ── Recommendations: what to do next for each stage ── */}
+      {data && (() => {
+        const sc = data.stage_counts; const b = data.brain
+        const TONE: Record<string, string> = {
+          sky: 'bg-sky-50 border-sky-200 text-sky-700', amber: 'bg-amber-50 border-amber-200 text-amber-700',
+          emerald: 'bg-emerald-50 border-emerald-200 text-emerald-700', violet: 'bg-violet-50 border-violet-200 text-violet-700',
+          gray: 'bg-gray-50 border-gray-200 text-gray-600',
+        }
+        type Rec = { txt: string; tone: keyof typeof TONE; action?: React.ReactNode }
+        const recs: Rec[] = []
+        if ((data.vitals.total ?? 0) === 0)
+          recs.push({ tone: 'sky', txt: isAr ? 'لا فرص بعد — افتح «الرادار» وشغّل مسحاً شاملاً لتغذية الحسّ' : 'No opportunities — run a Radar full scan',
+            action: <Link href={`/${locale}/dashboard/radar`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-600 text-white text-[11px] font-bold"><Radar className="w-3 h-3" />{isAr ? 'الرادار' : 'Radar'}</Link> })
+        if ((sc.sensed ?? 0) > 0)
+          recs.push({ tone: 'emerald', txt: isAr ? `${sc.sensed} فرصة مُكتشفة لم تُقيّم بعد` : `${sc.sensed} sensed, not scored`,
+            action: <button onClick={pulse} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold"><Zap className="w-3 h-3" />{isAr ? 'نبضة' : 'Pulse'}</button> })
+        if ((sc.approved ?? 0) > 0)
+          recs.push({ tone: 'amber', txt: isAr ? `طابور الاعتماد: ${sc.approved} جاهزة — انشرها كصفحات SEO حيّة (3/مرة)` : `${sc.approved} approved — publish (3/run)`,
+            action: <button onClick={publish} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-600 text-white text-[11px] font-bold"><Hand className="w-3 h-3" />{isAr ? 'نشر' : 'Publish'}</button> })
+        if ((sc.scored ?? 0) > 0)
+          recs.push({ tone: 'gray', txt: isAr ? `تحت العتبة: ${sc.scored} قيد المراقبة — اتركها تنضج، أو اخفض عتبة الاعتماد (الآن ${b.approve_threshold}) إن كانت صارمة` : `${sc.scored} below gate — watch, or lower approve_threshold (${b.approve_threshold})` })
+        if ((sc.published ?? 0) > 0 && b.prediction_accuracy == null)
+          recs.push({ tone: 'violet', txt: isAr ? 'صفحات منشورة — شغّل «تعلّم» لمعايرة العقل من الزيارات الحقيقية' : 'Published pages — run Learn to calibrate the brain',
+            action: <button onClick={learn} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-600 text-white text-[11px] font-bold"><Brain className="w-3 h-3" />{isAr ? 'تعلّم' : 'Learn'}</button> })
+        if (recs.length === 0)
+          recs.push({ tone: 'emerald', txt: isAr ? 'كل شيء متوازن — الكائن يعمل تلقائياً كل يوم' : 'All balanced — the organism runs daily' })
+        return (
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
+            <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2"><Lightbulb className="w-4 h-4 text-amber-500" />{isAr ? 'ماذا أفعل الآن؟ — توصيات لكل مرحلة' : 'What to do next'}</h2>
+            <div className="space-y-2">
+              {recs.map((r, i) => (
+                <div key={i} className={`flex items-center justify-between gap-3 border rounded-xl px-3 py-2.5 ${TONE[r.tone]}`}>
+                  <span className="text-xs font-medium">{r.txt}</span>
+                  {r.action && <div className="flex-shrink-0">{r.action}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Vitals */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
