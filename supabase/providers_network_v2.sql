@@ -9,7 +9,11 @@
 -- ─────────────────────────────────────────────────────────────
 -- 1. get_providers v2 — public listing + category_counts
 --    (the public /providers page already calls this signature)
+--    Drop any older overload first so the name stays unambiguous.
 -- ─────────────────────────────────────────────────────────────
+drop function if exists get_providers(text, text, text, int, int);
+drop function if exists get_providers(text, text, text, text, int, int);
+
 create or replace function get_providers(
   p_type     text default null,
   p_emirate  text default null,
