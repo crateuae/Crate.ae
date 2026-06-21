@@ -62,12 +62,10 @@ export async function createSkeletonProduct(
     tags?: string[]
   }
 ): Promise<string | null> {
-  const productId = crypto.randomUUID()
-
+  // Let Supabase generate the UUID (not crypto.randomUUID which fails in some contexts)
   const { data, error } = await db
     .from('products')
     .insert({
-      id: productId,
       name_en: opp.title,
       name_ar: opp.title_ar || opp.title,
       source: 'organism_discovery',
@@ -94,7 +92,7 @@ export async function createSkeletonProduct(
     return null
   }
 
-  return data?.id || productId
+  return data?.id ?? null
 }
 
 /**
