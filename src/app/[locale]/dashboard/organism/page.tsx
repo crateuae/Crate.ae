@@ -353,37 +353,138 @@ export default function OrganismPage() {
 
 // ─── Opportunity list ────────────────────────────────────────────────────────
 
-function OppList({ isAr, title, Icon, empty, opps, accent }: {
-  isAr: boolean; title: string; Icon: typeof Eye; empty: string; opps: Opp[]; accent: 'amber' | 'gray'
+function OppCard({ o, isAr, accent, onPublish, onDismiss }: {
+  o: Opp; isAr: boolean; accent: 'amber' | 'gray'
+  onPublish?: (id: string) => void; onDismiss?: (id: string) => void
 }) {
+  const [busy, setBusy] = useState(false)
+  const scoreColor = o.composite_score >= 70 ? 'text-emerald-600' : o.composite_score >= 55 ? 'text-amber-600' : 'text-gray-500'
+  const name = isAr ? (o.title_ar || o.title) : o.title
+
+  async function handlePublish() {
+    setBusy(true)
+    try {
+      const r = await fetch('/api/organism/publish', { method: 'GET', cache: 'no-store' })
+      const j = await r.json()
+      if (j.published > 0 && onPublish) onPublish(o.id)
+    } finally { setBusy(false) }
+  }
+  async function handleDismiss() {
+    setBusy(true)
+    try {
+      await fetch('/api/organism/pipeline', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: o.id, stage: 'dismissed' }),
+      })
+      if (onDismiss) onDismiss(o.id)
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <div className={`border rounded-2xl p-4 ${accent === 'amber' ? 'border-amber-200 bg-amber-50/40' : 'border-gray-200 bg-white'}`}>
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="min-w-0">
+          <div className="font-bold text-sm text-gray-900 leading-snug">{name}</div>
+          <div className="text-[11px] text-gray-400 mt-0.5">{SOURCE_AR[o.source] ?? o.source}</div>
+        </div>
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          <span className={`text-xl font-black ${scoreColor}`}>{o.composite_score}</span>
+          <span className="text-[10px] text-gray-400">نقطة</span>
+        </div>
+      </div>
+
+      {/* Score bars */}
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        {[
+          { l: isAr ? 'الترند' : 'Trend',   v: o.trend_score,     c: 'bg-blue-200' },
+          { l: isAr ? 'الجودة' : 'Quality', v: o.quality_score,   c: 'bg-violet-200' },
+          { l: isAr ? 'الفجوة' : 'Gap',     v: o.composite_score, c: 'bg-amber-200' },
+        ].map(m => (
+          <div key={m.l} className="text-center">
+            <div className="text-[10px] text-gray-400 mb-0.5">{m.l}</div>
+            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${m.c}`} style={{ width: `${m.v}%` }} />
+            </div>
+            <div className="text-[10px] font-bold text-gray-600 mt-0.5">{m.v}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Badges */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {o.is_available_uae === false && (
+          <span className="text-[10px] bg-emerald-100 text-emerald-700 rounded-md px-1.5 py-0.5">
+            {isAr ? '🚪 فرصة دخول' : '🚪 Entry opportunity'}
+          </span>
+        )}
+        {!o.is_registered && (
+          <span className="text-[10px] bg-blue-100 text-blue-700 rounded-md px-1.5 py-0.5">
+            {isAr ? '📋 غير مسجّل' : '📋 Not registered'}
+          </span>
+        )}
+        {o.views > 0 && (
+          <span className="text-[10px] bg-gray-100 text-gray-600 rounded-md px-1.5 py-0.5">
+            👁 {o.views}
+          </span>
+        )}
+        {o.published_url && (
+          <Link href={o.published_url} target="_blank"
+            className="text-[10px] bg-emerald-600 text-white rounded-md px-1.5 py-0.5 flex items-center gap-0.5">
+            {isAr ? '🌐 منشور' : '🌐 Live'}
+          </Link>
+        )}
+      </div>
+
+      {/* Actions */}
+      {accent === 'amber' && (
+        <div className="flex gap-2">
+          <button onClick={handlePublish} disabled={busy}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-600 text-white text-xs font-bold hover:bg-orange-700 disabled:opacity-50 transition-colors">
+            {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Hand className="w-3 h-3" />}
+            {isAr ? 'نشر' : 'Publish'}
+          </button>
+          <button onClick={handleDismiss} disabled={busy}
+            className="px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 text-xs font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors">
+            {isAr ? 'تجاوز' : 'Skip'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function OppList({ isAr, title, Icon, empty, opps, accent, onRefresh }: {
+  isAr: boolean; title: string; Icon: typeof Eye; empty: string
+  opps: Opp[]; accent: 'amber' | 'gray'; onRefresh?: () => void
+}) {
+  const [list, setList] = useState(opps)
+  useEffect(() => { setList(opps) }, [opps])
+
+  const remove = (id: string) => setList(prev => prev.filter(o => o.id !== id))
+
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-5">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-4">
         <Icon className={`w-4 h-4 ${accent === 'amber' ? 'text-amber-600' : 'text-gray-400'}`} />
         <h2 className="text-sm font-bold text-gray-700">{title}</h2>
-        <span className="text-xs text-gray-400">({opps.length})</span>
+        <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">{list.length}</span>
+        {onRefresh && (
+          <button onClick={onRefresh} className="ms-auto text-gray-400 hover:text-gray-600">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
-      {opps.length === 0 ? (
-        <p className="text-xs text-gray-400 py-4 text-center flex items-center justify-center gap-2">
+      {list.length === 0 ? (
+        <p className="text-xs text-gray-400 py-6 text-center flex items-center justify-center gap-2">
           <AlertCircle className="w-4 h-4" />{empty}
         </p>
       ) : (
-        <div className="space-y-2">
-          {opps.map(o => (
-            <div key={o.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate">
-                  {isAr ? (o.title_ar || o.title) : o.title}
-                </div>
-                <div className="text-[11px] text-gray-400">{SOURCE_AR[o.source] ?? o.source}</div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-xs font-bold text-gray-700 bg-gray-100 rounded-lg px-2 py-1">
-                  {o.composite_score}
-                </span>
-                <span className="text-[10px] text-gray-400">Q{o.quality_score}</span>
-              </div>
-            </div>
+        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {list.map(o => (
+            <OppCard key={o.id} o={o} isAr={isAr} accent={accent}
+              onPublish={accent === 'amber' ? (id) => { remove(id); onRefresh?.() } : undefined}
+              onDismiss={accent === 'amber' ? remove : undefined}
+            />
           ))}
         </div>
       )}

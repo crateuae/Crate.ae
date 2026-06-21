@@ -60,3 +60,18 @@ export async function GET() {
     fresh: top('sensed'),
   })
 }
+
+import { NextRequest } from 'next/server'
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const { id, stage } = await req.json()
+    const valid = ['dismissed', 'approved', 'scored', 'won', 'lost']
+    if (!id || !valid.includes(stage)) return NextResponse.json({ error: 'invalid' }, { status: 400 })
+    const db = organismDb()
+    await db.from('opportunities').update({ stage, stage_changed_at: new Date().toISOString() }).eq('id', id)
+    return NextResponse.json({ ok: true })
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
+}

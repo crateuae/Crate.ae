@@ -184,21 +184,23 @@ Return JSON:
 
 // ─── Article Generation ───────────────────────────────────────────────────────
 export async function generateArticle(keyword: string, lang: 'ar' | 'en' | 'both') {
-  const system = `You are a UAE food trade and compliance content expert.
-Write informative, SEO-optimized articles. Return only JSON.`
+  const system = `You are a UAE food trade and market intelligence expert.
+Write detailed, SEO-optimized articles for UAE importers and traders. Return ONLY valid JSON.`
 
-  const prompt = `Write a complete article about: "${keyword}"
-Target: UAE food & beverage importers, traders, distributors.
-${lang === 'both' ? 'Provide both Arabic and English versions.' : `Language: ${lang}`}
+  const prompt = `Write a detailed market intelligence article about: "${keyword}"
+Target audience: UAE food & beverage importers, traders, distributors.
+${lang === 'both' ? 'Provide BOTH Arabic and English versions. Each body must be at least 600 characters.' : `Language: ${lang}`}
 
-Return JSON:
+IMPORTANT: body_ar and body_en must each be at least 600 characters — include market context, UAE regulations, import tips, and opportunities.
+
+Return ONLY this JSON (no markdown, no extra text):
 {
-  "title_ar": "...",
-  "title_en": "...",
-  "body_ar": "...",
-  "body_en": "...",
-  "tags": ["tag1", "tag2"],
-  "slug": "..."
+  "title_ar": "عنوان المقال بالعربية",
+  "title_en": "Article Title in English",
+  "body_ar": "محتوى مفصّل بالعربية (600+ حرف) يشمل: وصف المنتج، حجم السوق الإماراتي، فرص الاستيراد، اشتراطات التسجيل، التوصيات للتجار...",
+  "body_en": "Detailed content in English (600+ chars) covering: product overview, UAE market size, import opportunities, registration requirements, trader recommendations...",
+  "tags": ["uae", "fmcg", "import"],
+  "slug": "keyword-uae-market"
 }`
 
   return generateJSON(prompt, system)

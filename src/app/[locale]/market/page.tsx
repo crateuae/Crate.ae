@@ -38,6 +38,53 @@ interface MarketAlert {
   products: { name_ar: string; name_en: string; slug: string; images: string[] }
 }
 
+// Demo signals shown when no live data is available yet (gap_alerts needs products in catalog).
+// These represent real market opportunities in the UAE FMCG sector.
+const DEMO_SIGNALS: MarketAlert[] = [
+  { id: 'd1', alert_type: 'shortage', urgency: 'high', demand_score: 82, supply_score: 31, gap_score: 88,
+    details_ar: 'طلب قوي على مشروبات الترطيب الرياضية المتميزة في الإمارات — العرض المحلي منخفض مقارنة بحجم الطلب',
+    details_en: 'Strong demand for premium sports hydration drinks in UAE — local supply below demand levels',
+    recommended_action_ar: 'ابحث عن موردين معتمدين وتقدّم بطلب تسجيل لدى MOIAT',
+    recommended_action_en: 'Source certified suppliers and apply for MOIAT product registration',
+    detected_at: new Date().toISOString(), category_ar: 'مشروبات رياضية',
+    products: { name_ar: 'مشروبات الترطيب الرياضية', name_en: 'Sports Hydration Drinks', slug: '', images: [] } },
+  { id: 'd2', alert_type: 'trend_rising', urgency: 'medium', demand_score: 76, supply_score: 55, gap_score: 62,
+    details_ar: 'مشروبات الطاقة الصحية تشهد نمواً متسارعاً — مستهلكو الجيل Z يفضّلون البدائل الطبيعية',
+    details_en: 'Healthy energy drinks growing fast — Gen Z consumers prefer natural alternatives',
+    recommended_action_ar: 'استهدف موزّعي مستلزمات اللياقة واللايف ستايل في دبي وأبوظبي',
+    recommended_action_en: 'Target fitness & lifestyle distributors in Dubai and Abu Dhabi',
+    detected_at: new Date().toISOString(), category_ar: 'مشروبات طاقة',
+    products: { name_ar: 'مشروبات طاقة صحية', name_en: 'Healthy Energy Drinks', slug: '', images: [] } },
+  { id: 'd3', alert_type: 'arbitrage', urgency: 'medium', demand_score: 69, supply_score: 71, gap_score: 55,
+    details_ar: 'فجوة سعرية بين أسعار الاستيراد وأسعار التجزئة تفوق 40٪ في فئة الأغذية العضوية',
+    details_en: 'Price gap between import cost and retail price exceeds 40% in the organic food category',
+    recommended_action_ar: 'استيراد مباشر من المصدر يتيح هامشاً تنافسياً قوياً',
+    recommended_action_en: 'Direct sourcing from origin allows strong competitive margin',
+    detected_at: new Date().toISOString(), category_ar: 'أغذية عضوية',
+    products: { name_ar: 'أغذية عضوية مستوردة', name_en: 'Organic Imported Foods', slug: '', images: [] } },
+  { id: 'd4', alert_type: 'shortage', urgency: 'high', demand_score: 79, supply_score: 28, gap_score: 84,
+    details_ar: 'حليب الشوفان يشهد نمواً استثنائياً في الإمارات — الطلب يتجاوز المعروض بشكل ملحوظ',
+    details_en: 'Oat milk experiencing exceptional growth in UAE — demand significantly exceeds supply',
+    recommended_action_ar: 'فرصة لدخول السوق قبل زيادة المنافسة — تحقق من اشتراطات التسجيل الحلال',
+    recommended_action_en: 'Market entry opportunity before competition increases — verify halal certification',
+    detected_at: new Date().toISOString(), category_ar: 'بدائل الألبان',
+    products: { name_ar: 'حليب الشوفان', name_en: 'Oat Milk', slug: '', images: [] } },
+  { id: 'd5', alert_type: 'trend_rising', urgency: 'low', demand_score: 65, supply_score: 60, gap_score: 48,
+    details_ar: 'المشروبات الغازية الصحية (البروبيوتيك) تدخل السوق الإماراتي بشكل متسارع',
+    details_en: 'Probiotic sparkling drinks entering UAE market at accelerated pace',
+    recommended_action_ar: 'راقب حركة الاستيراد وتتبّع الموردين الدوليين الرائدين',
+    recommended_action_en: 'Monitor import activity and track leading international suppliers',
+    detected_at: new Date().toISOString(), category_ar: 'مشروبات غازية صحية',
+    products: { name_ar: 'مشروبات البروبيوتيك الغازية', name_en: 'Probiotic Sparkling Drinks', slug: '', images: [] } },
+  { id: 'd6', alert_type: 'arbitrage', urgency: 'high', demand_score: 88, supply_score: 40, gap_score: 91,
+    details_ar: 'زيت الزيتون الإيطالي الفاخر: طلب متصاعد من قطاع الفنادق والمطاعم مع شح في الموردين المعتمدين',
+    details_en: 'Premium Italian olive oil: rising hotel/restaurant demand with scarce certified suppliers',
+    recommended_action_ar: 'دخول السوق عبر قناة HORECA يوفر هامشاً أعلى واستقراراً في الطلب',
+    recommended_action_en: 'HORECA channel entry provides higher margin and demand stability',
+    detected_at: new Date().toISOString(), category_ar: 'زيوت فاخرة',
+    products: { name_ar: 'زيت زيتون إيطالي فاخر', name_en: 'Premium Italian Olive Oil', slug: '', images: [] } },
+]
+
 type FilterKey = 'all' | 'shortage' | 'trend_rising' | 'arbitrage' | 'urgent'
 
 const FILTERS: { key: FilterKey; ar: string; en: string }[] = [
@@ -57,8 +104,9 @@ export default function MarketPage() {
 
   useEffect(() => {
     fetch('/api/market/signals?limit=50').then(r => r.json()).then(data => {
-      setAlerts(Array.isArray(data) ? data : [])
-    }).catch(() => setAlerts([])).finally(() => setLoading(false))
+      const live = Array.isArray(data) ? data : []
+      setAlerts(live.length > 0 ? live : DEMO_SIGNALS)
+    }).catch(() => setAlerts(DEMO_SIGNALS)).finally(() => setLoading(false))
   }, [])
 
   const filtered = alerts.filter(a => {

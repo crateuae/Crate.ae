@@ -73,10 +73,10 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
   let budget = Math.max(0, brain.daily_publish_cap - (publishedToday ?? 0))
   if (budget === 0) return { attempted: 0, published: 0, blocked: 0, cap_reached: true }
 
-  // Per-run cap: each article is a bilingual Claude generation (~10-20s), so cap
-  // the batch to stay within the 60s function limit. The daily cap still bounds
-  // the total; run again (cron or manual) to publish the rest of the queue.
-  const PER_RUN = 3
+  // Per-run cap: bilingual Claude generation takes ~20-40s per article.
+  // Cap at 1 so the endpoint always completes well within 60s.
+  // The daily cap still bounds the total; call again to publish the next one.
+  const PER_RUN = 1
   const { data: queue } = await db
     .from('opportunities')
     .select('*')
