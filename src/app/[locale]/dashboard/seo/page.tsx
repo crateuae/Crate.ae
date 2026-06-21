@@ -173,6 +173,64 @@ function DataTable({ rows, dim, showOpportunity }: {
 
 type Tab = 'quickwins' | 'keywords' | 'pages'
 
+// ─── Google Analytics panel ─────────────────────────────────────────────────
+
+interface GaData {
+  configured: boolean
+  totals?: { users: number; pageviews: number; sessions: number }
+  pages?: { path: string; users: number; pageviews: number; sessions: number }[]
+  error?: string
+}
+
+function GaPanel({ range }: { range: number }) {
+  const [ga, setGa] = useState<GaData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`/api/admin/ga?range=${range}`).then(r => r.json()).then(setGa).catch(() => setGa(null)).finally(() => setLoading(false))
+  }, [range])
+
+  if (loading) return <div className="bg-white border border-slate-200 rounded-2xl p-6 flex justify-center"><RefreshCw className="w-5 h-5 animate-spin text-slate-300" /></div>
+
+  if (!ga?.configured) return (
+    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-xs text-blue-700 space-y-1">
+      <p className="font-bold">📊 Google Analytics غير مُفعّل بعد</p>
+      <p>1. أنشئ خاصية <strong>GA4</strong> وانسخ <strong>Property ID</strong> الرقمي.</p>
+      <p>2. في GA4 → Admin → Property Access → أضف بريد الـ Service Account (نفس GSC) كـ <strong>Viewer</strong>.</p>
+      <p>3. في Vercel أضف <strong>GA4_PROPERTY_ID</strong> = المعرّف الرقمي → أعد النشر.</p>
+    </div>
+  )
+
+  if (ga.error) return (
+    <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-xs text-red-600">GA: {ga.error}</div>
+  )
+
+  const t = ga.totals!
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-4">
+        <StatCard icon={Eye} label="مستخدمون نشطون" value={fmt(t.users)} sub={`آخر ${range} يوم`} color="bg-blue-100 text-blue-600" />
+        <StatCard icon={MousePointerClick} label="مشاهدات الصفحات" value={fmt(t.pageviews)} sub="Analytics" color="bg-emerald-100 text-emerald-600" />
+        <StatCard icon={TrendingUp} label="الجلسات" value={fmt(t.sessions)} sub="Analytics" color="bg-violet-100 text-violet-600" />
+      </div>
+      {ga.pages && ga.pages.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-4">
+          <h3 className="text-xs font-black text-slate-700 mb-2">أكثر الصفحات زيارةً (GA4)</h3>
+          <div className="space-y-1">
+            {ga.pages.slice(0, 8).map((p, i) => (
+              <div key={i} className="flex items-center justify-between gap-2 text-xs py-1 border-b border-slate-50 last:border-0">
+                <span className="text-slate-600 truncate font-mono text-[11px]" dir="ltr">{p.path}</span>
+                <span className="text-slate-400 flex-shrink-0">{fmt(p.pageviews)} {fmt(p.users)}👤</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SeoPage() {
   const [range, setRange]   = useState(28)
   const [data, setData]     = useState<GscData | null>(null)
@@ -211,7 +269,7 @@ export default function SeoPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-black text-slate-800">SEO — Google Search Console</h1>
+          <h1 className="text-xl font-black text-slate-800">SEO — Search Console + Analytics</h1>
           {data && (
             <p className="text-xs text-slate-400 mt-0.5">{data.startDate} → {data.endDate}</p>
           )}
@@ -229,6 +287,9 @@ export default function SeoPage() {
           </button>
         </div>
       </div>
+
+      {/* Google Analytics (GA4) */}
+      <GaPanel range={range} />
 
       {/* Error */}
       {error && (
