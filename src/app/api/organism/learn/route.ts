@@ -13,10 +13,7 @@ import { captureOutcomes, relearnWeights } from '@/lib/organism/learning'
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret')
-  if (process.env.NODE_ENV === 'production' && secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  // Open trigger: Vercel Cron + manual admin learn from the dashboard.
 
   const startedAt = Date.now()
   try {

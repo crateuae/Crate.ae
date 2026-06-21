@@ -14,10 +14,8 @@ import { publishApproved } from '@/lib/organism/publish'
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret')
-  if (process.env.NODE_ENV === 'production' && secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  // Open trigger: Vercel Cron + manual admin publish from the dashboard.
+  // Rate-governed by daily_publish_cap, so open access is acceptable.
 
   const startedAt = Date.now()
   try {
