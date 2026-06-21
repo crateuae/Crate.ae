@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { organismDb } from '@/lib/organism/pipeline'
 import { captureOutcomes, relearnWeights } from '@/lib/organism/learning'
 
-export const maxDuration = 120
+export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-cron-secret')

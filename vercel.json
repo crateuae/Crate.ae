@@ -1,20 +1,6 @@
 {
   "crons": [
-    {
-      "path": "/api/organism/heartbeat",
-      "schedule": "0 */6 * * *"
-    },
-    {
-      "path": "/api/organism/publish",
-      "schedule": "30 */6 * * *"
-    },
-    {
-      "path": "/api/organism/learn",
-      "schedule": "0 4 * * 1"
-    },
-    {
-      "path": "/api/market/signals",
-      "schedule": "0 5 * * *"
-    }
+    { "path": "/api/organism/heartbeat", "schedule": "0 5 * * *" },
+    { "path": "/api/organism/publish", "schedule": "0 6 * * *" }
   ]
 }
