@@ -7,6 +7,8 @@ import {
 } from 'lucide-react'
 import { PRODUCTS_CATALOG, getProductSlug, getProductFMCG } from '@/lib/data/products-catalog'
 import { getProductSignals } from '@/lib/supabase/actions'
+import { createClient } from '@/lib/supabase/actions'
+import OrganismProductView, { type OrganismProduct } from './OrganismProductView'
 
 const SIGNAL_CONFIG = {
   shortage:  { label_ar: 'نقص عرض',      label_en: 'Supply Shortage', cls: 'bg-red-100 text-red-700 border-red-200',    Icon: TrendingDown },
@@ -17,13 +19,34 @@ const SIGNAL_CONFIG = {
 
 export default async function ProductDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; id: string }>
+  searchParams: Promise<{ type?: string }>
 }) {
   const { locale, id } = await params
+  const { type: typeParam } = await searchParams
   const isAr = locale === 'ar'
   const product = PRODUCTS_CATALOG.find(p => getProductSlug(p) === id || p.id === id)
-  if (!product) notFound()
+
+  // Fallback: organism-discovered products live only in Supabase (not the static catalog).
+  if (!product) {
+    const supabase = await createClient()
+    const { data: organism } = await supabase
+      .from('products')
+      .select('id, slug, name_ar, name_en, type_ar, type_en, content_ar, content_en, tags, country_origin, price_aed, price_on_request, category_id, organism_opportunity_id, published_at, is_published')
+      .or(`id.eq.${id},slug.eq.${id}`)
+      .eq('source', 'organism_discovery')
+      .eq('is_published', true)
+      .maybeSingle()
+
+    if (!organism) notFound()
+
+    const type: 'verified' | 'high' | 'opportunity' =
+      typeParam === 'verified' || typeParam === 'high' ? typeParam : 'opportunity'
+
+    return <OrganismProductView product={organism as OrganismProduct} locale={locale} type={type} />
+  }
 
   const slug = getProductSlug(product)
   const [signals, fmcg] = await Promise.all([
