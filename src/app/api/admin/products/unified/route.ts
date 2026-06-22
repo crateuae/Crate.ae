@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from('products')
       .select(
-        'id, name_ar, name_en, source, is_published, published_at, organism_opportunity_id, page_views, rfq_count, type_en, created_at',
+        'id, slug, name_ar, name_en, brand, source, is_published, published_at, organism_opportunity_id, page_views, rfq_count, type_en, category_en, subcategory_en, image_emoji, image_url, market_signal, gap_score, registration_status, created_at',
         { count: 'exact' }
       )
 

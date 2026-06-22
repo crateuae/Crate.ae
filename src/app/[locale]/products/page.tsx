@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { Boxes, Globe, Tag, Clock, Award, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { Boxes, Globe, Tag, Clock, Award, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react'
 import { PRODUCTS_CATALOG, PRODUCT_CATEGORIES, getProductSlug, getProductFMCG } from '@/lib/data/products-catalog'
+import { createClient } from '@/lib/supabase/actions'
 
-const SIGNAL_CONFIG = {
+const SIGNAL_CONFIG: Record<string, { label_ar: string; label_en: string; cls: string }> = {
   shortage:  { label_ar: 'نقص عرض',     label_en: 'Shortage',  cls: 'bg-red-100 text-red-700' },
   rising:    { label_ar: 'طلب صاعد',     label_en: 'Rising',    cls: 'bg-green-100 text-green-700' },
   arbitrage: { label_ar: 'مراجحة سعرية', label_en: 'Arbitrage', cls: 'bg-amber-100 text-amber-700' },
@@ -16,6 +17,15 @@ export default async function ProductsPage({ params, searchParams }: {
   const { locale } = await params
   const { cat, q, status } = await searchParams
   const isAr = locale === 'ar'
+
+  // Fetch organism-discovered products from Supabase (not in static catalog)
+  const supabase = await createClient()
+  const { data: dbProducts } = await supabase
+    .from('products')
+    .select('id, slug, name_ar, name_en, brand, source, image_emoji, image_url, market_signal, gap_score, registration_status, category_en, subcategory_en, subcategory_ar, price_wholesale_aed, price_import_aed, shelf_life_months, certifications, country_origin, country_origin_ar, tags')
+    .eq('source', 'organism_discovery')
+    .eq('is_published', true)
+    .order('created_at', { ascending: false })
 
   const filtered = PRODUCTS_CATALOG.filter(p => {
     const matchCat = !cat || p.category_en.toLowerCase().includes(cat.toLowerCase()) || p.category_ar.includes(cat)
@@ -233,6 +243,61 @@ export default async function ProductsPage({ params, searchParams }: {
                     </div>
                   )
                 })}
+              </div>
+            )}
+
+            {/* Organism-discovered products */}
+            {dbProducts && dbProducts.length > 0 && (
+              <div className="mt-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="w-4 h-4 text-purple-500" />
+                  <h2 className="text-sm font-black text-gray-700">
+                    {isAr ? 'فرص مكتشفة حديثاً' : 'Recently Discovered Opportunities'}
+                  </h2>
+                  <span className="text-[10px] bg-purple-100 text-purple-700 rounded-full px-2 py-0.5 font-bold">{dbProducts.length}</span>
+                </div>
+                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {dbProducts.map(p => (
+                    <div key={p.id} className="bg-white border border-purple-200 rounded-2xl overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all">
+                      <div className="h-28 flex items-center justify-center border-b border-gray-100 text-4xl relative bg-gradient-to-br from-purple-50 to-white">
+                        {p.image_url
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={p.image_url} alt={p.name_en} className="w-16 h-16 object-contain" />
+                          : <span>{p.image_emoji || '📦'}</span>}
+                        <span className="absolute top-2 start-2 flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                          <Sparkles className="w-2.5 h-2.5" />{isAr ? 'فرصة جديدة' : 'New Opportunity'}
+                        </span>
+                        {p.market_signal && SIGNAL_CONFIG[p.market_signal] && (
+                          <span className={`absolute top-2 end-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${SIGNAL_CONFIG[p.market_signal].cls}`}>
+                            {isAr ? SIGNAL_CONFIG[p.market_signal].label_ar : SIGNAL_CONFIG[p.market_signal].label_en}
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        {(p.subcategory_ar || p.subcategory_en) && (
+                          <div className="mb-2"><span className="text-[10px] bg-purple-50 text-purple-600 rounded-md px-2 py-0.5 font-medium">{isAr ? p.subcategory_ar : p.subcategory_en}</span></div>
+                        )}
+                        <Link href={`/${locale}/products/${p.slug || p.id}`} className="block group/link">
+                          <h3 className="font-black text-gray-900 text-[15px] leading-tight mb-0.5 group-hover/link:text-purple-600 transition-colors">{isAr ? p.name_ar : p.name_en}</h3>
+                        </Link>
+                        {p.brand && <p className="text-xs text-gray-400 mb-3">{p.brand}</p>}
+                        {p.tags && p.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {p.tags.slice(0, 3).map((t: string) => (
+                              <span key={t} className="text-[9px] bg-orange-50 text-orange-600 border border-orange-100 rounded-full px-2 py-0.5">#{t}</span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <Link href={`/${locale}/products/${p.slug || p.id}`}
+                            className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-purple-500 hover:bg-purple-600 py-2 rounded-xl transition-colors">
+                            {isAr ? 'عرض الفرصة' : 'View Opportunity'}
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
