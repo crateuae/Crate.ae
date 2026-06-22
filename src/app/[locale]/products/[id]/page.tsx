@@ -12,7 +12,7 @@ import {
   ShoppingCart, Plane, FileText, TrendingUp, TrendingDown, Minus,
   Package, Building2, ChevronLeft, BarChart3, Award,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/actions'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getProductSignals } from '@/lib/supabase/actions'
 import { PRODUCTS_CATALOG, getProductSlug, getProductFMCG } from '@/lib/data/products-catalog'
 import UnifiedProductPage, { type DBProduct } from './UnifiedProductPage'
@@ -33,13 +33,17 @@ export default async function ProductDetailPage({
   const isAr = locale === 'ar'
 
   // ── 1. Supabase first — covers all synced catalog + organism products ──────
-  const supabase = await createClient()
-  const { data: dbProduct } = await supabase
-    .from('products')
-    .select('*')
-    .or(`id.eq.${id},slug.eq.${id}`)
-    .eq('is_published', true)
-    .maybeSingle()
+  const supabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+  // UUID regex — if id looks like a UUID query both columns, otherwise slug only
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  const productQuery = supabase.from('products').select('*').eq('is_published', true)
+  const { data: dbProduct } = await (isUUID
+    ? productQuery.or(`id.eq.${id},slug.eq.${id}`)
+    : productQuery.eq('slug', id)
+  ).maybeSingle()
 
   if (dbProduct) {
     const signals = await getProductSignals(dbProduct.slug ?? id).catch(() => null)

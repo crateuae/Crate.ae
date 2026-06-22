@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Boxes, Globe, Tag, Clock, Award, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react'
 import { PRODUCTS_CATALOG, PRODUCT_CATEGORIES, getProductSlug, getProductFMCG } from '@/lib/data/products-catalog'
-import { createClient } from '@/lib/supabase/actions'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 const SIGNAL_CONFIG: Record<string, { label_ar: string; label_en: string; cls: string }> = {
   shortage:  { label_ar: 'نقص عرض',     label_en: 'Shortage',  cls: 'bg-red-100 text-red-700' },
@@ -18,8 +18,11 @@ export default async function ProductsPage({ params, searchParams }: {
   const { cat, q, status } = await searchParams
   const isAr = locale === 'ar'
 
-  // Fetch organism-discovered products from Supabase (not in static catalog)
-  const supabase = await createClient()
+  // Fetch organism-discovered products from Supabase (service role to bypass RLS)
+  const supabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
   const { data: dbProducts } = await supabase
     .from('products')
     .select('id, slug, name_ar, name_en, brand, source, image_emoji, image_url, market_signal, gap_score, registration_status, category_en, subcategory_en, subcategory_ar, price_wholesale_aed, price_import_aed, shelf_life_months, certifications, country_origin, country_origin_ar, tags')
