@@ -40,12 +40,76 @@ export default async function ProductDetailPage({
       .eq('is_published', true)
       .maybeSingle()
 
-    if (!organism) notFound()
+    // Organism-discovered product
+    if (organism) {
+      const type: 'verified' | 'high' | 'opportunity' =
+        typeParam === 'verified' || typeParam === 'high' ? typeParam : 'opportunity'
+      return <OrganismProductView product={organism as OrganismProduct} locale={locale} type={type} />
+    }
 
-    const type: 'verified' | 'high' | 'opportunity' =
-      typeParam === 'verified' || typeParam === 'high' ? typeParam : 'opportunity'
+    // Manual product from Supabase (not in catalog) — simple detail page
+    const { data: manual } = await supabase
+      .from('products')
+      .select('*')
+      .or(`id.eq.${id},slug.eq.${id}`)
+      .eq('source', 'manual')
+      .eq('is_published', true)
+      .maybeSingle()
 
-    return <OrganismProductView product={organism as OrganismProduct} locale={locale} type={type} />
+    if (manual) {
+      // Render simple manual product page
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <div className="bg-white border-b border-gray-100 px-6 py-3">
+            <div className="max-w-3xl mx-auto flex items-center gap-2 text-sm text-gray-400">
+              <Link href={`/${locale}`} className="hover:text-gray-700">{isAr ? 'الرئيسية' : 'Home'}</Link>
+              <ChevronLeft className={`w-3.5 h-3.5 ${isAr ? 'rotate-180' : ''}`} />
+              <Link href={`/${locale}/products`} className="hover:text-gray-700">{isAr ? 'المنتجات' : 'Products'}</Link>
+              <ChevronLeft className={`w-3.5 h-3.5 ${isAr ? 'rotate-180' : ''}`} />
+              <span className="text-gray-700 font-medium truncate">{isAr ? manual.name_ar : manual.name_en}</span>
+            </div>
+          </div>
+
+          <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+            <div className="bg-white border border-gray-200 rounded-3xl p-6 md:p-8">
+              <h1 className="text-2xl md:text-3xl font-black text-gray-900 mb-3">{isAr ? manual.name_ar : manual.name_en}</h1>
+              {manual.brand && <p className="text-gray-400 text-sm mb-2">{manual.brand}</p>}
+              <div className="flex flex-wrap gap-2 mt-4">
+                {manual.type_en && <span className="inline-block text-xs bg-orange-50 text-orange-600 border border-orange-100 rounded-full px-3 py-1 font-semibold">{isAr ? manual.type_ar : manual.type_en}</span>}
+                {manual.country_origin && manual.country_origin !== 'Unknown' && <span className="inline-block text-xs bg-gray-100 text-gray-600 rounded-full px-3 py-1">{manual.country_origin}</span>}
+              </div>
+            </div>
+
+            {manual.description_en || manual.description_ar ? (
+              <div className="bg-white border border-gray-200 rounded-3xl p-6">
+                <p className="text-gray-600 text-sm leading-relaxed">{isAr ? manual.description_ar : manual.description_en}</p>
+              </div>
+            ) : null}
+
+            <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-3xl p-6 md:p-8 text-white">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-black text-lg">{isAr ? 'مهتم بهذا المنتج؟' : 'Interested?'}</h2>
+                  <p className="text-white/80 text-sm mt-0.5">{isAr ? 'اطلب عرض سعر — سنتواصل معك خلال 24 ساعة.' : 'Request a quote — we will reach out within 24 hours.'}</p>
+                </div>
+              </div>
+              <Link
+                href={`/${locale}/rfq?product=${encodeURIComponent(manual.name_en || 'Product')}`}
+                className="inline-flex items-center justify-center gap-2 bg-white text-orange-600 font-bold py-2.5 px-5 rounded-xl text-sm hover:bg-orange-50"
+              >
+                {isAr ? 'اطلب عرض سعر' : 'Request Quote'}
+                <ArrowRight className={`w-4 h-4 ${isAr ? 'rotate-180' : ''}`} />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    notFound()
   }
 
   const slug = getProductSlug(product)
