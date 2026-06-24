@@ -1,8 +1,8 @@
 /**
- * POST /api/admin/campaigns/send  { campaign_id, test_email? }
- * Resolves the campaign audience and sends via Resend in batches of 100.
- * Records every send in campaign_sends and updates the campaign counters.
- * Supports {{name}} / {{company}} tokens in the body.
+ * POST /api/admin/campaigns/send
+ *   { campaign_id, test_email? }           → regular send / test
+ *   { campaign_id, only_new: true }        → send ONLY to recipients not in campaign_sends
+ *   { campaign_id, only_new: false }       → resend to ALL recipients (even already-sent)
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -16,14 +16,14 @@ function db() {
     { auth: { persistSession: false, autoRefreshToken: false } })
 }
 const FROM = process.env.RESEND_FROM_EMAIL ?? 'uae@crate.ae'
-const MAX_PER_RUN = 500   // safety cap to stay within plan limits
+const MAX_PER_RUN = 500
 
 function fill(html: string, r: { name: string | null; company: string | null }) {
   return html.replace(/\{\{name\}\}/g, r.name ?? '').replace(/\{\{company\}\}/g, r.company ?? '')
 }
 
 export async function POST(req: NextRequest) {
-  const { campaign_id, test_email } = await req.json()
+  const { campaign_id, test_email, only_new } = await req.json()
   if (!campaign_id) return NextResponse.json({ error: 'campaign_id required' }, { status: 400 })
   if (!process.env.RESEND_API_KEY) return NextResponse.json({ error: 'email not configured' }, { status: 503 })
 
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const { data: c } = await supabase.from('email_campaigns').select('*').eq('id', campaign_id).single()
   if (!c) return NextResponse.json({ error: 'campaign not found' }, { status: 404 })
 
-  // Test send: one email to the admin, no DB writes.
+  // Test send: one email, no DB writes
   if (test_email) {
     const { error } = await resend.emails.send({
       from: `Crate <${FROM}>`, to: [test_email], subject: `[TEST] ${c.subject}`,
@@ -44,15 +44,34 @@ export async function POST(req: NextRequest) {
       : NextResponse.json({ ok: true, test: true })
   }
 
-  if (c.status === 'sent' || c.status === 'sending') {
+  // Block accidental double-send on first-time sends (not already sent + only_new not specified)
+  if (only_new === undefined && (c.status === 'sent' || c.status === 'sending')) {
     return NextResponse.json({ error: `campaign already ${c.status}` }, { status: 409 })
   }
 
-  const audience = await resolveAudience(supabase, c.audience as AudienceSpec)
-  const recipients = audience.slice(0, MAX_PER_RUN)
-  if (recipients.length === 0) return NextResponse.json({ error: 'audience is empty' }, { status: 422 })
+  // Resolve full audience
+  const fullAudience = await resolveAudience(supabase, c.audience as AudienceSpec)
 
-  await supabase.from('email_campaigns').update({ status: 'sending', total_recipients: recipients.length }).eq('id', campaign_id)
+  let recipients = fullAudience.slice(0, MAX_PER_RUN)
+
+  // only_new = true → exclude emails already successfully sent
+  if (only_new === true) {
+    const { data: alreadySent } = await supabase
+      .from('campaign_sends')
+      .select('email')
+      .eq('campaign_id', campaign_id)
+      .eq('status', 'sent')
+    const sentSet = new Set((alreadySent ?? []).map((s: { email: string }) => s.email.toLowerCase()))
+    recipients = recipients.filter(r => !sentSet.has(r.email.toLowerCase()))
+  }
+
+  if (recipients.length === 0) return NextResponse.json({ error: 'no new recipients to send to' }, { status: 422 })
+
+  // Update total_recipients to reflect the full audience size
+  await supabase.from('email_campaigns').update({
+    status: 'sending',
+    total_recipients: fullAudience.length,
+  }).eq('id', campaign_id)
 
   let sent = 0
   const sendRows: { campaign_id: string; email: string; name: string | null; status: string; error: string | null }[] = []
@@ -71,8 +90,12 @@ export async function POST(req: NextRequest) {
   }
 
   if (sendRows.length) await supabase.from('campaign_sends').insert(sendRows)
+
+  const newSentCount = (c.sent_count ?? 0) + sent
   await supabase.from('email_campaigns').update({
-    status: sent > 0 ? 'sent' : 'failed', sent_count: sent, sent_at: new Date().toISOString(),
+    status: newSentCount > 0 ? 'sent' : 'failed',
+    sent_count: newSentCount,
+    sent_at: new Date().toISOString(),
   }).eq('id', campaign_id)
 
   return NextResponse.json({ ok: true, sent, total: recipients.length })
