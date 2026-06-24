@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   Bold, Italic, Underline, Strikethrough, Link2, List, ListOrdered,
-  AlignLeft, AlignCenter, AlignRight, Code2, Palette, Type,
+  AlignLeft, AlignCenter, AlignRight, Palette, Type,
   Minus, Image, RotateCcw, Eye, Code,
 } from 'lucide-react'
 
@@ -12,7 +12,7 @@ const SIGNATURE_HTML = `
 <table style="border-top:2px solid #e85d04;padding-top:10px;margin-top:8px;font-family:Arial,sans-serif;font-size:13px;color:#374151;width:100%;max-width:480px;">
   <tr>
     <td>
-      <strong style="font-size:15px;color:#111827;">م. مالك الطبجي &nbsp;|&nbsp; Eng. Malik Altubji</strong><br/>
+      <strong style="font-size:15px;color:#111827;">Crate Team</strong><br/>
       <span style="color:#e85d04;font-weight:600;">Crate.ae</span>
       <span style="color:#6b7280;"> — UAE Smart Trade Platform</span><br/><br/>
       <span>📞 <a href="tel:+971543000415" style="color:#374151;text-decoration:none;">+971 54 300 0415</a></span>&nbsp;&nbsp;
@@ -34,6 +34,7 @@ export default function RichEmailEditor({ value, onChange, isAr, placeholder }: 
   const [mode, setMode] = useState<'visual' | 'html'>('visual')
   const [htmlVal, setHtmlVal] = useState(value)
   const [sigInserted, setSigInserted] = useState(false)
+  const [editorDir, setEditorDir] = useState<'rtl' | 'ltr'>(isAr ? 'rtl' : 'ltr')
 
   // Sync external value → editor on first load or mode switch
   useEffect(() => {
@@ -172,6 +173,16 @@ export default function RichEmailEditor({ value, onChange, isAr, placeholder }: 
           </button>
 
           {SEP}
+          {/* RTL / LTR toggle */}
+          {SEP}
+          <button
+            onClick={() => setEditorDir(d => d === 'rtl' ? 'ltr' : 'rtl')}
+            title="Toggle RTL / LTR"
+            className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border font-bold transition-colors ${editorDir === 'rtl' ? 'bg-violet-100 text-violet-700 border-violet-300' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+            {editorDir === 'rtl' ? 'RTL ←' : '→ LTR'}
+          </button>
+
+          {SEP}
           {/* Auto-signature */}
           <button onClick={addSignature}
             className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded border border-orange-200 bg-orange-50 text-orange-700 font-bold hover:bg-orange-100 ms-0.5">
@@ -188,7 +199,7 @@ export default function RichEmailEditor({ value, onChange, isAr, placeholder }: 
           suppressContentEditableWarning
           onInput={handleInput}
           onFocus={() => { if (!sigInserted && !value.includes('crate.ae')) insertSig() }}
-          dir={isAr ? 'rtl' : 'ltr'}
+          dir={editorDir}
           className="min-h-[220px] max-h-[420px] overflow-y-auto px-4 py-3 text-sm text-slate-800 focus:outline-none leading-relaxed"
           style={{ fontFamily: 'Arial, sans-serif' }}
           data-placeholder={placeholder ?? (isAr ? 'اكتب محتوى الإيميل هنا…' : 'Write email content here…')}
