@@ -6,6 +6,7 @@ import {
   Megaphone, Loader2, Sparkles, Users, Send, FlaskConical, Plus,
   CheckCircle2, Mail, Store, Package, Pencil, Trash2,
 } from 'lucide-react'
+import RichEmailEditor from './RichEmailEditor'
 
 type Src = 'requesters' | 'providers' | 'manual'
 const REQ_SECTIONS = [
@@ -240,7 +241,12 @@ export default function CampaignsPage() {
           </div>
           <input value={name} onChange={e => setName(e.target.value)} placeholder={isAr ? 'اسم الحملة (داخلي)' : 'Campaign name'} className={inp} />
           <input value={subject} onChange={e => setSubject(e.target.value)} placeholder={isAr ? 'موضوع الإيميل' : 'Subject'} className={inp} />
-          <textarea value={body} onChange={e => setBody(e.target.value)} rows={6} placeholder={isAr ? 'نص الإيميل (HTML). الرموز: {{name}} {{company}}' : 'Email body (HTML). Tokens: {{name}} {{company}}'} className={inp + ' resize-none font-mono text-[11px]'} />
+          <RichEmailEditor
+            value={body}
+            onChange={setBody}
+            isAr={isAr}
+            placeholder={isAr ? 'اكتب محتوى الإيميل هنا…' : 'Write email content here…'}
+          />
           <div className="flex gap-2">
             <button onClick={createCampaign} disabled={creating}
               className="flex-1 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 disabled:opacity-60 flex items-center justify-center gap-2">
