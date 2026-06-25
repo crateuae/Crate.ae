@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Package, BarChart2, ShieldCheck, Boxes, Users, LayoutDashboard, Menu, X, LogIn, LogOut, ChevronDown, Bell } from 'lucide-react'
+import { Package, BarChart2, ShieldCheck, Boxes, Users, LayoutDashboard, Menu, X, LogIn, LogOut, ChevronDown, Bell, BookOpen } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/components/providers/AuthProvider'
 
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/packaging',   icon: Package,      label_ar: 'إعادة التعبئة',      label_en: 'Repackaging' },
   { href: '/products',    icon: Boxes,        label_ar: 'المنتجات',           label_en: 'Products' },
   { href: '/providers',   icon: Users,        label_ar: 'الموردون',           label_en: 'Suppliers' },
+  { href: '/guides/carton-specs', icon: BookOpen, label_ar: 'دليل الكراتين', label_en: 'Carton Guide' },
 ]
 
 // ── Notification type ──────────────────────────────────────────────────────
