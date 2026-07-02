@@ -50,7 +50,7 @@ export function getProviders(opts: {
   to: number
 }): Promise<GetProvidersResult> {
   const cacheKey = [
-    'providers-list',
+    'providers-list-v2',   // v2: bust stale anon-era cache after service-role fix
     opts.type     ?? 'all',
     opts.emirate  ?? 'all',
     opts.category ?? 'all',
@@ -110,7 +110,7 @@ export function getProviderBySlug(slug: string) {
         return null
       }
     },
-    ['provider-detail', slug],
+    ['provider-detail-v2', slug],   // v2: bust stale anon-era null cache after service-role fix
     { revalidate: 86400, tags: ['providers'] },
   )()
 }
