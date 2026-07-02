@@ -60,7 +60,7 @@ export default function Footer({ locale = 'ar' }: { locale?: string }) {
           {/* Knowledge */}
           <FooterCol isAr={isAr} title={isAr ? 'المعرفة والأدلة' : 'Knowledge & Guides'}>
             <FooterLink href={L('/guides/carton-specs')}>{isAr ? 'دليل مواصفات الكراتين' : 'Carton Specs Guide'}</FooterLink>
-            <FooterLink href={L('/blog')}>{isAr ? 'المدونة والرؤى' : 'Blog & Insights'}</FooterLink>
+            <FooterLink href={L('/insights')}>{isAr ? 'المدونة والرؤى' : 'Blog & Insights'}</FooterLink>
             <FooterLink href={L('/market')}>{isAr ? 'لوحة الفرص المباشرة' : 'Live Opportunity Board'}</FooterLink>
             <FooterLink href={L('/compliance')}>{isAr ? 'فحص منتج جديد' : 'Check a New Product'}</FooterLink>
           </FooterCol>
