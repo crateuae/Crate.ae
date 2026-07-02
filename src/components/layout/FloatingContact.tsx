@@ -8,10 +8,10 @@ import { useState, useEffect } from 'react'
  */
 export default function FloatingContact({ locale }: { locale: string }) {
   const isAr = locale === 'ar'
-  const [hidden, setHidden] = useState(true)
+  // Visible by default (renders server-side, no flash); hide only on admin/auth screens.
+  const [hidden, setHidden] = useState(false)
 
   useEffect(() => {
-    // Don't show over the admin dashboard / auth screens.
     const p = window.location.pathname
     setHidden(/\/(dashboard|admin|login|auth)(\/|$)/.test(p))
   }, [])
