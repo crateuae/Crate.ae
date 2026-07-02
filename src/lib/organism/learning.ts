@@ -90,7 +90,7 @@ export async function relearnWeights(db: SupabaseClient): Promise<LearnResult> {
   const gradeBefore = new Date(Date.now() - GRADE_AGE_DAYS * 86400000).toISOString()
   const { data: graded } = await db
     .from('opportunities')
-    .select('trend_score, registrability_score, arbitrage_score, gap_score, composite_score, views')
+    .select('trend_score, registrability_score, arbitrage_score, gap_score, composite_score, views, rfq_count, deals_count')
     .in('stage', ['published', 'capturing', 'converting', 'won', 'lost'])
     .lte('published_at', gradeBefore)
     .limit(1000)
@@ -99,8 +99,15 @@ export async function relearnWeights(db: SupabaseClient): Promise<LearnResult> {
     return { status: 'insufficient_data', sample: graded?.length ?? 0 }
   }
 
-  const successes = graded.filter(g => (g.views ?? 0) >= SUCCESS_VIEWS)
-  const failures  = graded.filter(g => (g.views ?? 0) < SUCCESS_VIEWS)
+  // Success = a real commercial outcome (an RFQ lead or a closed deal). Page views
+  // are only a weak FALLBACK proxy, used until any lead signal exists — so once
+  // real leads arrive the brain learns "what gets LEADS", not "what gets traffic".
+  const hasLeadSignal = graded.some(g => (g.rfq_count ?? 0) > 0 || (g.deals_count ?? 0) > 0)
+  const isSuccess = (g: (typeof graded)[number]) => hasLeadSignal
+    ? ((g.rfq_count ?? 0) > 0 || (g.deals_count ?? 0) > 0)
+    : ((g.views ?? 0) >= SUCCESS_VIEWS)
+  const successes = graded.filter(isSuccess)
+  const failures  = graded.filter(g => !isSuccess(g))
   // Need both classes to learn a contrast.
   if (successes.length === 0 || failures.length === 0) {
     return { status: 'insufficient_data', sample: graded.length, successes: successes.length }
@@ -150,7 +157,7 @@ export async function relearnWeights(db: SupabaseClient): Promise<LearnResult> {
     daily_publish_cap: active?.daily_publish_cap ?? 10,
     is_active: true,
     prediction_accuracy: accuracy,
-    notes: `Auto-relearned from ${graded.length} graded (${successes.length} successes). `
+    notes: `Auto-relearned from ${graded.length} graded (${successes.length} ${hasLeadSignal ? 'lead' : 'traffic'}-successes). `
          + `Shift: ${dims.map(d => `${d} ${oldWeights[d]}→${newWeights[d]}`).join(', ')}`,
   })
 

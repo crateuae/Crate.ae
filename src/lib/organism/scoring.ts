@@ -57,13 +57,17 @@ function estimateArbitrage(c: SensedCandidate): number {
  * data-poor opportunity must NOT be auto-published (would be low-value spam).
  */
 function estimateQuality(c: SensedCandidate): number {
+  // Quality is scored from signals we ACTUALLY have. avg_price_aed is null across
+  // the whole dataset today, so it must NOT be load-bearing — otherwise every
+  // candidate maxes low and nothing ever reaches 'approved' (the publish queue
+  // starves). Price is now a small bonus when present, not a gate.
   let q = 0
   if (c.trend_score >= 25) q += 30
-  if (c.category_guess) q += 15
-  if (c.avg_price_aed && c.avg_price_aed > 0) q += 20
+  if (c.category_guess) q += 20
   if (c.is_available_uae !== null) q += 15
-  if (c.trend_direction && c.trend_direction !== 'stable') q += 10
-  if (c.title_ar) q += 10                              // bilingual-ready (platform rule)
+  if (c.trend_direction && c.trend_direction !== 'stable') q += 15
+  if (c.title_ar) q += 20                               // bilingual-ready (backfilled at sense)
+  if (c.avg_price_aed && c.avg_price_aed > 0) q += 10   // real price anchor — bonus, not required
   return clamp(q)
 }
 

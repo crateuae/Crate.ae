@@ -7,8 +7,9 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { PRODUCTS_CATALOG, getProductSlug } from '@/lib/data/products-catalog'
-import { computeUAETrend, UAE_FMCG_SEED_KEYWORDS, guessFMCGCategory } from '@/lib/trends/engine'
+import { PRODUCTS_CATALOG } from '@/lib/data/products-catalog'
+import { computeUAETrend, guessFMCGCategory, rotatingSeedWindow, expansionSeedsFromCategories } from '@/lib/trends/engine'
+import { arabicGlossFor } from '@/lib/trends/fmcg-keyword-bank'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,17 +18,36 @@ const supabase = createClient(
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)) }
 
-/** Check if keyword overlaps with any existing product */
+// Generic tokens that must not, on their own, class a keyword as "already in catalog".
+// With a ~190-term pool the old first-word substring test filtered out almost
+// everything (e.g. any "... drink UAE" collided with a branded drink product).
+const GENERIC_TOKENS = new Set([
+  'drink', 'water', 'milk', 'juice', 'oil', 'sauce', 'coffee', 'tea', 'rice',
+  'pasta', 'snack', 'snacks', 'bar', 'cheese', 'yogurt', 'butter', 'food',
+  'organic', 'powder', 'seeds', 'sugar', 'flour', 'free', 'protein',
+])
+
+/** Meaningful lowercase tokens (len ≥ 4, not generic) from a phrase. */
+function meaningfulTokens(s: string): string[] {
+  return s.toLowerCase()
+    .replace(/[^a-z0-9\s]+/g, ' ')
+    .split(/\s+/)
+    .filter(t => t.length >= 4 && !GENERIC_TOKENS.has(t))
+}
+
+/**
+ * Check whether a seed keyword is ALREADY covered by a catalog product.
+ * Match only on a shared DISTINCTIVE token (specific product word or brand),
+ * never on a generic category word — otherwise a large seed pool gets over-
+ * filtered to nothing and discovery starves.
+ */
 function matchesExistingProduct(keyword: string): boolean {
-  const kl = keyword.toLowerCase().replace(' uae', '').trim()
+  const kTokens = new Set(meaningfulTokens(keyword.replace(/\buae\b/gi, ' ')))
+  if (kTokens.size === 0) return false
   return PRODUCTS_CATALOG.some(p => {
-    const nameEn = p.name_en.toLowerCase()
-    const brand = p.brand.toLowerCase()
-    return (
-      nameEn.includes(kl) || kl.includes(nameEn.split(' ')[0]) ||
-      brand.includes(kl) || kl.includes(brand) ||
-      getProductSlug(p).replace(/-/g, ' ').includes(kl)
-    )
+    const nameTokens = meaningfulTokens(p.name_en)
+    const brandTokens = meaningfulTokens(p.brand)
+    return [...nameTokens, ...brandTokens].some(t => kTokens.has(t))
   })
 }
 
@@ -46,8 +66,23 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const limit: number = Math.min(body.limit || 20, 30)
 
-  // 1. Scan UAE FMCG seed keywords using multi-source engine
-  const keywords = UAE_FMCG_SEED_KEYWORDS.slice(0, limit)
+  // Learning-loop expansion: grow the discovery surface from the categories of
+  // opportunities that actually won or are converting (proven demand → adjacent
+  // same-category terms scanned first).
+  let expansionSeeds: string[] = []
+  try {
+    const { data: winners } = await supabase
+      .from('opportunities')
+      .select('category_guess')
+      .in('stage', ['won', 'converting'])
+      .not('category_guess', 'is', null)
+      .limit(50)
+    expansionSeeds = expansionSeedsFromCategories((winners ?? []).map(w => w.category_guess))
+  } catch { /* non-fatal: fall back to pure rotation */ }
+
+  // 1. Deterministic day-rotating window over the full seed pool, so each beat
+  //    scans a DIFFERENT slice instead of re-scanning the same head every day.
+  const keywords = rotatingSeedWindow(limit, new Date(), expansionSeeds)
   const newKeywords = keywords.filter(k => !matchesExistingProduct(k))
 
   const enriched = []
@@ -63,7 +98,7 @@ export async function POST(req: NextRequest) {
       if (trend.trend_score >= 25) {
         enriched.push({
           keyword,
-          keyword_ar: null,
+          keyword_ar: arabicGlossFor(keyword),
           trend_score: trend.trend_score,
           uae_interest_pct: trend.uae_interest_pct,
           trend_direction: trend.trend_direction,
@@ -92,7 +127,9 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    scanned: limit,
+    scanned: keywords.length,
+    candidates_after_catalog_filter: newKeywords.length,
+    expansion_seeds: expansionSeeds.length,
     new_discoveries: enriched.length,
     inserted,
     top_opportunities: enriched

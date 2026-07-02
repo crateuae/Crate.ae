@@ -299,16 +299,80 @@ export interface DiscoveryResult {
   is_available_uae: boolean
 }
 
-export const UAE_FMCG_SEED_KEYWORDS = [
-  'energy drink UAE', 'grape drink UAE', 'oat milk UAE', 'sparkling water UAE',
-  'cold brew coffee UAE', 'kombucha UAE', 'protein shake UAE', 'coconut water UAE',
-  'protein bar UAE', 'rice cake UAE', 'seaweed snack UAE', 'nut butter UAE',
-  'dark chocolate UAE', 'trail mix UAE', 'popcorn UAE', 'beef jerky UAE',
-  'almond milk UAE', 'soy milk UAE', 'vegan cheese UAE', 'plant based yogurt UAE',
-  'hot sauce UAE', 'tahini UAE', 'sriracha UAE', 'truffle oil UAE',
-  'chia seeds UAE', 'quinoa UAE', 'hemp seeds UAE', 'flaxseed UAE',
-  'korean food UAE', 'japanese snacks UAE', 'mexican sauce UAE', 'italian pasta UAE',
-]
+import { allSeedTerms, adjacentTermsForCategory } from './fmcg-keyword-bank'
+
+/**
+ * The full category-partitioned seed pool (~190 real UAE FMCG import terms),
+ * flattened to English search strings. This replaces the old 32-term static list
+ * that made discovery starve (same terms every beat → all filtered as catalog
+ * matches → nothing new sensed).
+ */
+export const UAE_FMCG_SEED_KEYWORDS: string[] = allSeedTerms().map(t => t.en)
+
+/**
+ * Deterministic day-rotating window over the seed pool.
+ *
+ * Each daily beat scans a DIFFERENT slice, so the organism keeps sensing new
+ * terms instead of re-scanning the same head of the list forever. The slice is
+ * chosen by day-of-year (mod number-of-slices) — fully deterministic, no stored
+ * cursor required, and it wraps cleanly across the year.
+ *
+ * @param windowSize  how many terms this beat should scan (e.g. the discover `limit`)
+ * @param date        the beat's date. In the live app pass `new Date()`. Callers
+ *                    running inside a restricted workflow (no Date.now) can pass an
+ *                    explicit date. Defaults to `new Date()`.
+ * @param extraSeeds  learning-loop expansion terms (won/converting adjacents),
+ *                    always scanned first so proven categories are never rotated out.
+ */
+export function rotatingSeedWindow(
+  windowSize: number,
+  date: Date = new Date(),
+  extraSeeds: string[] = [],
+): string[] {
+  const pool = UAE_FMCG_SEED_KEYWORDS
+  const size = Math.max(1, Math.min(windowSize, pool.length + extraSeeds.length))
+
+  // Prepend expansion terms (deduped, capped so they never eat the whole window).
+  const seen = new Set<string>()
+  const priority: string[] = []
+  for (const s of extraSeeds) {
+    const k = s.trim().toLowerCase()
+    if (k && !seen.has(k)) { seen.add(k); priority.push(s.trim()) }
+    if (priority.length >= Math.floor(size / 2)) break   // leave room for rotation
+  }
+
+  // Day-of-year → which slice of the pool to scan this beat.
+  const start = new Date(date.getFullYear(), 0, 0)
+  const dayOfYear = Math.floor((date.getTime() - start.getTime()) / 86400000)
+  const slices = Math.max(1, Math.ceil(pool.length / size))
+  const sliceIndex = ((dayOfYear % slices) + slices) % slices
+  const offset = sliceIndex * size
+
+  const out: string[] = [...priority]
+  for (let i = 0; out.length < size && i < pool.length; i++) {
+    const term = pool[(offset + i) % pool.length]
+    const k = term.toLowerCase()
+    if (!seen.has(k)) { seen.add(k); out.push(term) }
+  }
+  return out
+}
+
+/**
+ * Build learning-loop expansion seeds from the categories of the given winning/
+ * converting opportunities. Same-category adjacent terms that are NOT already in
+ * the bank — this is how proven demand grows the discovery surface.
+ */
+export function expansionSeedsFromCategories(categories: (string | null)[]): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const cat of categories) {
+    for (const term of adjacentTermsForCategory(cat)) {
+      const k = term.toLowerCase()
+      if (!seen.has(k)) { seen.add(k); out.push(term) }
+    }
+  }
+  return out
+}
 
 export function guessFMCGCategory(keyword: string): string {
   const k = keyword.toLowerCase()

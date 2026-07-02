@@ -78,10 +78,16 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
   let budget = Math.max(0, brain.daily_publish_cap - (publishedToday ?? 0))
   if (budget === 0) return { attempted: 0, published: 0, blocked: 0, cap_reached: true }
 
-  // Per-run cap: bilingual Claude generation takes ~20-40s per article.
-  // Cap at 1 so the endpoint always completes well within 60s.
-  // The daily cap still bounds the total; call again to publish the next one.
-  const PER_RUN = 1
+  // Per-run throughput: one 6am invocation publishes several pages instead of one.
+  // Bilingual generation uses Claude Haiku (~8-13s/article). Budgeting ~13s each,
+  // 4 articles ≈ 52s, safely under the 60s Vercel function limit (maxDuration=60).
+  // The daily_publish_cap still bounds the total across the day.
+  const PER_RUN = 4
+  // Wall-clock guard: never START an article we might not finish in time. Reserve
+  // ~10s of the 60s ceiling (startup + brain fetch + per-article gen + response),
+  // so we stop cleanly before the platform kills the function mid-write.
+  const startedAt = Date.now()
+  const ELAPSED_BUDGET_MS = 50_000
   const { data: queue } = await db
     .from('opportunities')
     .select('*')
@@ -94,6 +100,9 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
   let published = 0, blocked = 0
   for (const o of queue) {
     if (budget <= 0) break
+    // Time governor: if we're past the wall-clock budget, stop before generating
+    // another article. Remaining approved items simply publish on the next run.
+    if (Date.now() - startedAt >= ELAPSED_BUDGET_MS) break
     try {
       const keyword = o.title as string
       const art = await generateArticle(keyword, 'both') as GeneratedArticle

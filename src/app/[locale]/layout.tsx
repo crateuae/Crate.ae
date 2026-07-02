@@ -7,6 +7,7 @@ import { routing } from '@/i18n/routing'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import VisitorTracker from '@/components/layout/VisitorTracker'
+import FloatingContact from '@/components/layout/FloatingContact'
 import { AuthProvider } from '@/components/providers/AuthProvider'
 import '../globals.css'
 
@@ -75,6 +76,7 @@ export default async function LocaleLayout({
             <Navbar />
             <main>{children}</main>
             <Footer locale={locale} />
+            <FloatingContact locale={locale} />
             <VisitorTracker />
           </AuthProvider>
         </NextIntlClientProvider>
