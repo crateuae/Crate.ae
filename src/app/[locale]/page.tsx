@@ -510,9 +510,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                   : `${fmt(d.providers)} licensed companies, ${d.opportunities} tracked opportunities, and a compliance engine running now — start before your competitor.`}
               </p>
               <div className="flex flex-wrap justify-center gap-3">
-                <Link href={`/${locale}/market`}
+                <Link href={`/${locale}/rfq`}
                   className="inline-flex items-center gap-2 bg-white text-orange-600 font-semibold px-8 py-4 rounded-2xl transition-all text-sm hover:-translate-y-0.5 hover:shadow-lg">
-                  {isAr ? 'ابدأ الآن — مجاناً' : 'Start now — free'}
+                  {isAr ? 'اطلب عرض سعر — مجاناً' : 'Request a quote — free'}
                   <Arrow className="w-4 h-4" />
                 </Link>
                 <Link href={`/${locale}/products`}

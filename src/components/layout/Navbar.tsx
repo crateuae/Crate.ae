@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Package, BarChart2, ShieldCheck, Boxes, Users, LayoutDashboard, Menu, X, LogIn, LogOut, ChevronDown, Bell, BookOpen } from 'lucide-react'
+import { Package, BarChart2, ShieldCheck, Boxes, Users, LayoutDashboard, Menu, X, LogIn, LogOut, ChevronDown, Bell, BookOpen, FileText } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/components/providers/AuthProvider'
 
@@ -190,6 +190,13 @@ export default function Navbar() {
             {isAr ? 'EN' : 'AR'}
           </Link>
 
+          {/* Primary CTA — Request a quote (the conversion action) */}
+          <Link href={`/${locale}/rfq`}
+            className="inline-flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors shadow-sm shadow-orange-500/20">
+            <FileText className="w-4 h-4" />
+            {isAr ? 'اطلب عرض سعر' : 'Request a Quote'}
+          </Link>
+
           {/* Admin notification bell */}
           {!loading && isAdmin && <NotificationBell locale={locale} isAr={isAr} />}
 
@@ -265,6 +272,12 @@ export default function Navbar() {
               {isAr ? item.label_ar : item.label_en}
             </Link>
           ))}
+          {/* Primary CTA */}
+          <Link href={`/${locale}/rfq`} onClick={() => setOpen(false)}
+            className="flex items-center gap-2 bg-orange-500 text-white rounded-lg px-3 py-2.5 text-sm font-semibold mt-1">
+            <FileText className="w-4 h-4" />
+            {isAr ? 'اطلب عرض سعر' : 'Request a Quote'}
+          </Link>
           <div className="pt-2 border-t border-gray-100 mt-2 space-y-1">
             {!loading && user ? (
               <>

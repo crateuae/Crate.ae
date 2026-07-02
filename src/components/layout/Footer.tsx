@@ -55,6 +55,7 @@ export default function Footer({ locale = 'ar' }: { locale?: string }) {
             <FooterLink href={L('/providers')}>{isAr ? 'سجل الموردين' : 'Supplier Registry'}</FooterLink>
             <FooterLink href={L('/compliance')}>{isAr ? 'اشتراطات الاستيراد' : 'Import Requirements'}</FooterLink>
             <FooterLink href={L('/packaging')}>{isAr ? 'تخطيط التوريد والتعبئة' : 'Supply & Repack Planning'}</FooterLink>
+            <FooterLink href={L('/rfq')}>{isAr ? 'اطلب عرض سعر' : 'Request a Quote'}</FooterLink>
           </FooterCol>
 
           {/* Knowledge */}

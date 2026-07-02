@@ -23,9 +23,13 @@ import { matchProductInCatalog, createSkeletonProduct, updateProductContent, lin
 const MIN_BODY_CHARS = 400          // quality gate: each language must be substantial
 const MIN_TAGS = 2
 
+// UAE-restricted terms must never appear in a public slug/URL (legal).
+const BANNED_SLUG_WORDS = /\b(intelligence|command|operations?|radar|surveillance|espionage)\b/gi
+
 function slugify(s: string): string {
   return s.toLowerCase()
     .replace(/\s+uae\b/g, '')
+    .replace(BANNED_SLUG_WORDS, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 80) || `insight-${Date.now()}`
@@ -126,8 +130,9 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
         if (success) {
           await linkOpportunityToProduct(db, matchedProductId, o.id)
 
-          // Mark as published → Verified opportunity
-          const publishedUrl = `/products/${matchedProductId}?type=${oppType}`
+          // Mark as published → Verified opportunity (clean slug URL for SEO)
+          const { data: mp } = await db.from('products').select('slug').eq('id', matchedProductId).maybeSingle()
+          const publishedUrl = `/products/${mp?.slug ?? matchedProductId}`
           await db.from('opportunities').update({
             stage: 'published',
             published_url: publishedUrl,
@@ -165,8 +170,9 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
         continue
       }
 
-      // Publish immediately → High or Opportunity type
-      const publishedUrl = `/products/${newProductId}?type=${oppType}`
+      // Publish immediately → High or Opportunity type (clean slug URL for SEO)
+      const { data: np } = await db.from('products').select('slug').eq('id', newProductId).maybeSingle()
+      const publishedUrl = `/products/${np?.slug ?? newProductId}`
       await db.from('opportunities').update({
         stage: 'published',
         published_url: publishedUrl,

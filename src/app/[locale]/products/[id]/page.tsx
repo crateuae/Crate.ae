@@ -5,6 +5,7 @@
  * 1. Supabase (all synced catalog + organism products) → UnifiedProductPage
  * 2. Static catalog fallback (for any slug not yet synced) → original inline render
  */
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import {
@@ -16,6 +17,63 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getProductSignals } from '@/lib/supabase/actions'
 import { PRODUCTS_CATALOG, getProductSlug, getProductFMCG } from '@/lib/data/products-catalog'
 import UnifiedProductPage, { type DBProduct } from './UnifiedProductPage'
+
+const SITE = 'https://www.crate.ae'
+
+// ─── SEO: per-product metadata (keyword-rich, canonical=slug, hreflang) ─────────
+export async function generateMetadata(
+  { params }: { params: Promise<{ locale: string; id: string }> }
+): Promise<Metadata> {
+  const { locale, id } = await params
+  const isAr = locale === 'ar'
+  const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  const q = supabase.from('products').select('slug, name_ar, name_en, brand, image_url').eq('is_published', true)
+  const { data: p } = await (isUUID ? q.or(`id.eq.${id},slug.eq.${id}`) : q.eq('slug', id)).maybeSingle()
+
+  const cat = p ? null : PRODUCTS_CATALOG.find(c => getProductSlug(c) === id || (c as { id?: string }).id === id)
+  const name = p ? (isAr ? p.name_ar : p.name_en) : cat ? (isAr ? cat.name_ar : cat.name_en) : null
+  if (!name) return {}
+  const slug = p?.slug ?? (cat ? getProductSlug(cat) : id)
+  const title = isAr ? `${name} — دليل الاستيراد والتسجيل في الإمارات` : `${name} — UAE Import & Registration Guide`
+  const description = isAr
+    ? `${name}: أسعار الجملة والتجزئة، حالة التسجيل، اشتراطات الاستيراد، وفرص السوق في الإمارات — مع طلب عرض سعر مباشر.`
+    : `${name}: wholesale & retail pricing, registration status, import requirements and UAE market opportunity — with a direct quote request.`
+  const image = p?.image_url ?? undefined
+  return {
+    title, description,
+    alternates: {
+      canonical: `${SITE}/${locale}/products/${slug}`,
+      languages: { ar: `/ar/products/${slug}`, en: `/en/products/${slug}`, 'x-default': `/ar/products/${slug}` },
+    },
+    openGraph: { title, description, url: `${SITE}/${locale}/products/${slug}`, type: 'website', images: image ? [image] : [] },
+  }
+}
+
+// ─── SEO: Product + Breadcrumb structured data ──────────────────────────────────
+function ProductJsonLd({ locale, name, brand, slug, image, priceAed }: {
+  locale: string; name: string; brand?: string | null; slug: string; image?: string | null; priceAed?: number | null
+}) {
+  const url = `${SITE}/${locale}/products/${slug}`
+  const isAr = locale === 'ar'
+  const data = [
+    {
+      '@context': 'https://schema.org', '@type': 'Product',
+      name, ...(brand ? { brand: { '@type': 'Brand', name: brand } } : {}),
+      ...(image ? { image } : {}), url,
+      ...(priceAed ? { offers: { '@type': 'Offer', priceCurrency: 'AED', price: priceAed, availability: 'https://schema.org/InStock', url } } : {}),
+    },
+    {
+      '@context': 'https://schema.org', '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: isAr ? 'الرئيسية' : 'Home', item: `${SITE}/${locale}` },
+        { '@type': 'ListItem', position: 2, name: isAr ? 'المنتجات' : 'Products', item: `${SITE}/${locale}/products` },
+        { '@type': 'ListItem', position: 3, name, item: url },
+      ],
+    },
+  ]
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
+}
 
 const SIGNAL_CONFIG = {
   shortage:  { label_ar: 'نقص عرض',      label_en: 'Supply Shortage', cls: 'bg-red-100 text-red-700 border-red-200',    Icon: TrendingDown },
@@ -46,8 +104,15 @@ export default async function ProductDetailPage({
   ).maybeSingle()
 
   if (dbProduct) {
-    const signals = await getProductSignals(dbProduct.slug ?? id).catch(() => null)
-    return <UnifiedProductPage product={dbProduct as DBProduct} locale={locale} signals={signals} />
+    const p = dbProduct as DBProduct
+    const signals = await getProductSignals(p.slug ?? id).catch(() => null)
+    return (
+      <>
+        <ProductJsonLd locale={locale} name={isAr ? p.name_ar : p.name_en} brand={p.brand}
+          slug={p.slug ?? id} image={p.image_url} priceAed={p.price_retail_aed} />
+        <UnifiedProductPage product={p} locale={locale} signals={signals} />
+      </>
+    )
   }
 
   // ── 2. Static catalog fallback (safety net for slugs not yet in Supabase) ──
@@ -74,6 +139,8 @@ export default async function ProductDetailPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ProductJsonLd locale={locale} name={isAr ? product.name_ar : product.name_en} brand={product.brand}
+        slug={slug} image={null} priceAed={product.price_retail_aed} />
       <div className="bg-white border-b border-gray-100 px-6 py-3">
         <div className="max-w-5xl mx-auto flex items-center gap-2 text-sm text-gray-400">
           <Link href={`/${locale}`} className="hover:text-gray-700">{isAr ? 'الرئيسية' : 'Home'}</Link>
@@ -312,6 +379,28 @@ export default async function ProductDetailPage({
             </div>
           </div>
         )}
+
+        {/* RFQ conversion CTA */}
+        <div className="rounded-3xl bg-gradient-to-br from-orange-500 to-amber-500 text-white p-6 md:p-8 shadow-lg shadow-orange-500/20">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+            <div className="flex items-start gap-3">
+              <div className="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-black text-lg">{isAr ? 'مهتم بهذا المنتج؟' : 'Interested in this product?'}</h2>
+                <p className="text-white/85 text-sm mt-0.5 max-w-md">
+                  {isAr ? 'اطلب عرض سعر أو استشارة استيراد — نتواصل معك خلال ٢٤ ساعة.' : 'Request a quote or import consultation — we reply within 24 hours.'}
+                </p>
+              </div>
+            </div>
+            <Link href={`/${locale}/rfq?product=${encodeURIComponent(product.name_en)}`}
+              className="inline-flex items-center justify-center gap-2 bg-white text-orange-600 font-semibold py-3 px-6 rounded-2xl text-sm hover:-translate-y-0.5 transition-all whitespace-nowrap">
+              {isAr ? 'اطلب عرض سعر' : 'Request a Quote'}
+              <ArrowRight className={`w-4 h-4 ${isAr ? 'rotate-180' : ''}`} />
+            </Link>
+          </div>
+        </div>
 
         <div className="flex justify-start">
           <Link href={`/${locale}/products`} className="flex items-center gap-2 text-sm text-gray-400 hover:text-orange-500 font-medium">

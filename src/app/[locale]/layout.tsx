@@ -31,6 +31,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params
   const isAr = locale === 'ar'
   return {
+    metadataBase: new URL('https://www.crate.ae'),
     title: {
       default: isAr
         ? 'Crate — منصة الاستيراد والتوريد الذكية في الإمارات'
