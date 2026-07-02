@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   Activity, Brain, Eye, Hand, Zap, RefreshCw, Loader2, TrendingUp,
-  CheckCircle2, Clock, ShieldCheck, Sparkles, Package, AlertCircle, Lightbulb, Radar,
+  CheckCircle2, Clock, ShieldCheck, Sparkles, Package, AlertCircle, Lightbulb, Telescope,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ const STAGES: { key: string; ar: string; en: string; Icon: typeof Eye; color: st
 ]
 
 const SOURCE_AR: Record<string, string> = {
-  radar_discovery: 'رادار — غير مسجّل',
+  radar_discovery: 'اكتشاف — غير مسجّل',
   gap_alert: 'فجوة — مسجّل',
   product_trend: 'ترند منتج',
   manual: 'يدوي',
@@ -231,8 +231,8 @@ export default function OrganismPage() {
         type Rec = { txt: string; tone: keyof typeof TONE; action?: React.ReactNode }
         const recs: Rec[] = []
         if ((data.vitals.total ?? 0) === 0)
-          recs.push({ tone: 'sky', txt: isAr ? 'لا فرص بعد — افتح «الرادار» وشغّل مسحاً شاملاً لتغذية الحسّ' : 'No opportunities — run a Radar full scan',
-            action: <Link href={`/${locale}/dashboard/radar`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-600 text-white text-[11px] font-bold"><Radar className="w-3 h-3" />{isAr ? 'الرادار' : 'Radar'}</Link> })
+          recs.push({ tone: 'sky', txt: isAr ? 'لا فرص بعد — افتح «الاكتشاف» وشغّل مسحاً شاملاً لتغذية الحسّ' : 'No opportunities — run a Discovery full scan',
+            action: <Link href={`/${locale}/dashboard/discovery`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-600 text-white text-[11px] font-bold"><Telescope className="w-3 h-3" />{isAr ? 'الاكتشاف' : 'Discovery'}</Link> })
         if ((sc.sensed ?? 0) > 0)
           recs.push({ tone: 'emerald', txt: isAr ? `${sc.sensed} فرصة مُكتشفة لم تُقيّم بعد` : `${sc.sensed} sensed, not scored`,
             action: <button onClick={pulse} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold"><Zap className="w-3 h-3" />{isAr ? 'نبضة' : 'Pulse'}</button> })

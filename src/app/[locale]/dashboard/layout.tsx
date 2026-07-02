@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Boxes, FolderTree, Package, ShieldCheck, LayoutDashboard, ArrowRight, LogOut, Store, LineChart, Activity, FileText, Megaphone, Radar } from 'lucide-react'
+import { Boxes, FolderTree, Package, ShieldCheck, LayoutDashboard, ArrowRight, LogOut, Store, LineChart, Activity, FileText, Megaphone, Telescope } from 'lucide-react'
 
 const SIDEBAR_ITEMS = [
   { href: '/dashboard', icon: LayoutDashboard, label_ar: 'نظرة عامة', label_en: 'Overview', exact: true },
@@ -11,7 +11,7 @@ const SIDEBAR_ITEMS = [
   { href: '/dashboard/providers', icon: Store, label_ar: 'الموردون', label_en: 'Providers' },
   { href: '/dashboard/products', icon: Boxes, label_ar: 'المنتجات', label_en: 'Products' },
   { href: '/dashboard/products-categories', icon: FolderTree, label_ar: 'تصنيفات المنتجات', label_en: 'Product Categories' },
-  { href: '/dashboard/radar', icon: Radar, label_ar: 'الرادار — الإدراك', label_en: 'Radar — Sensing' },
+  { href: '/dashboard/discovery', icon: Telescope, label_ar: 'اكتشاف الفرص', label_en: 'Discovery' },
   { href: '/dashboard/seo', icon: LineChart, label_ar: 'SEO — جوجل', label_en: 'SEO — Google' },
   { href: '/dashboard/packaging', icon: Package, label_ar: 'مواصفات التعبئة', label_en: 'Packaging Specs' },
   { href: '/dashboard/compliance-rules', icon: ShieldCheck, label_ar: 'اشتراطات التسجيل', label_en: 'Compliance Rules' },

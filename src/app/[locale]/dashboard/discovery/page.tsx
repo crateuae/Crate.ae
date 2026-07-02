@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import {
-  Radar, Search, BarChart3, Loader2, RefreshCw, TrendingUp, TrendingDown,
+  Telescope, Search, BarChart3, Loader2, RefreshCw, TrendingUp, TrendingDown,
   Minus, CheckCircle2, XCircle, Activity, Sparkles, AlertTriangle, Eye,
 } from 'lucide-react'
 
@@ -26,7 +26,7 @@ const DIR = (d: string | null) =>
   : d === 'falling' ? { Icon: TrendingDown, c: 'text-red-500', ar: 'هابط' }
   : { Icon: Minus, c: 'text-slate-400', ar: 'مستقر' }
 
-export default function RadarPage() {
+export default function DiscoveryPage() {
   const { locale } = useParams()
   const isAr = locale === 'ar'
   const [discoveries, setDiscoveries] = useState<Discovery[]>([])
@@ -50,7 +50,7 @@ export default function RadarPage() {
   }, [])
   useEffect(() => { load() }, [load])
 
-  // Full scan: run all three radar sources, then feed the organism.
+  // Full scan: run all three discovery sources, then feed the organism.
   async function fullScan() {
     const steps: [string, () => Promise<unknown>][] = [
       [isAr ? 'مسح الترندات والاكتشافات…' : 'Scanning trends…', () => fetch('/api/trends/discover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ limit: 20 }) })],
@@ -78,9 +78,9 @@ export default function RadarPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <Radar className="w-6 h-6 text-sky-600" />
+          <Telescope className="w-6 h-6 text-sky-600" />
           <div>
-            <h1 className="text-xl font-black text-slate-900">{isAr ? 'الرادار — الإدراك الموحّد' : 'Radar — Unified Sensing'}</h1>
+            <h1 className="text-xl font-black text-slate-900">{isAr ? 'اكتشاف الفرص — المسح الموحّد' : 'Opportunity Discovery — Unified Scan'}</h1>
             <p className="text-xs text-slate-500">{isAr ? 'ترندات + اكتشافات + فجوات → تغذّي الكائن' : 'Trends + discoveries + gaps → feed the organism'}</p>
           </div>
         </div>
