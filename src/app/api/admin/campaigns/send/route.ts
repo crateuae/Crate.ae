@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { resolveAudience, type AudienceSpec } from '@/lib/campaigns/audience'
+import { complianceFooter, unsubUrl } from '@/lib/campaigns/unsubscribe'
 
 export const maxDuration = 60
 
@@ -65,6 +66,14 @@ export async function POST(req: NextRequest) {
     recipients = recipients.filter(r => !sentSet.has(r.email.toLowerCase()))
   }
 
+  // COMPLIANCE: never email a suppressed address (unsubscribed / bounced / complained).
+  {
+    const emails = recipients.map(r => r.email.toLowerCase())
+    const { data: supp } = await supabase.from('email_suppressions').select('email').in('email', emails)
+    const suppressed = new Set((supp ?? []).map((s: { email: string }) => s.email.toLowerCase()))
+    if (suppressed.size) recipients = recipients.filter(r => !suppressed.has(r.email.toLowerCase()))
+  }
+
   if (recipients.length === 0) return NextResponse.json({ error: 'no new recipients to send to' }, { status: 422 })
 
   // Update total_recipients to reflect the full audience size
@@ -80,7 +89,12 @@ export async function POST(req: NextRequest) {
     const batch = recipients.slice(i, i + 100)
     try {
       await resend.batch.send(batch.map(r => ({
-        from: `Crate <${FROM}>`, to: [r.email], subject: c.subject, html: fill(c.body_html, r),
+        from: `Crate <${FROM}>`, to: [r.email], subject: c.subject,
+        html: fill(c.body_html, r) + complianceFooter(r.email),
+        headers: {
+          'List-Unsubscribe': `<${unsubUrl(r.email)}>, <mailto:uae@crate.ae?subject=unsubscribe>`,
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        },
       })))
       for (const r of batch) { sent++; sendRows.push({ campaign_id, email: r.email, name: r.name, status: 'sent', error: null }) }
     } catch (e) {

@@ -73,16 +73,34 @@ export async function resolveAudience(db: SupabaseClient, spec: AudienceSpec): P
       }
     }
   } else {
-    let q = db.from('providers').select('email, name_en, name_ar').not('email', 'is', null).eq('is_active', true).limit(limit)
-    if (spec.provider_type) q = q.eq('type', spec.provider_type)
-    if (spec.category) q = q.eq('category', spec.category)
-    if (spec.emirate) q = q.eq('emirate', spec.emirate)
+    // Registry providers carry no contact info; outreach uses provider_contacts
+    // (status='verified' only — consented self-claim or admin-verified import).
+    let q = db
+      .from('provider_contacts')
+      .select('email, contact_name, providers!inner(name_en, name_ar, type, category, emirate, is_active)')
+      .eq('status', 'verified')
+      .not('email', 'is', null)
+      .eq('providers.is_active', true)
+      .limit(limit)
+    if (spec.provider_type) q = q.eq('providers.type', spec.provider_type)
+    if (spec.category) q = q.eq('providers.category', spec.category)
+    if (spec.emirate) q = q.eq('providers.emirate', spec.emirate)
     const { data } = await q
-    for (const r of data ?? []) {
-      const email = (r.email as string)?.trim().toLowerCase()
-      if (email && !map.has(email)) map.set(email, { email, name: (r.name_en as string) ?? (r.name_ar as string) ?? null, company: (r.name_en as string) ?? null })
+    for (const r of (data ?? []) as unknown as Array<{ email: string; contact_name: string | null; providers: { name_en: string | null; name_ar: string | null } }>) {
+      const email = r.email?.trim().toLowerCase()
+      const company = r.providers?.name_en ?? r.providers?.name_ar ?? null
+      if (email && !map.has(email)) map.set(email, { email, name: r.contact_name ?? company, company })
     }
   }
 
-  return [...map.values()]
+  // COMPLIANCE: drop any suppressed address from EVERY audience source.
+  const all = [...map.values()]
+  if (all.length) {
+    const { data: supp } = await db.from('email_suppressions').select('email').in('email', all.map(r => r.email))
+    if (supp?.length) {
+      const blocked = new Set(supp.map((s: { email: string }) => s.email.toLowerCase()))
+      return all.filter(r => !blocked.has(r.email.toLowerCase()))
+    }
+  }
+  return all
 }
