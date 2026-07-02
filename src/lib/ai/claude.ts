@@ -157,7 +157,7 @@ export async function analyzeMarketGap(input: {
   price_trend: number
   sources: string[]
 }) {
-  const system = `You are a UAE market intelligence analyst for food & beverage trading.
+  const system = `You are a UAE market analyst for food & beverage trading.
 Return ONLY valid JSON.`
 
   const prompt = `Analyze this market signal:
@@ -184,10 +184,11 @@ Return JSON:
 
 // ─── Article Generation ───────────────────────────────────────────────────────
 export async function generateArticle(keyword: string, lang: 'ar' | 'en' | 'both') {
-  const system = `You are a UAE food trade and market intelligence expert.
-Write detailed, SEO-optimized articles for UAE importers and traders. Return ONLY valid JSON.`
+  const system = `You are a UAE food trade and market analysis expert.
+Write detailed, SEO-optimized articles for UAE importers and traders. Return ONLY valid JSON.
+Use neutral commercial language only — never use intelligence/military/security/command terminology (Arabic: avoid استخبارات، منظومة، قيادة، غرفة عمليات).`
 
-  const prompt = `Write a detailed market intelligence article about: "${keyword}"
+  const prompt = `Write a detailed market analysis article about: "${keyword}"
 Target audience: UAE food & beverage importers, traders, distributors.
 ${lang === 'both' ? 'Provide BOTH Arabic and English versions. Each body must be at least 600 characters.' : `Language: ${lang}`}
 

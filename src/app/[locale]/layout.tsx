@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Poppins, Noto_Sans_Arabic } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { notFound } from 'next/navigation'
@@ -9,6 +10,20 @@ import VisitorTracker from '@/components/layout/VisitorTracker'
 import { AuthProvider } from '@/components/providers/AuthProvider'
 import '../globals.css'
 
+// English → Poppins, Arabic → Noto Sans Arabic. Exposed as CSS vars --font-en / --font-ar.
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-en',
+  display: 'swap',
+})
+const notoArabic = Noto_Sans_Arabic({
+  subsets: ['arabic'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-ar',
+  display: 'swap',
+})
+
 const GT_ID = 'GT-K5M94L6R'   // Google Tag container (routes to GA4 + Ads)
 const GA_ID = 'G-D24S8N3VBP'  // GA4 Measurement ID (destination)
 
@@ -18,13 +33,13 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return {
     title: {
       default: isAr
-        ? 'Crate — مركز القيادة التجاري لسوق الإمارات'
-        : 'Crate — The Trade Command Center for the UAE Market',
+        ? 'Crate — منصة الاستيراد والتوريد الذكية في الإمارات'
+        : 'Crate — The Smart Import & Supply Platform for the UAE',
       template: '%s | Crate',
     },
     description: isAr
-      ? 'منظومة استخبارات تجارية تدير دورة الاستيراد كاملة — رصد فرص السوق، فحص اشتراطات التسجيل، وتخطيط التوريد والتعبئة للسوق الإماراتي'
-      : 'A trade intelligence system running the full import cycle — market opportunity detection, registration compliance checks, and supply & repack planning for the UAE market',
+      ? 'منصة متكاملة تدير دورة الاستيراد كاملة — اكتشاف فرص السوق، فحص اشتراطات التسجيل، وتخطيط التوريد والتعبئة للسوق الإماراتي'
+      : 'An all-in-one platform for the full import cycle — market opportunity discovery, registration compliance checks, and supply & packing planning for the UAE market',
     alternates: { languages: { ar: '/ar', en: '/en', 'x-default': '/ar' } },
   }
 }
@@ -43,7 +58,7 @@ export default async function LocaleLayout({
   const dir = locale === 'ar' ? 'rtl' : 'ltr'
 
   return (
-    <html lang={locale} dir={dir}>
+    <html lang={locale} dir={dir} className={`${poppins.variable} ${notoArabic.variable}`}>
       <head>
         {/* Google Tag — GT-K5M94L6R → GA4 G-D24S8N3VBP */}
         <script async src={`https://www.googletagmanager.com/gtag/js?id=${GT_ID}`} />
@@ -53,7 +68,7 @@ export default async function LocaleLayout({
           }}
         />
       </head>
-      <body className="min-h-screen bg-[#F8F9FB] text-gray-900 font-sans">
+      <body className="min-h-screen bg-white text-gray-900 font-sans">
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
             <Navbar />

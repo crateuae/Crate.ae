@@ -159,8 +159,8 @@ export default function Navbar() {
           </div>
           <div>
             <div className="text-xl font-black text-gray-900 leading-none tracking-tight">Crate</div>
-            <div className={`text-[10px] text-gray-400 font-semibold leading-none mt-0.5 ${isAr ? '' : 'tracking-wide'}`}>
-              {isAr ? 'استخبارات تجارية · الإمارات' : 'Trade Intelligence · UAE'}
+            <div className={`text-[10px] text-gray-400 font-medium leading-none mt-0.5 ${isAr ? '' : 'tracking-wide'}`}>
+              {isAr ? 'الاستيراد والتوريد · الإمارات' : 'Import & Supply · UAE'}
             </div>
           </div>
         </Link>

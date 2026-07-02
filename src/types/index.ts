@@ -35,7 +35,7 @@ export interface ProductBrand {
   logo_url: string | null
 }
 
-// ─── Market Intelligence ─────────────────────────────────────────────────────
+// ─── Market Signals ──────────────────────────────────────────────────────────
 export type SignalType = 'demand' | 'supply'
 export type SignalSource = 'noon' | 'amazon_ae' | 'carrefour' | 'lulu' | 'google_trends' | 'keyword_planner' | 'internal_search' | 'quote_request'
 
