@@ -1,72 +1,134 @@
 import Link from 'next/link'
-import { Package } from 'lucide-react'
+import { Package, Mail, Phone, MapPin, Globe2 } from 'lucide-react'
 
-export default function Footer() {
+export default function Footer({ locale = 'ar' }: { locale?: string }) {
+  const isAr = locale === 'ar'
+  const L = (path: string) => `/${locale}${path}`
+
   return (
-    <footer className="border-t border-gray-100 bg-white mt-16 px-6 py-10">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid md:grid-cols-4 gap-8 mb-8">
-          {/* Brand */}
-          <div className="md:col-span-1">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center">
-                <Package className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-black text-gray-900 text-lg">Crate</span>
-            </div>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              منصة استيراد وتجارة عامة وإعادة تعبئة للسوق الإماراتي — تكشف فجوات الطلب، تفحص اشتراطات ESMA، وتبني خطط التوريد.
-            </p>
-            <p className="text-[10px] text-gray-300 mt-2">
-              Import · General Trading · Repackaging — UAE
-            </p>
-          </div>
+    <footer className="bg-slate-950 text-slate-400 mt-0" dir={isAr ? 'rtl' : 'ltr'}>
+      {/* ── Top grid ── */}
+      <div className="max-w-6xl mx-auto px-5 pt-14 pb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr] gap-x-8 gap-y-10">
 
-          {/* Pages */}
-          <div>
-            <div className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">المنصة</div>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="/ar/market"     className="hover:text-orange-500 transition-colors">فرص السوق</Link></li>
-              <li><Link href="/ar/products"   className="hover:text-orange-500 transition-colors">المنتجات</Link></li>
-              <li><Link href="/ar/providers"  className="hover:text-orange-500 transition-colors">الموردون</Link></li>
-              <li><Link href="/ar/compliance" className="hover:text-orange-500 transition-colors">اشتراطات الاستيراد</Link></li>
-              <li><Link href="/ar/packaging"  className="hover:text-orange-500 transition-colors">إعادة التعبئة</Link></li>
+          {/* Brand + contact */}
+          <div className="col-span-2 md:col-span-4 lg:col-span-1">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center">
+                <Package className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <div className="font-black text-white text-lg leading-none">Crate</div>
+                <div className={`text-[9px] font-bold text-slate-500 uppercase mt-1 ${isAr ? '' : 'tracking-[0.2em]'}`}>
+                  {isAr ? 'استخبارات تجارية · الإمارات' : 'Trade Intelligence · UAE'}
+                </div>
+              </div>
+            </div>
+            <p className="text-xs leading-relaxed text-slate-500 mb-5 max-w-xs">
+              {isAr
+                ? 'منظومة تدير دورة الاستيراد كاملة — رصد الفرص، فحص الاشتراطات، وتخطيط التوريد والتعبئة للسوق الإماراتي.'
+                : 'A system running the full import cycle — opportunity detection, compliance checks, and supply & repack planning for the UAE market.'}
+            </p>
+            <ul className="space-y-2.5 text-xs">
+              <li>
+                <a href="mailto:uae@crate.ae" className="inline-flex items-center gap-2 hover:text-orange-400 transition-colors">
+                  <Mail className="w-3.5 h-3.5 text-orange-500/70" /> uae@crate.ae
+                </a>
+              </li>
+              <li>
+                <a href="tel:+971543000415" className="inline-flex items-center gap-2 hover:text-orange-400 transition-colors" dir="ltr">
+                  <Phone className="w-3.5 h-3.5 text-orange-500/70" /> +971 54 300 0415
+                </a>
+              </li>
+              <li className="inline-flex items-center gap-2">
+                <MapPin className="w-3.5 h-3.5 text-orange-500/70" />
+                {isAr ? 'الإمارات العربية المتحدة' : 'United Arab Emirates'}
+              </li>
             </ul>
           </div>
+
+          {/* Platform */}
+          <FooterCol isAr={isAr} title={isAr ? 'المنصة' : 'Platform'}>
+            <FooterLink href={L('/market')}>{isAr ? 'فرص السوق' : 'Market Opportunities'}</FooterLink>
+            <FooterLink href={L('/products')}>{isAr ? 'المنتجات المرصودة' : 'Monitored Products'}</FooterLink>
+            <FooterLink href={L('/providers')}>{isAr ? 'سجل الموردين' : 'Supplier Registry'}</FooterLink>
+            <FooterLink href={L('/compliance')}>{isAr ? 'اشتراطات الاستيراد' : 'Import Requirements'}</FooterLink>
+            <FooterLink href={L('/packaging')}>{isAr ? 'تخطيط التوريد والتعبئة' : 'Supply & Repack Planning'}</FooterLink>
+          </FooterCol>
+
+          {/* Knowledge */}
+          <FooterCol isAr={isAr} title={isAr ? 'المعرفة والأدلة' : 'Knowledge & Guides'}>
+            <FooterLink href={L('/guides/carton-specs')}>{isAr ? 'دليل مواصفات الكراتين' : 'Carton Specs Guide'}</FooterLink>
+            <FooterLink href={L('/blog')}>{isAr ? 'المدونة والرؤى' : 'Blog & Insights'}</FooterLink>
+            <FooterLink href={L('/market')}>{isAr ? 'لوحة الفرص الحية' : 'Live Opportunity Board'}</FooterLink>
+            <FooterLink href={L('/compliance')}>{isAr ? 'فحص منتج جديد' : 'Check a New Product'}</FooterLink>
+          </FooterCol>
 
           {/* Standards */}
-          <div>
-            <div className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">المعايير</div>
-            <ul className="space-y-2 text-xs text-gray-400">
-              <li>UAE.S 9:2019 — الليبل الغذائي</li>
-              <li>UAE.S 1926:2015 — النقاء</li>
-              <li>ESMA — اشتراطات التسجيل</li>
-              <li>ADAFSA — أبوظبي الغذاء والدواء</li>
-              <li>Halal — متطلبات الحلال</li>
-            </ul>
-          </div>
+          <FooterCol isAr={isAr} title={isAr ? 'المعايير المعتمدة' : 'Covered Standards'}>
+            <FooterText>UAE.S 9:2019 — {isAr ? 'الليبل الغذائي' : 'Food labeling'}</FooterText>
+            <FooterText>UAE.S 1926:2015 — {isAr ? 'النقاء' : 'Purity'}</FooterText>
+            <FooterText>ESMA — {isAr ? 'اشتراطات التسجيل' : 'Registration'}</FooterText>
+            <FooterText>ADAFSA — {isAr ? 'أبوظبي للغذاء' : 'Abu Dhabi Food'}</FooterText>
+            <FooterText>Halal — {isAr ? 'متطلبات الحلال' : 'Halal requirements'}</FooterText>
+          </FooterCol>
 
-          {/* Market focus */}
-          <div>
-            <div className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">التغطية</div>
-            <ul className="space-y-2 text-xs text-gray-400">
-              <li>🇦🇪 الإمارات العربية المتحدة</li>
-              <li>📦 استيراد من أوروبا وآسيا</li>
-              <li>🏷️ إعادة تعبئة للسوق المحلي</li>
-              <li>🛒 توزيع HORECA والتجزئة</li>
-              <li>📊 30+ منتج FMCG مرصود</li>
-            </ul>
-          </div>
+          {/* Data sources */}
+          <FooterCol isAr={isAr} title={isAr ? 'مصادر البيانات' : 'Data Sources'}>
+            <FooterText>{isAr ? 'سجل دبي التجاري (DED)' : 'Dubai DED Registry'}</FooterText>
+            <FooterText>Noon · Amazon.ae</FooterText>
+            <FooterText>Carrefour · Lulu</FooterText>
+            <FooterText>Google Trends</FooterText>
+            <FooterText>{isAr ? 'مزامنة آلية يومية' : 'Automated daily sync'}</FooterText>
+          </FooterCol>
         </div>
+      </div>
 
-        <div className="border-t border-gray-100 pt-5 flex flex-col md:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-4 text-xs text-gray-400">
-            <Link href="/ar/privacy" className="hover:text-gray-600 transition-colors">الخصوصية</Link>
-            <Link href="/ar/terms"   className="hover:text-gray-600 transition-colors">الشروط</Link>
+      {/* ── Bottom bar ── */}
+      <div className="border-t border-white/5">
+        <div className="max-w-6xl mx-auto px-5 py-5 flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-5 text-[11px]">
+            <Link href={L('/privacy')} className="hover:text-slate-200 transition-colors">
+              {isAr ? 'سياسة الخصوصية' : 'Privacy Policy'}
+            </Link>
+            <Link href={L('/terms')} className="hover:text-slate-200 transition-colors">
+              {isAr ? 'الشروط والأحكام' : 'Terms & Conditions'}
+            </Link>
+            <a href="https://www.crate.ae" className="hover:text-slate-200 transition-colors inline-flex items-center gap-1.5">
+              <Globe2 className="w-3 h-3" /> www.crate.ae
+            </a>
           </div>
-          <span className="text-xs text-gray-300">© 2026 Crate — منصة الاستيراد والتوريد في الإمارات</span>
+          <span className="text-[11px] text-slate-600">
+            © 2026 Crate — {isAr ? 'منصة الاستيراد والتوريد في الإمارات 🇦🇪' : 'UAE Import & Supply Platform 🇦🇪'}
+          </span>
         </div>
       </div>
     </footer>
   )
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function FooterCol({ title, children, isAr }: { title: string; children: React.ReactNode; isAr?: boolean }) {
+  // letter-spacing tears cursive Arabic glyph joins — Latin titles only
+  return (
+    <div>
+      <div className={`text-[10px] font-black text-slate-500 uppercase mb-4 ${isAr ? '' : 'tracking-[0.2em]'}`}>{title}</div>
+      <ul className="space-y-2.5">{children}</ul>
+    </div>
+  )
+}
+
+function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <li>
+      <Link href={href} className="text-xs text-slate-400 hover:text-orange-400 transition-colors">
+        {children}
+      </Link>
+    </li>
+  )
+}
+
+function FooterText({ children }: { children: React.ReactNode }) {
+  return <li className="text-xs text-slate-500">{children}</li>
 }

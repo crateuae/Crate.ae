@@ -12,9 +12,21 @@ import '../globals.css'
 const GT_ID = 'GT-K5M94L6R'   // Google Tag container (routes to GA4 + Ads)
 const GA_ID = 'G-D24S8N3VBP'  // GA4 Measurement ID (destination)
 
-export const metadata: Metadata = {
-  title: { default: 'Crate — منصة الاستيراد والتوريد في الإمارات', template: '%s | Crate' },
-  description: 'فرص السوق الإماراتي، اشتراطات استيراد المواد الغذائية، تخطيط التوريد والتعبئة',
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params
+  const isAr = locale === 'ar'
+  return {
+    title: {
+      default: isAr
+        ? 'Crate — مركز القيادة التجاري لسوق الإمارات'
+        : 'Crate — The Trade Command Center for the UAE Market',
+      template: '%s | Crate',
+    },
+    description: isAr
+      ? 'منظومة استخبارات تجارية تدير دورة الاستيراد كاملة — رصد فرص السوق، فحص اشتراطات التسجيل، وتخطيط التوريد والتعبئة للسوق الإماراتي'
+      : 'A trade intelligence system running the full import cycle — market opportunity detection, registration compliance checks, and supply & repack planning for the UAE market',
+    alternates: { languages: { ar: '/ar', en: '/en', 'x-default': '/ar' } },
+  }
 }
 
 export default async function LocaleLayout({
@@ -46,7 +58,7 @@ export default async function LocaleLayout({
           <AuthProvider>
             <Navbar />
             <main>{children}</main>
-            <Footer />
+            <Footer locale={locale} />
             <VisitorTracker />
           </AuthProvider>
         </NextIntlClientProvider>
