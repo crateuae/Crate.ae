@@ -2,7 +2,7 @@
   "nav": {
     "home": "Home",
     "products": "Products",
-    "market": "Market Radar",
+    "market": "Market Opportunities",
     "compliance": "Compliance Checker",
     "packaging": "Packaging Calculator",
     "providers": "Supplier Directory",
@@ -11,8 +11,8 @@
     "login": "Login"
   },
   "home": {
-    "hero_title": "Crate — Supply Chain Intelligence",
-    "hero_subtitle": "UAE Market Radar: Supply & demand gaps, product compliance checking, and smart packaging calculator",
+    "hero_title": "Crate — The Smart Import & Supply Platform",
+    "hero_subtitle": "UAE market platform: supply & demand gaps, product compliance checking, and smart packaging calculator",
     "cta_market": "Discover Gaps",
     "cta_compliance": "Check Your Product",
     "cta_packaging": "Calculate Packaging",
@@ -20,7 +20,7 @@
     "stats_alerts": "Active Market Signals",
     "stats_rules": "Compliance Rules",
     "section_how": "How Crate Works",
-    "how_1_title": "Market Radar",
+    "how_1_title": "Market Opportunities",
     "how_1_desc": "Automatically monitors UAE e-stores and Google Trends to reveal supply & demand gaps",
     "how_2_title": "Compliance Checker",
     "how_2_desc": "Checks your product against UAE.S standards and returns all gaps at once",
@@ -28,7 +28,7 @@
     "how_3_desc": "Enter an institutional order and get a full packaging plan with cost, price, and label"
   },
   "market": {
-    "title": "Market Radar",
+    "title": "Market Opportunities",
     "subtitle": "Real-time supply & demand signals",
     "gap_shortage": "Supply Shortage",
     "gap_arbitrage": "Arbitrage Opportunity",
