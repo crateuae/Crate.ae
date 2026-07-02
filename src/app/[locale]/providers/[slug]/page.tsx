@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { getProviderBySlug } from '@/lib/supabase/cached'
 import ViewBeacon from './ViewBeacon'
+import ClaimForm from './ClaimForm'
 
 export const revalidate = 86400   // Cache individual provider pages 24 hours
 
@@ -269,6 +270,11 @@ export default async function ProviderDetailPage({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Self-claim — consented enrichment channel */}
+        <div className="mt-6">
+          <ClaimForm providerId={p.id} isAr={isAr} />
         </div>
       </div>
     </div>
