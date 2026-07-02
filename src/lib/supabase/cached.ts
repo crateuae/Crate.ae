@@ -2,16 +2,19 @@
  * Cached Supabase queries — wraps heavy queries with Next.js cache.
  * Data revalidates every hour automatically (ISR).
  *
- * Uses a direct anon client (no cookies) because unstable_cache runs
- * outside request context and cannot access next/headers cookies.
+ * Server-only (unstable_cache runs on the server, never shipped to the client).
+ * Uses the SERVICE ROLE key: the providers table has an RLS policy that calls
+ * is_admin(), which the anon role cannot execute — so an anon read errors and
+ * every provider page 404s. Service role reads this public catalog directly.
  */
 import { unstable_cache } from 'next/cache'
-import { createClient as createBrowserClient } from '@supabase/supabase-js'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 function getClient() {
-  return createBrowserClient(
+  return createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
   )
 }
 
