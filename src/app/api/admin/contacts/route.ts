@@ -34,14 +34,15 @@ export async function POST(req: NextRequest) {
   if (!rows.length) return NextResponse.json({ error: 'rows required' }, { status: 422 })
 
   const supabase = db()
-  let imported = 0
-  const unmatched: string[] = []
+  let imported = 0        // matched to a registry provider
+  let standalone = 0      // verified but not linked to a registry company
+  const now = new Date().toISOString()
 
   for (const row of rows) {
     const email = row.email?.trim().toLowerCase()
     if (!email || !email.includes('@')) continue
 
-    // Resolve provider by slug, else by company name.
+    // Resolve provider by slug, else by company name (optional).
     let providerId: string | null = null
     if (row.provider_slug?.trim()) {
       const { data } = await supabase.from('providers').select('id').eq('slug', row.provider_slug.trim()).maybeSingle()
@@ -51,19 +52,32 @@ export async function POST(req: NextRequest) {
       const { data } = await supabase.from('providers').select('id').ilike('name_en', `%${row.company.trim()}%`).limit(1).maybeSingle()
       providerId = data?.id ?? null
     }
-    if (!providerId) { unmatched.push(email); continue }
 
-    const { error } = await supabase.from('provider_contacts').upsert({
-      provider_id: providerId, email,
+    const base = {
+      email,
       contact_name: row.contact_name?.trim() || null,
       phone: row.phone?.trim() || null,
       source: 'admin_import', consent: true, confidence: 100,
-      status: 'verified', verified_at: new Date().toISOString(),
-    }, { onConflict: 'provider_id,email' })
-    if (!error) imported++
+      status: 'verified', verified_at: now,
+    }
+
+    if (providerId) {
+      // Registry-linked: dedup on (provider_id, email).
+      const { error } = await supabase.from('provider_contacts')
+        .upsert({ ...base, provider_id: providerId }, { onConflict: 'provider_id,email' })
+      if (!error) imported++
+    } else {
+      // Standalone verified contact (no registry match). Dedup by email manually
+      // since NULL provider_id doesn't participate in the unique constraint.
+      const { data: existing } = await supabase.from('provider_contacts')
+        .select('id').is('provider_id', null).eq('email', email).maybeSingle()
+      if (existing) { standalone++; continue }
+      const { error } = await supabase.from('provider_contacts').insert({ ...base, provider_id: null })
+      if (!error) standalone++
+    }
   }
 
-  return NextResponse.json({ ok: true, imported, unmatched, unmatched_count: unmatched.length })
+  return NextResponse.json({ ok: true, imported, standalone, total: imported + standalone })
 }
 
 export async function PATCH(req: NextRequest) {

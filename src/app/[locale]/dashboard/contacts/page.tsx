@@ -14,7 +14,7 @@ export default function ContactsPage() {
   const isAr = locale === 'ar'
   const [raw, setRaw] = useState('')
   const [busy, setBusy] = useState(false)
-  const [result, setResult] = useState<{ imported: number; unmatched_count: number; unmatched: string[] } | null>(null)
+  const [result, setResult] = useState<{ imported: number; standalone: number; total: number } | null>(null)
   const [pending, setPending] = useState<Pending[]>([])
 
   const loadPending = useCallback(async () => {
@@ -66,7 +66,12 @@ export default function ContactsPage() {
       {/* Import */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6">
         <h2 className="text-sm font-black text-slate-800 flex items-center gap-2 mb-3"><Upload className="w-4 h-4 text-orange-500" />{isAr ? 'استيراد قائمة موثّقة' : 'Import verified list'}</h2>
-        <p className="text-[11px] text-slate-400 mb-2 font-mono">email, provider-slug-or-company, name (optional), phone (optional)</p>
+        <p className="text-[11px] text-slate-400 mb-2">
+          {isAr
+            ? 'سطر لكل جهة اتصال. الإيميل وحده يكفي، أو أضف: '
+            : 'One contact per line. A bare email works, or add: '}
+          <span className="font-mono">email, provider-slug-or-company, name, phone</span>
+        </p>
         <textarea value={raw} onChange={e => setRaw(e.target.value)} rows={6} dir="ltr"
           placeholder={"sales@acme.ae, acme-trading-llc, Ahmed, +9715...\ninfo@foodco.ae, Food Co LLC"}
           className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none" />
@@ -76,13 +81,14 @@ export default function ContactsPage() {
         </button>
         {result && (
           <div className="mt-3 text-xs space-y-1">
-            <div className="text-emerald-600 font-bold">✓ {isAr ? `تم استيراد ${result.imported}` : `Imported ${result.imported}`}</div>
-            {result.unmatched_count > 0 && (
-              <div className="text-amber-600">
-                {isAr ? `${result.unmatched_count} بلا تطابق (استخدمها في حملة يدوية): ` : `${result.unmatched_count} unmatched (use a manual campaign): `}
-                <span className="font-mono text-[10px] text-slate-500">{result.unmatched.slice(0, 8).join(', ')}</span>
-              </div>
-            )}
+            <div className="text-emerald-600 font-bold">
+              ✓ {isAr ? `تم استيراد ${result.total} جهة اتصال موثّقة` : `Imported ${result.total} verified contacts`}
+            </div>
+            <div className="text-slate-500">
+              {isAr
+                ? `${result.imported} مرتبطة بشركة في السجل · ${result.standalone} مستقلة`
+                : `${result.imported} linked to a registry company · ${result.standalone} standalone`}
+            </div>
           </div>
         )}
       </div>

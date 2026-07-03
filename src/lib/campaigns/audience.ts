@@ -73,22 +73,31 @@ export async function resolveAudience(db: SupabaseClient, spec: AudienceSpec): P
       }
     }
   } else {
-    // Registry providers carry no contact info; outreach uses provider_contacts
-    // (status='verified' only — consented self-claim or admin-verified import).
-    let q = db
+    // Outreach uses provider_contacts (status='verified' only — consented self-claim
+    // or admin-verified import). Rows may be registry-linked OR standalone (no provider).
+    // LEFT join so standalone contacts (provider_id null) are included too.
+    const hasFilter = Boolean(spec.provider_type || spec.category || spec.emirate)
+    const { data } = await db
       .from('provider_contacts')
-      .select('email, contact_name, providers!inner(name_en, name_ar, type, category, emirate, is_active)')
+      .select('email, contact_name, providers(name_en, name_ar, type, category, emirate, is_active)')
       .eq('status', 'verified')
       .not('email', 'is', null)
-      .eq('providers.is_active', true)
       .limit(limit)
-    if (spec.provider_type) q = q.eq('providers.type', spec.provider_type)
-    if (spec.category) q = q.eq('providers.category', spec.category)
-    if (spec.emirate) q = q.eq('providers.emirate', spec.emirate)
-    const { data } = await q
-    for (const r of (data ?? []) as unknown as Array<{ email: string; contact_name: string | null; providers: { name_en: string | null; name_ar: string | null } }>) {
+    type Row = { email: string; contact_name: string | null; providers: { name_en: string | null; name_ar: string | null; type: string | null; category: string | null; emirate: string | null; is_active: boolean | null } | null }
+    for (const r of (data ?? []) as unknown as Row[]) {
+      const p = r.providers
+      // Provider-specific filters apply only to registry-linked rows; when a filter
+      // is set, standalone (no-provider) contacts are excluded from that segment.
+      if (hasFilter) {
+        if (!p || p.is_active === false) continue
+        if (spec.provider_type && p.type !== spec.provider_type) continue
+        if (spec.category && p.category !== spec.category) continue
+        if (spec.emirate && p.emirate !== spec.emirate) continue
+      } else if (p && p.is_active === false) {
+        continue
+      }
       const email = r.email?.trim().toLowerCase()
-      const company = r.providers?.name_en ?? r.providers?.name_ar ?? null
+      const company = p?.name_en ?? p?.name_ar ?? null
       if (email && !map.has(email)) map.set(email, { email, name: r.contact_name ?? company, company })
     }
   }
