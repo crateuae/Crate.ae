@@ -80,7 +80,9 @@ const EVALUATORS: Record<string, (i: ComplianceInput) => { status: RuleResult['s
     'Storage conditions must appear in Arabic.', 'يجب أن تظهر ظروف التخزين باللغة العربية.'),
   storage_temp_arabic: (i) => arabicSection(i.label_text, /يحفظ|درجة الحرارة|مبرد|التخزين|°|مئوية/,
     'Storage temperature must be specified in Arabic.', 'يجب تحديد درجة حرارة التخزين باللغة العربية.'),
-  nutrition_in_arabic: (i) => arabicSection(i.label_text, /القيمة الغذائية|الحقائق الغذائية|السعرات|الطاقة|بروتين|دهون|كربوهيدرات|سكر/,
+  // Table-specific Arabic terms only — NOT 'سكر'/'دهون' which also appear in the
+  // ingredients list (would cause a false pass when only the ingredients are Arabic).
+  nutrition_in_arabic: (i) => arabicSection(i.label_text, /القيمة الغذائية|الحقائق الغذائية|القيمة الغذائيه|السعرات الحرارية|السعرات|القيمة المرجعية|الطاقة \(/,
     'Nutrition facts must appear in Arabic.', 'يجب أن تظهر الحقائق الغذائية باللغة العربية.'),
   ingredients_in_arabic: (i) => arabicSection(i.label_text, /المكونات|المحتويات|مكونات/,
     'Ingredients list must appear in Arabic.', 'يجب أن تظهر قائمة المكونات باللغة العربية.'),
