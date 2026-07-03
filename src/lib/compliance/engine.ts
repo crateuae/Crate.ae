@@ -101,7 +101,7 @@ const EVALUATORS: Record<string, (i: ComplianceInput) => { status: RuleResult['s
   sulfites_declared: (i) => {
     if (!i.has_sulfites) return { status: 'na', note_en: 'Product declared free of sulfites.', note_ar: 'المنتج مُعلن خالٍ من السلفايت.' }
     const t = norm(i.label_text) + ' ' + norm(i.ingredients)
-    return /e2(2[0-8])|\bsulph?ite|سلفايت|سلفيت|كبريتيت|ثاني أكسيد الكبريت/.test(t)
+    return /e2(2[0-8])|sul(f|ph)ite|سلفايت|سلفيت|كبريتيت|ثاني أكسيد الكبريت/.test(t)
       ? { status: 'pass' }
       : { status: 'fail', note_en: 'Product contains sulfites but the E-number (E220–E228) is not declared on the label.', note_ar: 'المنتج يحتوي على سلفايت لكن رقم E (E220–E228) غير مُعلن على البطاقة.' }
   },
