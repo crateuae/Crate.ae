@@ -81,7 +81,19 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const { id, status } = await req.json()
+  const body = await req.json()
+
+  // Bulk verify every pending contact (weekly review shortcut).
+  if (body.verify_all) {
+    const { error, count } = await db()
+      .from('provider_contacts')
+      .update({ status: 'verified', verified_at: new Date().toISOString() }, { count: 'exact' })
+      .eq('status', 'pending')
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true, verified: count ?? 0 })
+  }
+
+  const { id, status } = body
   if (!id || !['verified', 'rejected'].includes(status)) {
     return NextResponse.json({ error: 'id and status (verified|rejected) required' }, { status: 422 })
   }

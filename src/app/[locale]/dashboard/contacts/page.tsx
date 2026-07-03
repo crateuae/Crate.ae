@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import { Upload, Loader2, CheckCircle2, XCircle, UserCheck, Mail } from 'lucide-react'
+import { Upload, Loader2, CheckCircle2, XCircle, UserCheck, Mail, Sparkles, ShieldCheck } from 'lucide-react'
 
 interface Pending {
   id: string; email: string; contact_name: string | null; phone: string | null
@@ -55,6 +55,27 @@ export default function ContactsPage() {
     setPending(p => p.filter(x => x.id !== id))
   }
 
+  const [enriching, setEnriching] = useState(false)
+  const [enrichMsg, setEnrichMsg] = useState<string | null>(null)
+  async function runEnrichment() {
+    setEnriching(true); setEnrichMsg(null)
+    try {
+      const d = await (await fetch('/api/organism/enrich?limit=15', { method: 'POST' })).json()
+      if (d.skipped) setEnrichMsg(isAr ? 'الإثراء غير مُفعّل — أضف GOOGLE_PLACES_API_KEY في Vercel لتشغيله' : 'Inactive — add GOOGLE_PLACES_API_KEY in Vercel to enable')
+      else setEnrichMsg(isAr ? `عولجت ${d.processed} · إيميلات ${d.emails_found} · هواتف ${d.phones_found}` : `Processed ${d.processed} · emails ${d.emails_found} · phones ${d.phones_found}`)
+      await loadPending()
+    } finally { setEnriching(false) }
+  }
+
+  const [verifying, setVerifying] = useState(false)
+  async function verifyAll() {
+    setVerifying(true)
+    try {
+      await fetch('/api/admin/contacts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verify_all: true }) })
+      setPending([])
+    } finally { setVerifying(false) }
+  }
+
   return (
     <div className="p-6 max-w-4xl mx-auto" dir={isAr ? 'rtl' : 'ltr'}>
       <h1 className="text-xl font-black text-slate-900 mb-1">{isAr ? 'جهات اتصال الموردين' : 'Supplier Contacts'}</h1>
@@ -93,12 +114,34 @@ export default function ContactsPage() {
         )}
       </div>
 
+      {/* Auto-enrichment (Google Places → website → email) */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6">
+        <h2 className="text-sm font-black text-slate-800 flex items-center gap-2 mb-1"><Sparkles className="w-4 h-4 text-orange-500" />{isAr ? 'إثراء شركات التغليف تلقائياً' : 'Auto-enrich packaging suppliers'}</h2>
+        <p className="text-[11px] text-slate-400 mb-3">
+          {isAr ? 'يبحث عن الموقع والإيميل والهاتف لشركات التغليف من Google Places. دفعة ~15 لكل تشغيل، تُخزّن «بانتظار المراجعة».'
+                : 'Finds website/email/phone for packaging suppliers via Google Places. ~15 per run, stored as pending review.'}
+        </p>
+        <button onClick={runEnrichment} disabled={enriching}
+          className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-5 py-2 rounded-xl disabled:opacity-60">
+          {enriching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}{isAr ? 'شغّل دفعة إثراء' : 'Run enrichment batch'}
+        </button>
+        {enrichMsg && <div className="mt-3 text-xs text-slate-600">{enrichMsg}</div>}
+      </div>
+
       {/* Pending self-claims */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5">
-        <h2 className="text-sm font-black text-slate-800 flex items-center gap-2 mb-3">
-          <UserCheck className="w-4 h-4 text-orange-500" />
-          {isAr ? `توثيقات بانتظار المراجعة (${pending.length})` : `Self-claims awaiting review (${pending.length})`}
-        </h2>
+        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+          <h2 className="text-sm font-black text-slate-800 flex items-center gap-2">
+            <UserCheck className="w-4 h-4 text-orange-500" />
+            {isAr ? `جهات اتصال بانتظار المراجعة (${pending.length})` : `Contacts awaiting review (${pending.length})`}
+          </h2>
+          {pending.length > 0 && (
+            <button onClick={verifyAll} disabled={verifying}
+              className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg disabled:opacity-60">
+              {verifying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}{isAr ? 'اعتماد الكل' : 'Verify all'}
+            </button>
+          )}
+        </div>
         {pending.length === 0 ? (
           <p className="text-xs text-slate-400 py-4 text-center">{isAr ? 'لا توثيقات معلّقة' : 'No pending claims'}</p>
         ) : (
