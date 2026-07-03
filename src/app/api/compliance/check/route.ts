@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
-import { checkProductCompliance } from '@/lib/ai/claude'
+import { checkComplianceDeterministic } from '@/lib/compliance/engine'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
@@ -10,25 +10,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'product_name and product_class are required' }, { status: 400 })
   }
 
-  const result = await checkProductCompliance({
+  const supabase = await createAdminClient()
+
+  // Deterministic rule-engine check — same input ALWAYS yields the same complete
+  // result (no AI randomness). Replaces the old temperature-1.0 AI improvisation.
+  const result = await checkComplianceDeterministic(supabase, {
     product_class,
     product_name,
     ingredients,
     label_text,
     caffeine_mg_per_100ml,
     has_sulfites,
-  }) as {
-    standard: string
-    verdict: string
-    passed: unknown[]
-    failed: unknown[]
-    missing_count: number
-    summary_ar: string
-    summary_en: string
-  }
+  })
 
   // Save check history
-  const supabase = await createAdminClient()
   await supabase.from('compliance_checks').insert({
     product_id: product_id || null,
     product_name,

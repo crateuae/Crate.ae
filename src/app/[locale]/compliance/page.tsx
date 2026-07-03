@@ -28,6 +28,7 @@ interface ComplianceResult {
   verdict: 'registerable' | 'not_registerable' | 'needs_review'
   passed: CheckItem[]
   failed: CheckItem[]
+  review?: CheckItem[]
   missing_count: number
   summary_ar: string
   summary_en: string
@@ -380,6 +381,27 @@ export default function CompliancePage() {
                           <div>
                             <p className="text-sm text-gray-900 font-medium">{f.requirement_ar}</p>
                             <p className="text-[10px] text-gray-400 mt-0.5">{f.requirement_en}</p>
+                            <p className="text-[10px] text-orange-500 font-semibold mt-0.5">{f.clause}</p>
+                            {f.note && <p className="text-[10px] text-amber-600 mt-0.5">{f.note}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {result.review && result.review.length > 0 && (
+                  <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+                    <h3 className="font-bold text-amber-600 mb-4 flex items-center gap-2 text-sm">
+                      <AlertTriangle className="w-4 h-4" />
+                      تحقّق يدوياً على التصميم ({result.review.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {result.review.map((f, i) => (
+                        <div key={i} className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm text-gray-900 font-medium">{f.requirement_ar}</p>
                             <p className="text-[10px] text-orange-500 font-semibold mt-0.5">{f.clause}</p>
                             {f.note && <p className="text-[10px] text-amber-600 mt-0.5">{f.note}</p>}
                           </div>
