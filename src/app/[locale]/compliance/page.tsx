@@ -1,6 +1,12 @@
 'use client'
 import { useState, useRef, KeyboardEvent } from 'react'
-import { ShieldCheck, ShieldX, AlertTriangle, CheckCircle, XCircle, Loader2, Plus, X } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { usePathname } from 'next/navigation'
+import { ShieldCheck, ShieldX, AlertTriangle, CheckCircle, XCircle, Loader2, Plus, X, ScanLine, Sparkles } from 'lucide-react'
+import type { ScanResult } from './SmartScanner'
+
+// Lazy-loaded so the ~8 MB OpenCV.js pipeline never touches the initial page bundle
+const SmartScanner = dynamic(() => import('./SmartScanner'), { ssr: false })
 
 const PRODUCT_CLASSES = [
   { value: 'beverage_general', label_ar: 'مشروب عام', label_en: 'General Beverage', cols_ar: ['القيمة/100ml', 'الحجم الصافي'], cols_en: ['Value/100ml', 'Net Volume'] },
@@ -52,9 +58,30 @@ export default function CompliancePage() {
   const [result, setResult] = useState<ComplianceResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showScanner, setShowScanner] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const pathname = usePathname()
+  const isAr = !pathname?.startsWith('/en')
+
   const selectedClass = PRODUCT_CLASSES.find(c => c.value === productClass) || PRODUCT_CLASSES[0]
+
+  // Prefill the whole form from a Smart-Scan result and show its (deterministic) verdict
+  function applyScan(r: ScanResult) {
+    const ex = r.extracted
+    if (ex.product_name) setProductName(ex.product_name)
+    if (ex.product_class) handleClassChange(ex.product_class)
+    if (Array.isArray(ex.ingredients) && ex.ingredients.length) {
+      const cls = PRODUCT_CLASSES.find(c => c.value === ex.product_class) || selectedClass
+      setIngredients(ex.ingredients)
+      setTableRows(ex.ingredients.map((ing: string) => ({ ingredient: ing, values: cls.cols_ar.map(() => '—') })))
+    }
+    if (ex.label_text) setLabelText(ex.label_text)
+    if (ex.caffeine_mg_per_100ml != null) setCaffeine(String(ex.caffeine_mg_per_100ml))
+    setHasSulfites(!!ex.has_sulfites)
+    setResult(r.compliance)
+    setShowScanner(false)
+  }
 
   function addChip(val: string) {
     const trimmed = val.trim().replace(/,$|،$/, '')
@@ -168,6 +195,24 @@ export default function CompliancePage() {
         <div className="grid lg:grid-cols-2 gap-6">
           {/* ── FORM ── */}
           <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-5">
+
+            {/* Smart Scan CTA */}
+            <button type="button" onClick={() => setShowScanner(true)}
+              className="w-full flex items-center gap-3 bg-gradient-to-l from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 text-white rounded-2xl px-4 py-3.5 transition-all shadow-sm">
+              <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                <ScanLine className="w-5 h-5" />
+              </span>
+              <span className="text-right flex-1">
+                <span className="block font-black text-sm">مسح ذكي بالكاميرا</span>
+                <span className="block text-[11px] text-white/85 font-medium">صوّر بطاقة المنتج — نقرأها ونملأ الحقول ونفحص المطابقة تلقائياً</span>
+              </span>
+              <Sparkles className="w-4 h-4 text-white/70 flex-shrink-0" />
+            </button>
+
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100" /></div>
+              <div className="relative flex justify-center"><span className="bg-white px-3 text-[11px] text-gray-300 font-semibold">أو أدخل البيانات يدوياً</span></div>
+            </div>
 
             {/* Product Name */}
             <div>
@@ -432,6 +477,10 @@ export default function CompliancePage() {
           </div>
         </div>
       </div>
+
+      {showScanner && (
+        <SmartScanner isAr={isAr} onClose={() => setShowScanner(false)} onApply={applyScan} />
+      )}
     </div>
   )
 }
