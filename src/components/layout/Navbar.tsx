@@ -5,13 +5,30 @@ import { Package, BarChart2, ShieldCheck, Boxes, Users, LayoutDashboard, Menu, X
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/components/providers/AuthProvider'
 
-const NAV_ITEMS = [
-  { href: '/market',      icon: BarChart2,   label_ar: 'فرص السوق',          label_en: 'Market Opportunities' },
-  { href: '/compliance',  icon: ShieldCheck,  label_ar: 'اشتراطات الاستيراد', label_en: 'Import Requirements' },
-  { href: '/packaging',   icon: Package,      label_ar: 'إعادة التعبئة',      label_en: 'Repackaging' },
-  { href: '/products',    icon: Boxes,        label_ar: 'المنتجات',           label_en: 'Products' },
-  { href: '/providers',   icon: Users,        label_ar: 'الموردون',           label_en: 'Suppliers' },
-  { href: '/guides/carton-specs', icon: BookOpen, label_ar: 'دليل الكراتين', label_en: 'Carton Guide' },
+// Grouped into 3 clear buckets so the nav guides rather than scatters.
+const NAV_GROUPS = [
+  {
+    label_ar: 'الفرص', label_en: 'Opportunities', icon: BarChart2,
+    items: [
+      { href: '/market',   icon: BarChart2, label_ar: 'فرص السوق', label_en: 'Market Opportunities' },
+      { href: '/products', icon: Boxes,     label_ar: 'المنتجات',   label_en: 'Products' },
+    ],
+  },
+  {
+    label_ar: 'أدوات الاستيراد', label_en: 'Import Tools', icon: ShieldCheck,
+    items: [
+      { href: '/compliance', icon: ShieldCheck, label_ar: 'اشتراطات الاستيراد', label_en: 'Import Requirements' },
+      { href: '/packaging',  icon: Package,     label_ar: 'إعادة التعبئة',      label_en: 'Repackaging' },
+      { href: '/providers',  icon: Users,       label_ar: 'الموردون',           label_en: 'Suppliers' },
+    ],
+  },
+  {
+    label_ar: 'المعرفة', label_en: 'Knowledge', icon: BookOpen,
+    items: [
+      { href: '/insights',            icon: FileText, label_ar: 'المدونة والرؤى', label_en: 'Blog & Insights' },
+      { href: '/guides/carton-specs', icon: BookOpen, label_ar: 'دليل الكراتين',  label_en: 'Carton Guide' },
+    ],
+  },
 ]
 
 // ── Notification type ──────────────────────────────────────────────────────
@@ -165,18 +182,38 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* Nav links */}
-        <div className="hidden lg:flex items-center gap-0.5 mx-4">
-          {NAV_ITEMS.map(item => {
-            const active = pathname.includes(item.href)
+        {/* Nav — 3 grouped dropdowns (CSS hover, no state) */}
+        <div className="hidden lg:flex items-center gap-1 mx-4">
+          {NAV_GROUPS.map(group => {
+            const active = group.items.some(i => pathname.includes(i.href))
             return (
-              <Link key={item.href} href={`/${locale}${item.href}`}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
-                  active ? 'bg-orange-50 text-orange-600 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                }`}>
-                <item.icon className="w-4 h-4 flex-shrink-0" />
-                {isAr ? item.label_ar : item.label_en}
-              </Link>
+              <div key={group.label_en} className="relative group">
+                <button
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
+                    active ? 'bg-orange-50 text-orange-600 font-semibold' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}>
+                  <group.icon className="w-4 h-4 flex-shrink-0" />
+                  {isAr ? group.label_ar : group.label_en}
+                  <ChevronDown className="w-3 h-3 opacity-50 transition-transform group-hover:rotate-180" />
+                </button>
+                {/* pt-1 bridges the hover gap so the menu doesn't close mid-move */}
+                <div className="absolute top-full start-0 pt-1.5 hidden group-hover:block min-w-[220px] z-50">
+                  <div className="bg-white border border-gray-200 rounded-2xl shadow-xl shadow-gray-100/70 py-1.5">
+                    {group.items.map(item => {
+                      const iActive = pathname.includes(item.href)
+                      return (
+                        <Link key={item.href} href={`/${locale}${item.href}`}
+                          className={`flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors ${
+                            iActive ? 'text-orange-600 bg-orange-50' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-600'
+                          }`}>
+                          <item.icon className={`w-4 h-4 flex-shrink-0 ${iActive ? 'text-orange-500' : 'text-gray-400'}`} />
+                          {isAr ? item.label_ar : item.label_en}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
             )
           })}
         </div>
@@ -265,12 +302,19 @@ export default function Navbar() {
       {/* Mobile menu */}
       {open && (
         <div className="lg:hidden bg-white border-t border-gray-100 px-4 py-3 space-y-1 shadow-lg">
-          {NAV_ITEMS.map(item => (
-            <Link key={item.href} href={`/${locale}${item.href}`} onClick={() => setOpen(false)}
-              className="flex items-center gap-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg px-3 py-2.5 transition-colors text-sm">
-              <item.icon className="w-4 h-4" />
-              {isAr ? item.label_ar : item.label_en}
-            </Link>
+          {NAV_GROUPS.map(group => (
+            <div key={group.label_en} className="mb-1">
+              <div className="px-3 pt-2 pb-1 text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1.5">
+                <group.icon className="w-3.5 h-3.5" />{isAr ? group.label_ar : group.label_en}
+              </div>
+              {group.items.map(item => (
+                <Link key={item.href} href={`/${locale}${item.href}`} onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg px-3 py-2.5 ps-6 transition-colors text-sm">
+                  <item.icon className="w-4 h-4" />
+                  {isAr ? item.label_ar : item.label_en}
+                </Link>
+              ))}
+            </div>
           ))}
           {/* Primary CTA */}
           <Link href={`/${locale}/rfq`} onClick={() => setOpen(false)}

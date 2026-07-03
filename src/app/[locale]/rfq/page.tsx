@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import RfqPageForm from './RfqPageForm'
+import TrustStrip from '@/components/layout/TrustStrip'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
@@ -28,6 +29,7 @@ export default async function RfqPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50/50 via-white to-white" dir={isAr ? 'rtl' : 'ltr'}>
+      <TrustStrip locale={locale} />
       <div className="max-w-3xl mx-auto px-5 py-14 lg:py-20">
         <RfqPageForm product={product} type={type} isAr={isAr} locale={locale} />
       </div>

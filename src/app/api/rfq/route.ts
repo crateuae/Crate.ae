@@ -6,6 +6,44 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { resolveAudience, type AudienceSpec } from '@/lib/campaigns/audience'
+
+/**
+ * CAPTURE → OUTREACH loop closure. An incoming RFQ (demand signal) drafts an
+ * outreach campaign to matching suppliers. SAFE: gated by ENABLE_OUTREACH,
+ * DRAFT-only (a human reviews & sends), and no-ops until verified contacts exist.
+ */
+async function draftSupplierOutreach(
+  supabase: ReturnType<typeof db>,
+  opts: { opportunityId: string | null; productEn: string; productAr: string | null }
+) {
+  if (process.env.ENABLE_OUTREACH !== 'true') return
+  try {
+    let category: string | null = null
+    if (opts.opportunityId) {
+      const { data: opp } = await supabase.from('opportunities').select('category_guess').eq('id', opts.opportunityId).maybeSingle()
+      category = (opp?.category_guess as string) ?? null
+    }
+    const spec: AudienceSpec = { source: 'providers', category: category ?? undefined, limit: 150 }
+    const audience = await resolveAudience(supabase, spec)
+    if (audience.length === 0) return
+    const name = opts.productAr || opts.productEn
+    await supabase.from('email_campaigns').insert({
+      name: `RFQ outreach — ${opts.productEn} (auto)`,
+      subject: `طلب توريد: ${name} — Sourcing request`,
+      body_html:
+        `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.8">`
+        + `<p>مرحباً {{company}},</p><p>لدينا طلب استيراد فعّال على <strong>${name}</strong>. `
+        + `إن كنتم توفّرونه أو ما يماثله، شاركونا قائمة الأسعار والحد الأدنى للطلب — بدون التزام.</p></div>`
+        + `<div dir="ltr" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.8;margin-top:12px">`
+        + `<p>Hello {{company}},</p><p>We have an active import request for <strong>${opts.productEn}</strong>. `
+        + `If you supply this or a close match, share your price list and MOQ — no obligation.</p></div>`,
+      audience: spec, status: 'draft', total_recipients: audience.length,
+    })
+  } catch (e) {
+    console.error('[rfq] auto-outreach:', e)
+  }
+}
 
 function db() {
   return createClient(
@@ -116,6 +154,13 @@ export async function POST(req: NextRequest) {
     email: contact_email?.trim() || null,
     quantity: quantity?.trim() || null,
     page: source_page || null,
+  })
+
+  // CAPTURE → OUTREACH: draft a supplier outreach for this demand (gated, draft-only).
+  await draftSupplierOutreach(supabase, {
+    opportunityId: opportunity_id || null,
+    productEn: product_name.trim(),
+    productAr: product_name_ar?.trim() || null,
   })
 
   return NextResponse.json({ ok: true, id: rfq.id })
