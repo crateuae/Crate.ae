@@ -1,7 +1,22 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Boxes, Globe, Tag, Clock, Award, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react'
 import { PRODUCTS_CATALOG, PRODUCT_CATEGORIES, getProductSlug, getProductFMCG } from '@/lib/data/products-catalog'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params
+  const isAr = locale === 'ar'
+  const title = isAr ? 'قاعدة منتجات الأغذية والسلع الاستهلاكية — حالة الاستيراد والتسجيل' : 'UAE Food & FMCG Product Database — Import & Registration Status'
+  const description = isAr
+    ? 'تصفّح منتجات الأغذية والسلع الاستهلاكية في السوق الإماراتي: حالة التسجيل، مسارات الاستيراد والتجارة، إشارات السوق، وفرص الربح.'
+    : 'Browse UAE food & FMCG products: registration status, import and trade paths, market signals, and profit opportunities.'
+  return {
+    title, description,
+    alternates: { canonical: `https://www.crate.ae/${locale}/products`, languages: { ar: '/ar/products', en: '/en/products', 'x-default': '/ar/products' } },
+    openGraph: { title, description, url: `https://www.crate.ae/${locale}/products` },
+  }
+}
 
 const SIGNAL_CONFIG: Record<string, { label_ar: string; label_en: string; cls: string }> = {
   shortage:  { label_ar: 'نقص عرض',     label_en: 'Shortage',  cls: 'bg-red-100 text-red-700' },
