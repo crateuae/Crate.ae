@@ -29,6 +29,11 @@ function loadOpenCv(): Promise<any> {
   return cvPromise
 }
 
+function isCvReady(): boolean {
+  const w = window as any
+  return !!(w.cv && w.cv.Mat)
+}
+
 function orderCorners(p: { x: number; y: number }[]) {
   const sum = (q: any) => q.x + q.y, diff = (q: any) => q.y - q.x
   const tl = p.reduce((a, b) => (sum(b) < sum(a) ? b : a))
@@ -117,6 +122,7 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
   const [err, setErr] = useState<string | null>(null)
   const [camReady, setCamReady] = useState(false)
   const [lastCanvas, setLastCanvas] = useState<HTMLCanvasElement | null>(null)
+  const [cvFirstLoad, setCvFirstLoad] = useState(false)
 
   const T = {
     title: isAr ? 'الماسح الذكي' : 'Smart Scanner',
@@ -182,6 +188,7 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
 
   async function runCv(canvas: HTMLCanvasElement, m: 'color' | 'bw') {
     setLastCanvas(canvas)
+    setCvFirstLoad(!isCvReady()) // first use downloads OpenCV (~8 MB) — say so
     setStage('cv'); setErr(null)
     try {
       const { url, detected } = await processImage(canvas, m)
@@ -243,14 +250,17 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
   const verdict = result?.compliance?.verdict as string | undefined
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-3" dir={isAr ? 'rtl' : 'ltr'}>
-      <div className="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-3" dir={isAr ? 'rtl' : 'ltr'}
+      onClick={(e) => { if (e.target === e.currentTarget) { stopCam(); onClose() } }}>
+      <div className="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl max-h-[92vh] flex flex-col"
+        role="dialog" aria-modal="true" aria-label={T.title}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
           <div className="flex items-center gap-2 font-black text-gray-900">
             <ScanLine className="w-5 h-5 text-orange-500" />{T.title}
           </div>
-          <button onClick={() => { stopCam(); onClose() }} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400">
+          <button onClick={() => { stopCam(); onClose() }} aria-label={isAr ? 'إغلاق' : 'Close'}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -287,8 +297,13 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
           {/* CV PROCESSING */}
           {stage === 'cv' && (
             <div className="p-12 flex flex-col items-center gap-3 text-gray-500">
-              <Loader2 className="w-7 h-7 animate-spin text-orange-500" /><p className="text-sm">{T.processing}</p>
-              <p className="text-[11px] text-gray-400">{isAr ? 'المعالجة تتم داخل متصفحك — بدون خوادم' : 'Processing in your browser — no servers'}</p>
+              <Loader2 className="w-7 h-7 animate-spin text-orange-500" />
+              <p className="text-sm">{cvFirstLoad
+                ? (isAr ? 'تحميل محرّك المسح لأول مرة…' : 'Loading the scanner engine (first time)…')
+                : T.processing}</p>
+              <p className="text-[11px] text-gray-400">{cvFirstLoad
+                ? (isAr ? 'تنزيل لمرة واحدة ثم يعمل فوراً — والمعالجة داخل متصفحك بلا خوادم' : 'One-time download, then instant — processing stays in your browser')
+                : (isAr ? 'المعالجة تتم داخل متصفحك — بدون خوادم' : 'Processing in your browser — no servers')}</p>
             </div>
           )}
 
@@ -342,6 +357,13 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
                   <div className="text-xs text-gray-500">{isAr ? result.compliance.summary_ar : result.compliance.summary_en}</div>
                 </div>
               </div>
+
+              {result.extracted.confidence === 'low' && (
+                <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 flex items-start gap-2 text-[11px] text-amber-700">
+                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                  {isAr ? 'ثقة القراءة منخفضة — راجع الحقول بعد التعبئة أو أعد المسح بصورة أوضح.' : 'Low OCR confidence — review the fields after applying, or rescan with a clearer photo.'}
+                </div>
+              )}
 
               {/* extracted quick view */}
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3 text-xs space-y-1.5">
