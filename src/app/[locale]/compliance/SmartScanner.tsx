@@ -61,7 +61,7 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
     retake: isAr ? 'إعادة' : 'Retake',
     analyze: isAr ? 'حلّل البطاقة' : 'Analyze label',
     processing: isAr ? 'جاري تجهيز الصورة…' : 'Preparing image…',
-    analyzing: isAr ? 'Claude يقرأ البطاقة…' : 'Claude is reading the label…',
+    analyzing: isAr ? 'Crate يقرأ البطاقة…' : 'Crate is reading the label…',
     color: isAr ? 'ملوّن' : 'Colour',
     bw: isAr ? 'أبيض/أسود' : 'B/W',
     ready: isAr ? 'الصورة محسّنة وجاهزة ✓' : 'Image enhanced & ready ✓',
