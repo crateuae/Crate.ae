@@ -52,6 +52,9 @@ export default function CompliancePage() {
     { ingredient: 'حمض الفوسفوريك', values: ['0.05g', '—'] },
     { ingredient: 'E211 بنزوات صوديوم', values: ['0.1g', '—'] },
   ])
+  // When a scan supplies its own table columns, they override the class template
+  // so the checker can accept ANY product's data shape.
+  const [customCols, setCustomCols] = useState<string[] | null>(null)
   const [labelText, setLabelText] = useState('')
   const [caffeine, setCaffeine] = useState('32')
   const [hasSulfites, setHasSulfites] = useState(false)
@@ -65,17 +68,32 @@ export default function CompliancePage() {
   const isAr = !pathname?.startsWith('/en')
 
   const selectedClass = PRODUCT_CLASSES.find(c => c.value === productClass) || PRODUCT_CLASSES[0]
+  // Effective table columns: a scan's own columns, else the class template.
+  const cols = (customCols && customCols.length) ? customCols : selectedClass.cols_ar
 
-  // Prefill the whole form from a Smart-Scan result and show its (deterministic) verdict
+  // Prefill the whole form from a Smart-Scan result and show its (deterministic) verdict.
+  // Builds a FLEXIBLE table from whatever nutrition structure the label had.
   function applyScan(r: ScanResult) {
     const ex = r.extracted
     if (ex.product_name) setProductName(ex.product_name)
-    if (ex.product_class) handleClassChange(ex.product_class)
-    if (Array.isArray(ex.ingredients) && ex.ingredients.length) {
-      const cls = PRODUCT_CLASSES.find(c => c.value === ex.product_class) || selectedClass
-      setIngredients(ex.ingredients)
-      setTableRows(ex.ingredients.map((ing: string) => ({ ingredient: ing, values: cls.cols_ar.map(() => '—') })))
+    if (ex.product_class) setProductClass(ex.product_class)
+    if (Array.isArray(ex.ingredients)) setIngredients(ex.ingredients.map(String).filter(Boolean))
+
+    const nut = ex.nutrition
+    if (nut && Array.isArray(nut.rows) && nut.rows.length && Array.isArray(nut.columns) && nut.columns.length) {
+      // Real nutrition table → use its own columns and values.
+      const c: string[] = nut.columns.map((x: unknown) => String(x))
+      setCustomCols(c)
+      setTableRows(nut.rows.map((row: { label?: string; values?: string[] }) => ({
+        ingredient: String(row.label ?? ''),
+        values: c.map((_col, i) => String(row.values?.[i] ?? '—')),
+      })))
+    } else if (Array.isArray(ex.ingredients) && ex.ingredients.length) {
+      // No table on the label → list ingredients under a single generic value column.
+      setCustomCols(['القيمة / Value'])
+      setTableRows(ex.ingredients.map((ing: string) => ({ ingredient: String(ing), values: ['—'] })))
     }
+
     if (ex.label_text) setLabelText(ex.label_text)
     if (ex.caffeine_mg_per_100ml != null) setCaffeine(String(ex.caffeine_mg_per_100ml))
     setHasSulfites(!!ex.has_sulfites)
@@ -87,7 +105,6 @@ export default function CompliancePage() {
     const trimmed = val.trim().replace(/,$|،$/, '')
     if (!trimmed || ingredients.includes(trimmed)) return
     setIngredients(prev => [...prev, trimmed])
-    setTableRows(prev => [...prev, { ingredient: trimmed, values: selectedClass.cols_ar.map(() => '—') }])
   }
 
   function handleChipKey(e: KeyboardEvent<HTMLInputElement>) {
@@ -97,13 +114,11 @@ export default function CompliancePage() {
       setChipInput('')
     } else if (e.key === 'Backspace' && !chipInput && ingredients.length > 0) {
       setIngredients(prev => prev.slice(0, -1))
-      setTableRows(prev => prev.slice(0, -1))
     }
   }
 
   function removeChip(idx: number) {
     setIngredients(prev => prev.filter((_, i) => i !== idx))
-    setTableRows(prev => prev.filter((_, i) => i !== idx))
   }
 
   function updateTableRow(rowIdx: number, colIdx: number, val: string) {
@@ -114,17 +129,17 @@ export default function CompliancePage() {
 
   function removeTableRow(idx: number) {
     setTableRows(prev => prev.filter((_, i) => i !== idx))
-    setIngredients(prev => prev.filter((_, i) => i !== idx))
   }
 
   function addTableRow() {
-    setTableRows(prev => [...prev, { ingredient: '', values: selectedClass.cols_ar.map(() => '—') }])
+    setTableRows(prev => [...prev, { ingredient: '', values: cols.map(() => '—') }])
   }
 
   function handleClassChange(val: string) {
     setProductClass(val)
+    setCustomCols(null) // manual class change → revert to the class column template
     const cls = PRODUCT_CLASSES.find(c => c.value === val) || PRODUCT_CLASSES[0]
-    setTableRows(prev => prev.map(r => ({ ...r, values: cls.cols_ar.map(() => '—') })))
+    setTableRows(prev => prev.map(r => ({ ...r, values: cls.cols_ar.map((_, i) => r.values[i] ?? '—') })))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -269,14 +284,14 @@ export default function CompliancePage() {
                   className="border-none outline-none text-xs text-gray-700 w-full bg-transparent placeholder-gray-400"
                 />
               </div>
-              <p className="text-[10px] text-gray-400 mt-1.5">💡 كل مكون تضيفه يظهر في الجدول أدناه ويُحلَّل تلقائياً</p>
+              <p className="text-[10px] text-gray-400 mt-1.5">💡 أضف المكوّنات هنا، وجدول القيم الغذائية يُدار بشكل منفصل أدناه (أو يُملأ تلقائياً من المسح الذكي)</p>
             </div>
 
             {/* Dynamic Table */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
-                  📊 جدول البيانات — {selectedClass.label_ar}
+                  📊 جدول البيانات — {customCols ? 'من المسح الذكي' : selectedClass.label_ar}
                 </label>
                 <button type="button" onClick={addTableRow}
                   className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-700 font-semibold">
@@ -287,8 +302,8 @@ export default function CompliancePage() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="text-right py-2 px-3 font-bold text-gray-500">المكوّن / Ingredient</th>
-                      {selectedClass.cols_ar.map((col, i) => (
+                      <th className="text-right py-2 px-3 font-bold text-gray-500">{customCols ? 'العنصر / Item' : 'المكوّن / Ingredient'}</th>
+                      {cols.map((col, i) => (
                         <th key={i} className="text-right py-2 px-2 font-bold text-gray-500 whitespace-nowrap">{col}</th>
                       ))}
                       <th className="w-8" />
@@ -305,7 +320,7 @@ export default function CompliancePage() {
                             placeholder="اسم المكوّن"
                           />
                         </td>
-                        {selectedClass.cols_ar.map((_, colIdx) => (
+                        {cols.map((_, colIdx) => (
                           <td key={colIdx} className="py-1.5 px-2">
                             <input
                               value={row.values[colIdx] ?? '—'}
@@ -323,7 +338,7 @@ export default function CompliancePage() {
                       </tr>
                     ))}
                     {tableRows.length === 0 && (
-                      <tr><td colSpan={selectedClass.cols_ar.length + 2} className="py-6 text-center text-gray-400 text-xs">أضف مكوناً من الحقل أعلاه</td></tr>
+                      <tr><td colSpan={cols.length + 2} className="py-6 text-center text-gray-400 text-xs">أضف صفاً أو امسح البطاقة لتعبئة الجدول تلقائياً</td></tr>
                     )}
                   </tbody>
                 </table>

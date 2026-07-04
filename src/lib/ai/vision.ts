@@ -18,6 +18,8 @@ export interface LabelExtraction {
   net_content: string | null
   country_of_origin: string | null
   importer: string | null
+  // Flexible nutrition/data table read off the label — whatever columns & rows it has.
+  nutrition: { columns: string[]; rows: { label: string; values: string[] }[] }
   arabic_sections: { dates: boolean; storage: boolean; nutrition: boolean; ingredients: boolean }
   confidence: 'high' | 'medium' | 'low'
 }
@@ -55,6 +57,10 @@ Rules:
 - "label_text": transcribe ALL visible text VERBATIM, keeping Arabic in Arabic and English in English, in reading order. This is the most important field — include every date, storage line, nutrition value, ingredient, warning, importer, and origin exactly as printed.
 - "product_class": choose the single best match from EXACTLY this list: ${VALID_CLASSES.join(', ')}. A regular soda = beverage_general; an energy drink = beverage_energy.
 - "ingredients": array of ingredient strings as printed (English list if present, else Arabic).
+- "nutrition": read the Nutrition Facts / القيمة الغذائية / الحقائق الغذائية table if the label has one. Be FLEXIBLE — capture whatever structure the label uses:
+    - "columns": the value-column headers EXACTLY as printed, e.g. ["لكل 100 مل","لكل عبوة 330 مل"] or ["Per 100g","Per serving"]. If there is a single value column, return one header. Prefer Arabic headers if the table is Arabic.
+    - "rows": one object per line, {"label": nutrient/row name as printed e.g. "الطاقة" or "Energy", "values": the cell values aligned left-to-right to "columns", e.g. ["118 kJ / 28 kcal","391 kJ / 92 kcal"]}. Pad missing cells with "—".
+    - If there is NO nutrition table, return {"columns": [], "rows": []}. Do NOT invent numbers.
 - "caffeine_mg_per_100ml": the caffeine content per 100 ml as a number, ONLY if the label states it; else null.
 - "has_sulfites": true if sulphites are present — i.e. the label/ingredients mention "sulphite"/"sulfite"/"كبريتيت"/E220–E228, OR contain caramel colour E150d (sulphite ammonia caramel). Else false.
 - "arabic_sections": for each of dates, storage, nutrition, ingredients — true if that section appears IN ARABIC on the label, false if only English or absent.
@@ -71,6 +77,7 @@ Return ONLY this JSON:
   "net_content": null,
   "country_of_origin": null,
   "importer": null,
+  "nutrition": { "columns": [], "rows": [] },
   "arabic_sections": { "dates": false, "storage": false, "nutrition": false, "ingredients": false },
   "confidence": "medium"
 }`
@@ -109,6 +116,17 @@ Return ONLY this JSON:
     net_content: raw.net_content ?? null,
     country_of_origin: raw.country_of_origin ?? null,
     importer: raw.importer ?? null,
+    nutrition: {
+      columns: Array.isArray(raw.nutrition?.columns) ? raw.nutrition!.columns.map(String) : [],
+      rows: Array.isArray(raw.nutrition?.rows)
+        ? (raw.nutrition!.rows as unknown[])
+            .filter((r): r is Record<string, unknown> => !!r && typeof r === 'object')
+            .map(r => ({
+              label: String(r.label ?? ''),
+              values: Array.isArray(r.values) ? (r.values as unknown[]).map(String) : [],
+            }))
+        : [],
+    },
     arabic_sections: {
       dates: !!raw.arabic_sections?.dates, storage: !!raw.arabic_sections?.storage,
       nutrition: !!raw.arabic_sections?.nutrition, ingredients: !!raw.arabic_sections?.ingredients,
