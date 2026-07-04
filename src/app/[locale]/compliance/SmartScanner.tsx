@@ -4,166 +4,32 @@
 import { useEffect, useRef, useState, useCallback, type ChangeEvent } from 'react'
 import {
   Camera, X, Loader2, RotateCcw, ScanLine, Sparkles, Upload,
-  CheckCircle2, XCircle, AlertTriangle, ImageIcon, Crop,
+  CheckCircle2, XCircle, AlertTriangle, ImageIcon,
 } from 'lucide-react'
 
-// ── OpenCV.js lazy loader (loaded only when the scanner opens; cached) ──────────
-// Verified-live sources (a pinned version that 404'd was the original bug). Tries
-// each in order; if the runtime doesn't init within the timeout it falls through.
-const CV_URLS = [
-  'https://docs.opencv.org/4.9.0/opencv.js',
-  'https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.10.0-release.1/dist/opencv.js',
-  'https://docs.opencv.org/4.x/opencv.js',
-]
-let cvPromise: Promise<any> | null = null
-function loadOpenCv(): Promise<any> {
-  if (cvPromise) return cvPromise
-  cvPromise = new Promise((resolve, reject) => {
-    const w = window as any
-    if (w.cv && w.cv.Mat) return resolve(w.cv)
-
-    let idx = 0
-    let settled = false
-    const finish = (cv?: any, err?: Error) => {
-      if (settled) return
-      settled = true
-      if (cv) resolve(cv)
-      else { cvPromise = null; reject(err || new Error('OpenCV unavailable')) }
-    }
-    const tryNext = () => {
-      if (idx >= CV_URLS.length) return finish(undefined)
-      const url = CV_URLS[idx++]
-      const s = document.createElement('script')
-      s.src = url
-      s.async = true
-      // Per-source timeout: WASM can be slow, but don't hang forever. Clarity no
-      // longer depends on OpenCV (JS enhancement covers it), so fail fast.
-      const to = setTimeout(() => { if (!settled) tryNext() }, 12_000)
-      s.onload = () => {
-        const cv = (window as any).cv
-        const done = (resolved: any) => { clearTimeout(to); finish(resolved) }
-        if (!cv) { clearTimeout(to); tryNext(); return }
-        if (typeof cv.then === 'function') cv.then(done)          // Promise-style build
-        else if (cv.Mat) done(cv)                                 // already initialized
-        else cv.onRuntimeInitialized = () => done((window as any).cv) // classic emscripten
-      }
-      s.onerror = () => { clearTimeout(to); tryNext() }
-      document.body.appendChild(s)
-    }
-    tryNext()
-  })
-  return cvPromise
-}
-
-function isCvReady(): boolean {
-  const w = window as any
-  return !!(w.cv && w.cv.Mat)
-}
-
-function orderCorners(p: { x: number; y: number }[]) {
-  const sum = (q: any) => q.x + q.y, diff = (q: any) => q.y - q.x
-  const tl = p.reduce((a, b) => (sum(b) < sum(a) ? b : a))
-  const br = p.reduce((a, b) => (sum(b) > sum(a) ? b : a))
-  const tr = p.reduce((a, b) => (diff(b) < diff(a) ? b : a))
-  const bl = p.reduce((a, b) => (diff(b) > diff(a) ? b : a))
-  return [tl, tr, br, bl]
-}
-
-// Pure-Canvas enhancement — GPU-accelerated, no OpenCV needed. Boosts text
-// legibility so clarity never depends on the 10 MB WASM download loading.
-function enhanceCanvasJS(source: HTMLCanvasElement, mode: 'color' | 'bw'): string {
+// Snapshot any source (video frame / bitmap / image) into a stable, downscaled
+// canvas we can re-enhance from repeatedly (a stopped video won't redraw later).
+function makeBaseCanvas(source: CanvasImageSource, sw: number, sh: number): HTMLCanvasElement {
+  const cap = 2600, scale = Math.min(1, cap / Math.max(sw, sh))
   const c = document.createElement('canvas')
-  c.width = source.width; c.height = source.height
-  const ctx = c.getContext('2d')!
-  ctx.filter = mode === 'bw'
-    ? 'grayscale(1) contrast(1.75) brightness(1.08)'
-    : 'contrast(1.32) brightness(1.04) saturate(1.06)'
-  ctx.drawImage(source, 0, 0)
-  return c.toDataURL('image/jpeg', 0.92)
-}
-
-function downscaleCanvas(src: HTMLCanvasElement, cap: number): HTMLCanvasElement {
-  const m = Math.max(src.width, src.height)
-  if (m <= cap) return src
-  const s = cap / m
-  const c = document.createElement('canvas')
-  c.width = Math.round(src.width * s); c.height = Math.round(src.height * s)
-  c.getContext('2d')!.drawImage(src, 0, 0, c.width, c.height)
+  c.width = Math.max(1, Math.round(sw * scale)); c.height = Math.max(1, Math.round(sh * scale))
+  c.getContext('2d')!.drawImage(source, 0, 0, c.width, c.height)
   return c
 }
 
-// Enhance the image. Default = fast Canvas enhancement (no freeze). When useCv is
-// true, ADDITIONALLY run OpenCV to auto-detect+perspective-crop the document — but
-// OpenCV is synchronous on the main thread and its 10 MB WASM can stall mobile, so
-// it is opt-in and works on a downscaled copy. Any failure degrades to Canvas.
-async function processImage(imgCanvas: HTMLCanvasElement, mode: 'color' | 'bw', useCv: boolean): Promise<{ url: string; cropped: boolean }> {
-  if (!useCv) return { url: enhanceCanvasJS(imgCanvas, mode), cropped: false }
-  let cv: any
-  try {
-    cv = await loadOpenCv()
-  } catch {
-    return { url: enhanceCanvasJS(imgCanvas, mode), cropped: false }
-  }
-  // Bound CPU/memory: OpenCV blocks the main thread, so work on a small copy.
-  const src = cv.imread(downscaleCanvas(imgCanvas, 1500))
-  const gray = new cv.Mat(), blur = new cv.Mat(), edges = new cv.Mat()
-  const contours = new cv.MatVector(), hier = new cv.Mat()
-  let quad: any = null, warped: any = null, sharp: any = null, out: any = null, M: any = null, srcTri: any = null, dstTri: any = null
-  try {
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY)
-    cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0)
-    cv.Canny(blur, edges, 60, 180)
-    const k = cv.Mat.ones(3, 3, cv.CV_8U); cv.dilate(edges, edges, k); k.delete()
-    cv.findContours(edges, contours, hier, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
-    const imgArea = src.rows * src.cols
-    let bestArea = 0
-    for (let i = 0; i < contours.size(); i++) {
-      const c = contours.get(i)
-      const area = cv.contourArea(c)
-      if (area > imgArea * 0.18) {
-        const peri = cv.arcLength(c, true)
-        const ap = new cv.Mat()
-        cv.approxPolyDP(c, ap, 0.02 * peri, true)
-        if (ap.rows === 4 && area > bestArea) { if (quad) quad.delete(); quad = ap; bestArea = area }
-        else ap.delete()
-      }
-      c.delete()
-    }
-    if (quad) {
-      const d = quad.data32S
-      const pts = [{ x: d[0], y: d[1] }, { x: d[2], y: d[3] }, { x: d[4], y: d[5] }, { x: d[6], y: d[7] }]
-      const [tl, tr, br, bl] = orderCorners(pts)
-      let W = Math.max(Math.hypot(br.x - bl.x, br.y - bl.y), Math.hypot(tr.x - tl.x, tr.y - tl.y)) | 0
-      let H = Math.max(Math.hypot(tr.x - br.x, tr.y - br.y), Math.hypot(tl.x - bl.x, tl.y - bl.y)) | 0
-      const cap = 2000, scale = Math.min(1, cap / Math.max(W, H))
-      W = Math.max(1, (W * scale) | 0); H = Math.max(1, (H * scale) | 0)
-      srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y])
-      dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, W, 0, W, H, 0, H])
-      M = cv.getPerspectiveTransform(srcTri, dstTri)
-      warped = new cv.Mat()
-      cv.warpPerspective(src, warped, M, new cv.Size(W, H))
-    } else {
-      warped = src.clone()
-    }
-    // Sharpen for crisp text (unsharp-style kernel), then enhance.
-    sharp = new cv.Mat()
-    const kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -1, 0, -1, 5, -1, 0, -1, 0])
-    cv.filter2D(warped, sharp, cv.CV_8U, kernel)
-    kernel.delete()
-    out = new cv.Mat()
-    if (mode === 'bw') {
-      const g = new cv.Mat(); cv.cvtColor(sharp, g, cv.COLOR_RGBA2GRAY)
-      cv.adaptiveThreshold(g, out, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 21, 12)
-      g.delete()
-    } else {
-      sharp.convertTo(out, -1, 1.22, 8) // contrast + brightness — keeps colour for coloured labels
-    }
-    const oc = document.createElement('canvas')
-    cv.imshow(oc, out)
-    return { url: oc.toDataURL('image/jpeg', 0.92), cropped: !!quad }
-  } finally {
-    ;[src, gray, blur, edges, contours, hier, quad, warped, sharp, out, M, srcTri, dstTri].forEach(m => { try { m?.delete() } catch { /* */ } })
-  }
+// Pure-Canvas enhancement — GPU-accelerated, instant, no heavy WASM. Boosts text
+// legibility for the OCR step. (We deliberately do NOT use OpenCV: its ~10 MB WASM
+// compiles synchronously on the main thread and froze mobile browsers, and Claude
+// Vision reads skewed/full-frame labels fine, so perspective-crop isn't needed.)
+function enhance(base: HTMLCanvasElement, mode: 'color' | 'bw'): string {
+  const c = document.createElement('canvas')
+  c.width = base.width; c.height = base.height
+  const ctx = c.getContext('2d')!
+  ctx.filter = mode === 'bw'
+    ? 'grayscale(1) contrast(1.75) brightness(1.08)'
+    : 'contrast(1.32) brightness(1.05) saturate(1.06)'
+  ctx.drawImage(base, 0, 0)
+  return c.toDataURL('image/jpeg', 0.92)
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -171,23 +37,21 @@ export interface ScanResult { extracted: any; compliance: any }
 
 interface Props { isAr: boolean; onClose: () => void; onApply: (r: ScanResult) => void }
 
-type Stage = 'camera' | 'cv' | 'preview' | 'analyzing' | 'result' | 'error'
+type Stage = 'camera' | 'processing' | 'preview' | 'analyzing' | 'result'
 
 export default function SmartScanner({ isAr, onClose, onApply }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  // Stable downscaled snapshot so the colour/B&W toggle can re-enhance instantly.
+  const baseRef = useRef<HTMLCanvasElement | null>(null)
 
   const [stage, setStage] = useState<Stage>('camera')
   const [processed, setProcessed] = useState<string | null>(null)
-  const [cropped, setCropped] = useState(false)
-  const [useCv, setUseCv] = useState(false)
   const [mode, setMode] = useState<'color' | 'bw'>('color')
   const [result, setResult] = useState<ScanResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [camReady, setCamReady] = useState(false)
-  const [lastCanvas, setLastCanvas] = useState<HTMLCanvasElement | null>(null)
-  const [cvFirstLoad, setCvFirstLoad] = useState(false)
 
   const T = {
     title: isAr ? 'الماسح الذكي' : 'Smart Scanner',
@@ -200,12 +64,9 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
     analyzing: isAr ? 'Claude يقرأ البطاقة…' : 'Claude is reading the label…',
     color: isAr ? 'ملوّن' : 'Colour',
     bw: isAr ? 'أبيض/أسود' : 'B/W',
-    detectedOn: isAr ? 'تم قصّ حواف المستند ✓' : 'Document edges cropped ✓',
-    noEdge: isAr ? 'الصورة كاملة ومحسّنة — جاهزة' : 'Full image, enhanced — ready',
-    autoCrop: isAr ? 'قصّ تلقائي' : 'Auto-crop',
-    cropHint: isAr ? 'يستخدم OpenCV (قد يستغرق لحظات)' : 'Uses OpenCV (may take a moment)',
+    ready: isAr ? 'الصورة محسّنة وجاهزة ✓' : 'Image enhanced & ready ✓',
     apply: isAr ? 'تعبئة الفاحص بالنتيجة' : 'Apply to checker',
-    camErr: isAr ? 'تعذّر فتح الكاميرا — ارفع صورة بدلاً من ذلك' : 'Camera unavailable — upload an image instead',
+    camErr: isAr ? 'تعذّر فتح الكاميرا — ارفع صورة من الاستوديو' : 'Camera unavailable — upload from gallery',
   }
 
   const stopCam = useCallback(() => {
@@ -246,27 +107,17 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
   }, [onClose, stopCam])
 
-  function frameToCanvas(source: CanvasImageSource, sw: number, sh: number): HTMLCanvasElement {
-    const cap = 2600, scale = Math.min(1, cap / Math.max(sw, sh))
-    const c = document.createElement('canvas')
-    c.width = Math.round(sw * scale); c.height = Math.round(sh * scale)
-    c.getContext('2d')!.drawImage(source, 0, 0, c.width, c.height)
-    return c
-  }
-
-  async function runCv(canvas: HTMLCanvasElement, m: 'color' | 'bw', withCv = false) {
-    setLastCanvas(canvas)
-    setUseCv(withCv)
-    setCvFirstLoad(withCv && !isCvReady()) // only the opt-in crop downloads OpenCV
-    setStage('cv'); setErr(null)
-    await new Promise(r => setTimeout(r, 30)) // let the spinner actually paint first
+  async function enhanceAndPreview(src: CanvasImageSource, w: number, h: number, m: 'color' | 'bw') {
+    const base = makeBaseCanvas(src, w, h)
+    baseRef.current = base
+    setStage('processing'); setErr(null)
+    await new Promise(r => setTimeout(r, 20)) // let the spinner paint first
     try {
-      const { url, cropped } = await processImage(canvas, m, withCv)
-      setProcessed(url); setCropped(cropped); setStage('preview')
+      setProcessed(enhance(base, m))
     } catch {
-      // Never block the user: enhance via Canvas (no OpenCV) so it stays clear.
-      setProcessed(enhanceCanvasJS(canvas, m)); setCropped(false); setStage('preview')
+      setProcessed(base.toDataURL('image/jpeg', 0.92)) // never block the user
     }
+    setStage('preview')
   }
 
   async function capture() {
@@ -274,38 +125,31 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
     // sharper than grabbing a low-res video preview frame. Falls back gracefully.
     const track = streamRef.current?.getVideoTracks?.()[0]
     const W = window as any
-    let canvas: HTMLCanvasElement | null = null
     if (track && W.ImageCapture) {
       try {
         const blob = await new W.ImageCapture(track).takePhoto()
         const bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' })
-        canvas = frameToCanvas(bmp, bmp.width, bmp.height)
-        bmp.close?.()
-      } catch { canvas = null }
+        stopCam()
+        await enhanceAndPreview(bmp, bmp.width, bmp.height, mode)
+        return
+      } catch { /* fall through to frame grab */ }
     }
-    if (!canvas) {
-      const v = videoRef.current
-      if (!v || !v.videoWidth) { stopCam(); return }
-      canvas = frameToCanvas(v, v.videoWidth, v.videoHeight)
-    }
+    const v = videoRef.current
+    if (!v || !v.videoWidth) { stopCam(); return }
     stopCam()
-    await runCv(canvas, mode)
+    await enhanceAndPreview(v, v.videoWidth, v.videoHeight, mode)
   }
 
   function onFile(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]; if (!f) return
     const img = new Image()
-    img.onload = () => { URL.revokeObjectURL(img.src); stopCam(); runCv(frameToCanvas(img, img.naturalWidth, img.naturalHeight), mode) }
+    img.onload = () => { URL.revokeObjectURL(img.src); stopCam(); enhanceAndPreview(img, img.naturalWidth, img.naturalHeight, mode) }
     img.src = URL.createObjectURL(f)
   }
 
-  async function reRunMode(m: 'color' | 'bw') {
+  function reRunMode(m: 'color' | 'bw') {
     setMode(m)
-    if (lastCanvas) await runCv(lastCanvas, m, useCv)
-  }
-
-  async function autoCrop() {
-    if (lastCanvas) await runCv(lastCanvas, mode, true)
+    if (baseRef.current) setProcessed(enhance(baseRef.current, m))
   }
 
   async function analyze() {
@@ -334,6 +178,7 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
 
   function retake() {
     // The camera-acquire effect re-runs because stage returns to 'camera'.
+    baseRef.current = null
     setProcessed(null); setResult(null); setErr(null); setCamReady(false); setStage('camera')
   }
 
@@ -361,7 +206,6 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
             <div className="p-4">
               <div className="relative rounded-2xl overflow-hidden bg-gray-900 aspect-[3/4]">
                 <video ref={videoRef} playsInline muted className="w-full h-full object-cover" />
-                {/* framing guide */}
                 <div className="absolute inset-6 border-2 border-white/70 rounded-xl pointer-events-none" style={{ boxShadow: '0 0 0 100vmax rgba(0,0,0,.25)' }} />
                 {!camReady && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80 text-sm gap-2 text-center px-6">
@@ -385,16 +229,12 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
             </div>
           )}
 
-          {/* CV PROCESSING */}
-          {stage === 'cv' && (
+          {/* PROCESSING (instant Canvas enhance — brief) */}
+          {stage === 'processing' && (
             <div className="p-12 flex flex-col items-center gap-3 text-gray-500">
               <Loader2 className="w-7 h-7 animate-spin text-orange-500" />
-              <p className="text-sm">{cvFirstLoad
-                ? (isAr ? 'تحميل محرّك القصّ لأول مرة…' : 'Loading the crop engine (first time)…')
-                : useCv ? (isAr ? 'جاري القصّ التلقائي…' : 'Auto-cropping…') : T.processing}</p>
-              <p className="text-[11px] text-gray-400">{cvFirstLoad
-                ? (isAr ? 'تنزيل لمرة واحدة (~10م.ب) ثم يعمل فوراً' : 'One-time ~10 MB download, then instant')
-                : (isAr ? 'المعالجة داخل متصفحك — بدون خوادم' : 'Processing in your browser — no servers')}</p>
+              <p className="text-sm">{T.processing}</p>
+              <p className="text-[11px] text-gray-400">{isAr ? 'المعالجة داخل متصفحك — بدون خوادم' : 'Processing in your browser — no servers'}</p>
             </div>
           )}
 
@@ -404,24 +244,17 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
               <div className="rounded-2xl overflow-hidden border border-gray-200 bg-gray-50">
                 <img src={processed} alt="processed" className="w-full object-contain max-h-[46vh]" />
               </div>
-              <div className={`mt-2 text-xs flex items-center gap-1.5 ${cropped ? 'text-emerald-600' : 'text-gray-400'}`}>
-                {cropped ? <CheckCircle2 className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
-                {cropped ? T.detectedOn : T.noEdge}
+              <div className="mt-2 text-xs flex items-center gap-1.5 text-emerald-600">
+                <CheckCircle2 className="w-3.5 h-3.5" />{T.ready}
               </div>
-              {/* enhance toggle + optional auto-crop */}
-              <div className="flex items-center gap-2 mt-3 flex-wrap">
-                <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-                  {(['color', 'bw'] as const).map(m => (
-                    <button key={m} onClick={() => reRunMode(m)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold ${mode === m ? 'bg-white shadow-sm text-orange-600' : 'text-gray-500'}`}>
-                      {m === 'color' ? T.color : T.bw}
-                    </button>
-                  ))}
-                </div>
-                <button onClick={autoCrop} title={T.cropHint}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${cropped ? 'border-emerald-200 text-emerald-600 bg-emerald-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-                  <Crop className="w-3.5 h-3.5" />{T.autoCrop}
-                </button>
+              {/* colour / high-contrast B&W toggle — instant, re-enhances the raw source */}
+              <div className="flex items-center gap-1 mt-3 bg-gray-100 rounded-xl p-1 w-fit">
+                {(['color', 'bw'] as const).map(m => (
+                  <button key={m} onClick={() => reRunMode(m)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold ${mode === m ? 'bg-white shadow-sm text-orange-600' : 'text-gray-500'}`}>
+                    {m === 'color' ? T.color : T.bw}
+                  </button>
+                ))}
               </div>
               {err && <p className="text-red-500 text-xs mt-2">{err}</p>}
               <div className="flex items-center gap-2 mt-4">
@@ -489,15 +322,6 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
                   <CheckCircle2 className="w-4 h-4" />{T.apply}
                 </button>
               </div>
-            </div>
-          )}
-
-          {/* ERROR */}
-          {stage === 'error' && (
-            <div className="p-10 flex flex-col items-center gap-3 text-center">
-              <ImageIcon className="w-8 h-8 text-gray-300" />
-              <p className="text-sm text-gray-500">{err}</p>
-              <button onClick={retake} className="mt-2 bg-orange-500 text-white font-bold py-2 px-5 rounded-xl text-sm">{T.retake}</button>
             </div>
           )}
         </div>
