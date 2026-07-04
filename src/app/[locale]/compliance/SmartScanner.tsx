@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState, useCallback, type ChangeEvent } from 'react'
 import {
   Camera, X, Loader2, RotateCcw, ScanLine, Sparkles, Upload,
-  CheckCircle2, XCircle, AlertTriangle, ImageIcon,
+  CheckCircle2, XCircle, AlertTriangle, ImageIcon, Crop,
 } from 'lucide-react'
 
 // ── OpenCV.js lazy loader (loaded only when the scanner opens; cached) ──────────
@@ -82,16 +82,30 @@ function enhanceCanvasJS(source: HTMLCanvasElement, mode: 'color' | 'bw'): strin
   return c.toDataURL('image/jpeg', 0.92)
 }
 
-// Detect the document quad, perspective-correct, sharpen & enhance. Client-side & free.
-// If OpenCV can't load, still enhance via Canvas so the image stays clear.
-async function processImage(imgCanvas: HTMLCanvasElement, mode: 'color' | 'bw'): Promise<{ url: string; cropped: boolean }> {
+function downscaleCanvas(src: HTMLCanvasElement, cap: number): HTMLCanvasElement {
+  const m = Math.max(src.width, src.height)
+  if (m <= cap) return src
+  const s = cap / m
+  const c = document.createElement('canvas')
+  c.width = Math.round(src.width * s); c.height = Math.round(src.height * s)
+  c.getContext('2d')!.drawImage(src, 0, 0, c.width, c.height)
+  return c
+}
+
+// Enhance the image. Default = fast Canvas enhancement (no freeze). When useCv is
+// true, ADDITIONALLY run OpenCV to auto-detect+perspective-crop the document — but
+// OpenCV is synchronous on the main thread and its 10 MB WASM can stall mobile, so
+// it is opt-in and works on a downscaled copy. Any failure degrades to Canvas.
+async function processImage(imgCanvas: HTMLCanvasElement, mode: 'color' | 'bw', useCv: boolean): Promise<{ url: string; cropped: boolean }> {
+  if (!useCv) return { url: enhanceCanvasJS(imgCanvas, mode), cropped: false }
   let cv: any
   try {
     cv = await loadOpenCv()
   } catch {
     return { url: enhanceCanvasJS(imgCanvas, mode), cropped: false }
   }
-  const src = cv.imread(imgCanvas)
+  // Bound CPU/memory: OpenCV blocks the main thread, so work on a small copy.
+  const src = cv.imread(downscaleCanvas(imgCanvas, 1500))
   const gray = new cv.Mat(), blur = new cv.Mat(), edges = new cv.Mat()
   const contours = new cv.MatVector(), hier = new cv.Mat()
   let quad: any = null, warped: any = null, sharp: any = null, out: any = null, M: any = null, srcTri: any = null, dstTri: any = null
@@ -167,6 +181,7 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
   const [stage, setStage] = useState<Stage>('camera')
   const [processed, setProcessed] = useState<string | null>(null)
   const [cropped, setCropped] = useState(false)
+  const [useCv, setUseCv] = useState(false)
   const [mode, setMode] = useState<'color' | 'bw'>('color')
   const [result, setResult] = useState<ScanResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -185,8 +200,10 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
     analyzing: isAr ? 'Claude يقرأ البطاقة…' : 'Claude is reading the label…',
     color: isAr ? 'ملوّن' : 'Colour',
     bw: isAr ? 'أبيض/أسود' : 'B/W',
-    detectedOn: isAr ? 'تم كشف حواف المستند ✓' : 'Document edges detected ✓',
-    noEdge: isAr ? 'لم تُكتشف حواف — استُخدمت الصورة كاملة' : 'No edges found — using full image',
+    detectedOn: isAr ? 'تم قصّ حواف المستند ✓' : 'Document edges cropped ✓',
+    noEdge: isAr ? 'الصورة كاملة ومحسّنة — جاهزة' : 'Full image, enhanced — ready',
+    autoCrop: isAr ? 'قصّ تلقائي' : 'Auto-crop',
+    cropHint: isAr ? 'يستخدم OpenCV (قد يستغرق لحظات)' : 'Uses OpenCV (may take a moment)',
     apply: isAr ? 'تعبئة الفاحص بالنتيجة' : 'Apply to checker',
     camErr: isAr ? 'تعذّر فتح الكاميرا — ارفع صورة بدلاً من ذلك' : 'Camera unavailable — upload an image instead',
   }
@@ -237,12 +254,14 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
     return c
   }
 
-  async function runCv(canvas: HTMLCanvasElement, m: 'color' | 'bw') {
+  async function runCv(canvas: HTMLCanvasElement, m: 'color' | 'bw', withCv = false) {
     setLastCanvas(canvas)
-    setCvFirstLoad(!isCvReady()) // first use downloads OpenCV (~8 MB) — say so
+    setUseCv(withCv)
+    setCvFirstLoad(withCv && !isCvReady()) // only the opt-in crop downloads OpenCV
     setStage('cv'); setErr(null)
+    await new Promise(r => setTimeout(r, 30)) // let the spinner actually paint first
     try {
-      const { url, cropped } = await processImage(canvas, m)
+      const { url, cropped } = await processImage(canvas, m, withCv)
       setProcessed(url); setCropped(cropped); setStage('preview')
     } catch {
       // Never block the user: enhance via Canvas (no OpenCV) so it stays clear.
@@ -282,7 +301,11 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
 
   async function reRunMode(m: 'color' | 'bw') {
     setMode(m)
-    if (lastCanvas) await runCv(lastCanvas, m)
+    if (lastCanvas) await runCv(lastCanvas, m, useCv)
+  }
+
+  async function autoCrop() {
+    if (lastCanvas) await runCv(lastCanvas, mode, true)
   }
 
   async function analyze() {
@@ -367,11 +390,11 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
             <div className="p-12 flex flex-col items-center gap-3 text-gray-500">
               <Loader2 className="w-7 h-7 animate-spin text-orange-500" />
               <p className="text-sm">{cvFirstLoad
-                ? (isAr ? 'تحميل محرّك المسح لأول مرة…' : 'Loading the scanner engine (first time)…')
-                : T.processing}</p>
+                ? (isAr ? 'تحميل محرّك القصّ لأول مرة…' : 'Loading the crop engine (first time)…')
+                : useCv ? (isAr ? 'جاري القصّ التلقائي…' : 'Auto-cropping…') : T.processing}</p>
               <p className="text-[11px] text-gray-400">{cvFirstLoad
-                ? (isAr ? 'تنزيل لمرة واحدة ثم يعمل فوراً — والمعالجة داخل متصفحك بلا خوادم' : 'One-time download, then instant — processing stays in your browser')
-                : (isAr ? 'المعالجة تتم داخل متصفحك — بدون خوادم' : 'Processing in your browser — no servers')}</p>
+                ? (isAr ? 'تنزيل لمرة واحدة (~10م.ب) ثم يعمل فوراً' : 'One-time ~10 MB download, then instant')
+                : (isAr ? 'المعالجة داخل متصفحك — بدون خوادم' : 'Processing in your browser — no servers')}</p>
             </div>
           )}
 
@@ -385,14 +408,20 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
                 {cropped ? <CheckCircle2 className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
                 {cropped ? T.detectedOn : T.noEdge}
               </div>
-              {/* enhance toggle — colour or high-contrast B/W (works with or without OpenCV) */}
-              <div className="flex items-center gap-1 mt-3 bg-gray-100 rounded-xl p-1 w-fit">
-                {(['color', 'bw'] as const).map(m => (
-                  <button key={m} onClick={() => reRunMode(m)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold ${mode === m ? 'bg-white shadow-sm text-orange-600' : 'text-gray-500'}`}>
-                    {m === 'color' ? T.color : T.bw}
-                  </button>
-                ))}
+              {/* enhance toggle + optional auto-crop */}
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+                  {(['color', 'bw'] as const).map(m => (
+                    <button key={m} onClick={() => reRunMode(m)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold ${mode === m ? 'bg-white shadow-sm text-orange-600' : 'text-gray-500'}`}>
+                      {m === 'color' ? T.color : T.bw}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={autoCrop} title={T.cropHint}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${cropped ? 'border-emerald-200 text-emerald-600 bg-emerald-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                  <Crop className="w-3.5 h-3.5" />{T.autoCrop}
+                </button>
               </div>
               {err && <p className="text-red-500 text-xs mt-2">{err}</p>}
               <div className="flex items-center gap-2 mt-4">
