@@ -8,23 +8,48 @@ import {
 } from 'lucide-react'
 
 // ── OpenCV.js lazy loader (loaded only when the scanner opens; cached) ──────────
+// Verified-live sources (a pinned version that 404'd was the original bug). Tries
+// each in order; if the runtime doesn't init within the timeout it falls through.
+const CV_URLS = [
+  'https://docs.opencv.org/4.9.0/opencv.js',
+  'https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.10.0-release.1/dist/opencv.js',
+  'https://docs.opencv.org/4.x/opencv.js',
+]
 let cvPromise: Promise<any> | null = null
 function loadOpenCv(): Promise<any> {
   if (cvPromise) return cvPromise
   cvPromise = new Promise((resolve, reject) => {
     const w = window as any
     if (w.cv && w.cv.Mat) return resolve(w.cv)
-    const s = document.createElement('script')
-    s.src = 'https://docs.opencv.org/4.10.0/opencv.js'
-    s.async = true
-    s.onload = () => {
-      const cv = (window as any).cv
-      if (cv && cv.Mat) resolve(cv)
-      else if (cv) cv.onRuntimeInitialized = () => resolve(cv)
-      else reject(new Error('opencv missing'))
+
+    let idx = 0
+    let settled = false
+    const finish = (cv?: any, err?: Error) => {
+      if (settled) return
+      settled = true
+      if (cv) resolve(cv)
+      else { cvPromise = null; reject(err || new Error('OpenCV unavailable')) }
     }
-    s.onerror = () => { cvPromise = null; reject(new Error('failed to load OpenCV')) }
-    document.body.appendChild(s)
+    const tryNext = () => {
+      if (idx >= CV_URLS.length) return finish(undefined)
+      const url = CV_URLS[idx++]
+      const s = document.createElement('script')
+      s.src = url
+      s.async = true
+      // Per-source timeout: WASM can be slow, but don't hang forever.
+      const to = setTimeout(() => { if (!settled) tryNext() }, 20_000)
+      s.onload = () => {
+        const cv = (window as any).cv
+        const done = (resolved: any) => { clearTimeout(to); finish(resolved) }
+        if (!cv) { clearTimeout(to); tryNext(); return }
+        if (typeof cv.then === 'function') cv.then(done)          // Promise-style build
+        else if (cv.Mat) done(cv)                                 // already initialized
+        else cv.onRuntimeInitialized = () => done((window as any).cv) // classic emscripten
+      }
+      s.onerror = () => { clearTimeout(to); tryNext() }
+      document.body.appendChild(s)
+    }
+    tryNext()
   })
   return cvPromise
 }
@@ -44,8 +69,14 @@ function orderCorners(p: { x: number; y: number }[]) {
 }
 
 // Detect the document quad, perspective-correct, enhance. All client-side & free.
-async function processImage(imgCanvas: HTMLCanvasElement, mode: 'color' | 'bw'): Promise<{ url: string; detected: boolean }> {
-  const cv = await loadOpenCv()
+// If OpenCV can't load, degrade gracefully to the raw frame — Vision still reads it.
+async function processImage(imgCanvas: HTMLCanvasElement, mode: 'color' | 'bw'): Promise<{ url: string; detected: boolean; enhanced: boolean }> {
+  let cv: any
+  try {
+    cv = await loadOpenCv()
+  } catch {
+    return { url: imgCanvas.toDataURL('image/jpeg', 0.9), detected: false, enhanced: false }
+  }
   const src = cv.imread(imgCanvas)
   const gray = new cv.Mat(), blur = new cv.Mat(), edges = new cv.Mat()
   const contours = new cv.MatVector(), hier = new cv.Mat()
@@ -96,7 +127,7 @@ async function processImage(imgCanvas: HTMLCanvasElement, mode: 'color' | 'bw'):
     }
     const oc = document.createElement('canvas')
     cv.imshow(oc, out)
-    return { url: oc.toDataURL('image/jpeg', 0.9), detected: !!quad }
+    return { url: oc.toDataURL('image/jpeg', 0.9), detected: !!quad, enhanced: true }
   } finally {
     ;[src, gray, blur, edges, contours, hier, quad, warped, out, M, srcTri, dstTri].forEach(m => { try { m?.delete() } catch { /* */ } })
   }
@@ -117,6 +148,7 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
   const [stage, setStage] = useState<Stage>('camera')
   const [processed, setProcessed] = useState<string | null>(null)
   const [detected, setDetected] = useState(false)
+  const [enhanced, setEnhanced] = useState(true)
   const [mode, setMode] = useState<'color' | 'bw'>('color')
   const [result, setResult] = useState<ScanResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -191,11 +223,11 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
     setCvFirstLoad(!isCvReady()) // first use downloads OpenCV (~8 MB) — say so
     setStage('cv'); setErr(null)
     try {
-      const { url, detected } = await processImage(canvas, m)
-      setProcessed(url); setDetected(detected); setStage('preview')
+      const { url, detected, enhanced } = await processImage(canvas, m)
+      setProcessed(url); setDetected(detected); setEnhanced(enhanced); setStage('preview')
     } catch {
-      setErr(isAr ? 'تعذّر تحميل معالج الصور (OpenCV)' : 'Failed to load the image processor (OpenCV)')
-      setStage('error')
+      // Never block the user: fall back to the raw frame — Vision can still read it.
+      setProcessed(canvas.toDataURL('image/jpeg', 0.9)); setDetected(false); setEnhanced(false); setStage('preview')
     }
   }
 
@@ -313,19 +345,21 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
               <div className="rounded-2xl overflow-hidden border border-gray-200 bg-gray-50">
                 <img src={processed} alt="processed" className="w-full object-contain max-h-[46vh]" />
               </div>
-              <div className={`mt-2 text-xs flex items-center gap-1.5 ${detected ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {detected ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-                {detected ? T.detectedOn : T.noEdge}
+              <div className={`mt-2 text-xs flex items-center gap-1.5 ${!enhanced ? 'text-gray-400' : detected ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {!enhanced ? <ImageIcon className="w-3.5 h-3.5" /> : detected ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                {!enhanced ? (isAr ? 'استُخدمت الصورة كما هي — Claude سيقرؤها' : 'Using the photo as-is — Claude will read it') : detected ? T.detectedOn : T.noEdge}
               </div>
-              {/* enhance toggle */}
-              <div className="flex items-center gap-1 mt-3 bg-gray-100 rounded-xl p-1 w-fit">
-                {(['color', 'bw'] as const).map(m => (
-                  <button key={m} onClick={() => reRunMode(m)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold ${mode === m ? 'bg-white shadow-sm text-orange-600' : 'text-gray-500'}`}>
-                    {m === 'color' ? T.color : T.bw}
-                  </button>
-                ))}
-              </div>
+              {/* enhance toggle — needs OpenCV; hidden when it wasn't available */}
+              {enhanced && (
+                <div className="flex items-center gap-1 mt-3 bg-gray-100 rounded-xl p-1 w-fit">
+                  {(['color', 'bw'] as const).map(m => (
+                    <button key={m} onClick={() => reRunMode(m)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold ${mode === m ? 'bg-white shadow-sm text-orange-600' : 'text-gray-500'}`}>
+                      {m === 'color' ? T.color : T.bw}
+                    </button>
+                  ))}
+                </div>
+              )}
               {err && <p className="text-red-500 text-xs mt-2">{err}</p>}
               <div className="flex items-center gap-2 mt-4">
                 <button onClick={retake} className="flex items-center justify-center gap-2 border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold py-2.5 px-4 rounded-2xl text-sm">
