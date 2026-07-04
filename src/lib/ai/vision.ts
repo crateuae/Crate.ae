@@ -24,6 +24,26 @@ export interface LabelExtraction {
 
 const VALID_CLASSES = ['beverage_general', 'beverage_energy', 'food_general', 'dairy', 'meat', 'confectionery', 'snack', 'oil', 'dietary_supplement']
 
+// Extract the first balanced JSON object from a model response, tolerating
+// markdown fences and trailing prose. Falls back gracefully.
+function extractJsonObject(text: string): string | null {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  const body = fenced ? fenced[1] : text
+  const start = body.indexOf('{')
+  if (start === -1) return null
+  let depth = 0, inStr = false, esc = false
+  for (let i = start; i < body.length; i++) {
+    const ch = body[i]
+    if (esc) { esc = false; continue }
+    if (ch === '\\') { esc = true; continue }
+    if (ch === '"') { inStr = !inStr; continue }
+    if (inStr) continue
+    if (ch === '{') depth++
+    else if (ch === '}') { depth--; if (depth === 0) return body.slice(start, i + 1) }
+  }
+  return null // unbalanced (truncated) — caller handles
+}
+
 const SYSTEM = `You are an OCR + data-extraction engine for UAE food & beverage product labels.
 Read EVERY piece of text on the label — Arabic AND English — and return structured data as JSON.
 You are ONLY extracting/reading. You do NOT judge compliance. Return ONLY valid JSON, nothing else.`
@@ -57,7 +77,7 @@ Return ONLY this JSON:
 
   const msg = await client.messages.create({
     model: MODEL,
-    max_tokens: 3000,
+    max_tokens: 4096, // dense bilingual label_text can be long — avoid truncating the JSON
     system: SYSTEM,
     messages: [{
       role: 'user',
@@ -69,9 +89,11 @@ Return ONLY this JSON:
   })
 
   const text = (msg.content.find(b => b.type === 'text') as { type: 'text'; text: string } | undefined)?.text ?? ''
-  const match = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\{[\s\S]*\}/)
-  if (!match) throw new Error('vision returned no JSON')
-  const raw = JSON.parse(match[1] || match[0]) as Partial<LabelExtraction>
+  const json = extractJsonObject(text)
+  if (!json) throw new Error(`vision returned unparseable output (stop=${msg.stop_reason})`)
+  let raw: Partial<LabelExtraction>
+  try { raw = JSON.parse(json) as Partial<LabelExtraction> }
+  catch { throw new Error('vision returned malformed JSON') }
 
   // Normalize / guard
   const product_class = VALID_CLASSES.includes(raw.product_class ?? '') ? raw.product_class! : 'food_general'

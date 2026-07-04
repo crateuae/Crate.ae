@@ -16,9 +16,30 @@ export const maxDuration = 60
 
 const MAX_B64 = 7_500_000 // ~5.6 MB image — reject larger to bound cost/latency
 
+// Best-effort per-IP throttle. This is a PUBLIC endpoint that calls the PAID
+// Claude Vision API, so we cap bursts to blunt abuse/cost. Module scope persists
+// within a warm serverless instance (resets on cold start — acceptable for a
+// free-tier tool; a determined attacker across cold instances is out of scope here).
+const RATE = { windowMs: 60_000, max: 6, hourMs: 3_600_000, hourMax: 40 }
+const hits = new Map<string, number[]>()
+function rateLimited(ip: string): boolean {
+  const now = Date.now()
+  const arr = (hits.get(ip) || []).filter(t => now - t < RATE.hourMs)
+  arr.push(now)
+  hits.set(ip, arr)
+  if (hits.size > 5000) hits.clear() // bound memory
+  const lastMin = arr.filter(t => now - t < RATE.windowMs).length
+  return lastMin > RATE.max || arr.length > RATE.hourMax
+}
+
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'vision not configured' }, { status: 503 })
+  }
+
+  const ip = (req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()) || req.headers.get('x-real-ip') || 'unknown'
+  if (rateLimited(ip)) {
+    return NextResponse.json({ error: 'too many scans — please wait a moment and try again' }, { status: 429 })
   }
 
   let body: { image?: string }

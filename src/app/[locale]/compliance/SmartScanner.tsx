@@ -140,22 +140,37 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
     streamRef.current = null
   }, [])
 
-  // start camera
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }, audio: false })
-        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return }
-        streamRef.current = stream
-        if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play().catch(() => {}) }
-        setCamReady(true)
-      } catch {
-        setCamReady(false) // allow upload fallback
-      }
-    })()
-    return () => { cancelled = true; stopCam() }
+  const startCamera = useCallback(async () => {
+    stopCam() // never run two streams at once
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }, audio: false,
+      })
+      streamRef.current = stream
+      if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play().catch(() => {}) }
+      setCamReady(true)
+    } catch {
+      setCamReady(false) // upload fallback stays available
+    }
   }, [stopCam])
+
+  // Acquire the camera only while on the camera stage; release it on every
+  // transition away (capture / preview / unmount). Keyed on `stage` so retake
+  // re-acquires reliably — and the video element is already mounted when this runs.
+  useEffect(() => {
+    if (stage !== 'camera') return
+    startCamera()
+    return () => stopCam()
+  }, [stage, startCamera, stopCam])
+
+  // Esc closes; lock page scroll while the modal is open
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { stopCam(); onClose() } }
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
+  }, [onClose, stopCam])
 
   function frameToCanvas(source: HTMLVideoElement | HTMLImageElement, sw: number, sh: number): HTMLCanvasElement {
     const cap = 1800, scale = Math.min(1, cap / Math.max(sw, sh))
@@ -199,29 +214,30 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
   async function analyze() {
     if (!processed) return
     setStage('analyzing'); setErr(null)
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 60_000)
     try {
       const res = await fetch('/api/compliance/scan', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: processed }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: processed }), signal: ctrl.signal,
       })
       const d = await res.json()
-      if (!res.ok) { setErr(d.error || 'error'); setStage('preview'); return }
+      if (!res.ok) { setErr(d.error || (isAr ? 'خطأ' : 'error')); setStage('preview'); return }
       setResult(d); setStage('result')
-    } catch {
-      setErr(isAr ? 'فشل الاتصال بالخادم' : 'Server request failed'); setStage('preview')
+    } catch (e) {
+      const aborted = (e as Error)?.name === 'AbortError'
+      setErr(aborted
+        ? (isAr ? 'انتهت المهلة — جرّب صورة أوضح' : 'Timed out — try a clearer image')
+        : (isAr ? 'فشل الاتصال بالخادم' : 'Server request failed'))
+      setStage('preview')
+    } finally {
+      clearTimeout(timer)
     }
   }
 
   function retake() {
-    setProcessed(null); setResult(null); setErr(null); setStage('camera')
-    // restart camera
-    ;(async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
-        streamRef.current = stream
-        if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(() => {}) }
-        setCamReady(true)
-      } catch { setCamReady(false) }
-    })()
+    // The camera-acquire effect re-runs because stage returns to 'camera'.
+    setProcessed(null); setResult(null); setErr(null); setCamReady(false); setStage('camera')
   }
 
   const verdict = result?.compliance?.verdict as string | undefined
