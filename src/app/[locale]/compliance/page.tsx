@@ -27,6 +27,8 @@ interface CheckItem {
   requirement_en: string
   requirement_ar: string
   note?: string
+  note_ar?: string
+  note_en?: string
 }
 
 interface ComplianceResult {
@@ -67,9 +69,53 @@ export default function CompliancePage() {
   const pathname = usePathname()
   const isAr = !pathname?.startsWith('/en')
 
+  const t = isAr ? {
+    title: '🛡 فاحص المطابقة',
+    subtitle: 'أدخل بيانات المنتج — يفحص ضد UAE.S ويعرض جميع النواقص دفعة واحدة لا شهراً كاملاً',
+    coverage: 'يغطي: UAE.S 9:2019 · UAE.S 1926:2015 · معايير ESMA',
+    scanTitle: 'مسح ذكي بالكاميرا',
+    scanSub: 'صوّر بطاقة المنتج — نقرأها ونملأ الحقول ونفحص المطابقة تلقائياً',
+    orManual: 'أو أدخل البيانات يدوياً',
+    productName: 'اسم المنتج *', productNamePh: 'مثال: Dr Pepper Strawberry 355ml',
+    productClass: 'فئة المنتج *',
+    ingredients: 'المكونات', ingredientsHint: '(اكتب واضغط Enter أو فاصلة)', ingredientsPh: 'ماء، سكر، كافيين...',
+    ingredientsNote: '💡 أضف المكوّنات هنا، وجدول القيم الغذائية يُدار بشكل منفصل أدناه (أو يُملأ تلقائياً من المسح الذكي)',
+    tableWord: 'جدول البيانات', fromScan: 'من المسح الذكي', addRow: 'إضافة صف',
+    colItem: 'العنصر', colIngredient: 'المكوّن', rowNamePh: 'اسم العنصر',
+    emptyTable: 'أضف صفاً أو امسح البطاقة لتعبئة الجدول تلقائياً',
+    labelText: 'نص البطاقة الحالي', labelTextPh: 'الصق البطاقة كما هو مكتوب على المنتج...',
+    caffeine: 'الكافيين (mg/100ml)', caffeinePh: 'اتركه فارغاً إذا لا يوجد',
+    sulfites: 'يحتوي على سلفايت (E220, E221, E222...)',
+    checkBtn: 'افحص المطابقة الآن', checking: 'جاري الفحص...',
+    errMsg: 'حدث خطأ أثناء الفحص. حاول مرة أخرى.',
+    emptyResult1: 'ستظهر نتائج الفحص هنا', emptyResult2: 'يغطي الفحص جميع متطلبات UAE.S دفعة واحدة',
+    missing: 'نقص', failed: 'النواقص', review: 'تحقّق يدوياً على التصميم', passed: 'المستوفى',
+  } : {
+    title: '🛡 Compliance Checker',
+    subtitle: 'Enter your product data — checked against UAE.S with every gap shown at once, not over a whole month',
+    coverage: 'Covers: UAE.S 9:2019 · UAE.S 1926:2015 · ESMA standards',
+    scanTitle: 'Smart camera scan',
+    scanSub: 'Photograph the label — we read it, fill the fields, and check compliance automatically',
+    orManual: 'or enter data manually',
+    productName: 'Product name *', productNamePh: 'e.g. Dr Pepper Strawberry 355ml',
+    productClass: 'Product class *',
+    ingredients: 'Ingredients', ingredientsHint: '(type and press Enter or comma)', ingredientsPh: 'water, sugar, caffeine...',
+    ingredientsNote: '💡 Add ingredients here; the nutrition table below is managed separately (or auto-filled from a smart scan)',
+    tableWord: 'Data table', fromScan: 'from smart scan', addRow: 'Add row',
+    colItem: 'Item', colIngredient: 'Ingredient', rowNamePh: 'Item name',
+    emptyTable: 'Add a row or scan the label to auto-fill the table',
+    labelText: 'Current label text', labelTextPh: 'Paste the label exactly as printed on the product...',
+    caffeine: 'Caffeine (mg/100ml)', caffeinePh: 'Leave empty if none',
+    sulfites: 'Contains sulfites (E220, E221, E222...)',
+    checkBtn: 'Check compliance now', checking: 'Checking...',
+    errMsg: 'An error occurred during the check. Please try again.',
+    emptyResult1: 'Check results will appear here', emptyResult2: 'The check covers all UAE.S requirements at once',
+    missing: 'missing', failed: 'Issues', review: 'Verify manually on the artwork', passed: 'Met',
+  }
+
   const selectedClass = PRODUCT_CLASSES.find(c => c.value === productClass) || PRODUCT_CLASSES[0]
-  // Effective table columns: a scan's own columns, else the class template.
-  const cols = (customCols && customCols.length) ? customCols : selectedClass.cols_ar
+  // Effective table columns: a scan's own columns, else the locale class template.
+  const cols = (customCols && customCols.length) ? customCols : (isAr ? selectedClass.cols_ar : selectedClass.cols_en)
 
   // Prefill the whole form from a Smart-Scan result and show its (deterministic) verdict.
   // Builds a FLEXIBLE table from whatever nutrition structure the label had.
@@ -163,7 +209,7 @@ export default function CompliancePage() {
       if (!res.ok) throw new Error('Check failed')
       setResult(await res.json())
     } catch {
-      setError('حدث خطأ أثناء الفحص. حاول مرة أخرى.')
+      setError(t.errMsg)
     } finally {
       setLoading(false)
     }
@@ -194,16 +240,14 @@ export default function CompliancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-10">
+    <div className="min-h-screen bg-gray-50 px-4 py-10" dir={isAr ? 'rtl' : 'ltr'}>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">🛡 فاحص المطابقة</h1>
-          <p className="text-gray-400 text-sm max-w-xl mx-auto">
-            أدخل بيانات المنتج — يفحص ضد UAE.S ويعرض جميع النواقص دفعة واحدة لا شهراً كاملاً
-          </p>
+          <h1 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">{t.title}</h1>
+          <p className="text-gray-400 text-sm max-w-xl mx-auto">{t.subtitle}</p>
           <div className="inline-block mt-3 text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded-full px-4 py-1.5 font-semibold">
-            يغطي: UAE.S 9:2019 · UAE.S 1926:2015 · معايير ESMA
+            {t.coverage}
           </div>
         </div>
 
@@ -217,41 +261,41 @@ export default function CompliancePage() {
               <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
                 <ScanLine className="w-5 h-5" />
               </span>
-              <span className="text-right flex-1">
-                <span className="block font-black text-sm">مسح ذكي بالكاميرا</span>
-                <span className="block text-[11px] text-white/85 font-medium">صوّر بطاقة المنتج — نقرأها ونملأ الحقول ونفحص المطابقة تلقائياً</span>
+              <span className="text-start flex-1">
+                <span className="block font-black text-sm">{t.scanTitle}</span>
+                <span className="block text-[11px] text-white/85 font-medium">{t.scanSub}</span>
               </span>
               <Sparkles className="w-4 h-4 text-white/70 flex-shrink-0" />
             </button>
 
             <div className="relative py-1">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100" /></div>
-              <div className="relative flex justify-center"><span className="bg-white px-3 text-[11px] text-gray-300 font-semibold">أو أدخل البيانات يدوياً</span></div>
+              <div className="relative flex justify-center"><span className="bg-white px-3 text-[11px] text-gray-300 font-semibold">{t.orManual}</span></div>
             </div>
 
             {/* Product Name */}
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">اسم المنتج *</label>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">{t.productName}</label>
               <input
                 type="text"
                 required
                 value={productName}
                 onChange={e => setProductName(e.target.value)}
-                placeholder="مثال: Dr Pepper Strawberry 355ml"
+                placeholder={t.productNamePh}
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:border-orange-400 transition-colors"
               />
             </div>
 
             {/* Product Class */}
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">فئة المنتج *</label>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">{t.productClass}</label>
               <select
                 value={productClass}
                 onChange={e => handleClassChange(e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:border-orange-400 transition-colors cursor-pointer"
               >
                 {PRODUCT_CLASSES.map(c => (
-                  <option key={c.value} value={c.value}>{c.label_ar} — {c.label_en}</option>
+                  <option key={c.value} value={c.value}>{isAr ? c.label_ar : c.label_en}</option>
                 ))}
               </select>
             </div>
@@ -259,7 +303,7 @@ export default function CompliancePage() {
             {/* Ingredient Chips */}
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
-                المكونات <span className="normal-case font-normal text-gray-400">(اكتب واضغط Enter أو فاصلة)</span>
+                {t.ingredients} <span className="normal-case font-normal text-gray-400">{t.ingredientsHint}</span>
               </label>
               <div
                 className="border border-gray-200 rounded-xl p-3 min-h-[72px] bg-white cursor-text focus-within:border-orange-400 transition-colors"
@@ -280,31 +324,31 @@ export default function CompliancePage() {
                   value={chipInput}
                   onChange={e => setChipInput(e.target.value)}
                   onKeyDown={handleChipKey}
-                  placeholder={ingredients.length === 0 ? 'ماء، سكر، كافيين...' : ''}
+                  placeholder={ingredients.length === 0 ? t.ingredientsPh : ''}
                   className="border-none outline-none text-xs text-gray-700 w-full bg-transparent placeholder-gray-400"
                 />
               </div>
-              <p className="text-[10px] text-gray-400 mt-1.5">💡 أضف المكوّنات هنا، وجدول القيم الغذائية يُدار بشكل منفصل أدناه (أو يُملأ تلقائياً من المسح الذكي)</p>
+              <p className="text-[10px] text-gray-400 mt-1.5">{t.ingredientsNote}</p>
             </div>
 
             {/* Dynamic Table */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
-                  📊 جدول البيانات — {customCols ? 'من المسح الذكي' : selectedClass.label_ar}
+                  📊 {t.tableWord} — {customCols ? t.fromScan : (isAr ? selectedClass.label_ar : selectedClass.label_en)}
                 </label>
                 <button type="button" onClick={addTableRow}
                   className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-700 font-semibold">
-                  <Plus className="w-3.5 h-3.5" /> إضافة صف
+                  <Plus className="w-3.5 h-3.5" /> {t.addRow}
                 </button>
               </div>
               <div className="border border-gray-200 rounded-xl overflow-hidden">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="text-right py-2 px-3 font-bold text-gray-500">{customCols ? 'العنصر / Item' : 'المكوّن / Ingredient'}</th>
+                      <th className="text-start py-2 px-3 font-bold text-gray-500">{customCols ? t.colItem : t.colIngredient}</th>
                       {cols.map((col, i) => (
-                        <th key={i} className="text-right py-2 px-2 font-bold text-gray-500 whitespace-nowrap">{col}</th>
+                        <th key={i} className="text-start py-2 px-2 font-bold text-gray-500 whitespace-nowrap">{col}</th>
                       ))}
                       <th className="w-8" />
                     </tr>
@@ -317,7 +361,7 @@ export default function CompliancePage() {
                             value={row.ingredient}
                             onChange={e => setTableRows(prev => prev.map((r, i) => i === rowIdx ? { ...r, ingredient: e.target.value } : r))}
                             className="w-full bg-transparent border-none outline-none text-gray-700 placeholder-gray-400"
-                            placeholder="اسم المكوّن"
+                            placeholder={t.rowNamePh}
                           />
                         </td>
                         {cols.map((_, colIdx) => (
@@ -338,7 +382,7 @@ export default function CompliancePage() {
                       </tr>
                     ))}
                     {tableRows.length === 0 && (
-                      <tr><td colSpan={cols.length + 2} className="py-6 text-center text-gray-400 text-xs">أضف صفاً أو امسح البطاقة لتعبئة الجدول تلقائياً</td></tr>
+                      <tr><td colSpan={cols.length + 2} className="py-6 text-center text-gray-400 text-xs">{t.emptyTable}</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -347,11 +391,11 @@ export default function CompliancePage() {
 
             {/* Label text */}
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">نص البطاقة الحالي</label>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">{t.labelText}</label>
               <textarea
                 value={labelText}
                 onChange={e => setLabelText(e.target.value)}
-                placeholder="الص البطاقة كما هو مكتوب على المنتج..."
+                placeholder={t.labelTextPh}
                 rows={2}
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 bg-white placeholder-gray-400 focus:outline-none focus:border-orange-400 transition-colors resize-none"
               />
@@ -360,12 +404,12 @@ export default function CompliancePage() {
             {/* Caffeine (beverages only) */}
             {(productClass === 'beverage_energy' || productClass === 'beverage_general') && (
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">الكافيين (mg/100ml)</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">{t.caffeine}</label>
                 <input
                   type="number"
                   value={caffeine}
                   onChange={e => setCaffeine(e.target.value)}
-                  placeholder="اتركه فارغاً إذا لا يوجد"
+                  placeholder={t.caffeinePh}
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:border-orange-400 transition-colors"
                 />
               </div>
@@ -379,7 +423,7 @@ export default function CompliancePage() {
                 onChange={e => setHasSulfites(e.target.checked)}
                 className="w-4 h-4 rounded accent-orange-500"
               />
-              <span className="text-sm text-gray-600">يحتوي على سلفايت (E220, E221, E222...)</span>
+              <span className="text-sm text-gray-600">{t.sulfites}</span>
             </label>
 
             <button
@@ -388,7 +432,7 @@ export default function CompliancePage() {
               className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors shadow-sm"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
-              {loading ? 'جاري الفحص...' : 'افحص المطابقة الآن'}
+              {loading ? t.checking : t.checkBtn}
             </button>
 
             {error && <p className="text-red-500 text-sm text-center">{error}</p>}
@@ -401,8 +445,8 @@ export default function CompliancePage() {
                 <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
                   <ShieldCheck className="w-8 h-8 text-gray-300" />
                 </div>
-                <p className="text-gray-400 font-medium">ستظهر نتائج الفحص هنا</p>
-                <p className="text-gray-300 text-sm mt-1">يغطي الفحص جميع متطلبات UAE.S دفعة واحدة</p>
+                <p className="text-gray-400 font-medium">{t.emptyResult1}</p>
+                <p className="text-gray-300 text-sm mt-1">{t.emptyResult2}</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -413,17 +457,16 @@ export default function CompliancePage() {
                       <div className="flex items-center gap-3 mb-2">
                         <cfg.icon className={`w-7 h-7 ${cfg.colorText}`} />
                         <span className={`text-xl font-black ${cfg.colorText}`}>
-                          {result.verdict === 'registerable' ? 'قابل للتسجيل ✓' :
-                           result.verdict === 'not_registerable' ? 'غير قابل للتسجيل' : 'يحتاج مراجعة'}
+                          {isAr ? cfg.label_ar : cfg.label_en}
                         </span>
                         {result.missing_count > 0 && (
                           <span className="bg-red-100 text-red-600 text-xs font-bold px-3 py-1 rounded-full">
-                            {result.missing_count} نقص
+                            {result.missing_count} {t.missing}
                           </span>
                         )}
                       </div>
                       <p className="text-xs font-semibold text-gray-500 mb-1">{result.standard}</p>
-                      <p className="text-sm text-gray-600 leading-relaxed">{result.summary_ar}</p>
+                      <p className="text-sm text-gray-600 leading-relaxed">{isAr ? result.summary_ar : result.summary_en}</p>
                     </div>
                   )
                 })()}
@@ -432,20 +475,22 @@ export default function CompliancePage() {
                   <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
                     <h3 className="font-bold text-red-600 mb-4 flex items-center gap-2 text-sm">
                       <XCircle className="w-4 h-4" />
-                      النواقص ({result.failed.length})
+                      {t.failed} ({result.failed.length})
                     </h3>
                     <div className="space-y-2">
-                      {result.failed.map((f, i) => (
+                      {result.failed.map((f, i) => {
+                        const note = isAr ? (f.note_ar ?? f.note) : f.note_en
+                        return (
                         <div key={i} className="flex items-start gap-2 p-3 bg-red-50 border border-red-100 rounded-xl">
                           <XCircle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
                           <div>
-                            <p className="text-sm text-gray-900 font-medium">{f.requirement_ar}</p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{f.requirement_en}</p>
+                            <p className="text-sm text-gray-900 font-medium">{isAr ? f.requirement_ar : f.requirement_en}</p>
                             <p className="text-[10px] text-orange-500 font-semibold mt-0.5">{f.clause}</p>
-                            {f.note && <p className="text-[10px] text-amber-600 mt-0.5">{f.note}</p>}
+                            {note && <p className="text-[10px] text-amber-600 mt-0.5">{note}</p>}
                           </div>
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -454,19 +499,22 @@ export default function CompliancePage() {
                   <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
                     <h3 className="font-bold text-amber-600 mb-4 flex items-center gap-2 text-sm">
                       <AlertTriangle className="w-4 h-4" />
-                      تحقّق يدوياً على التصميم ({result.review.length})
+                      {t.review} ({result.review.length})
                     </h3>
                     <div className="space-y-2">
-                      {result.review.map((f, i) => (
+                      {result.review.map((f, i) => {
+                        const note = isAr ? (f.note_ar ?? f.note) : f.note_en
+                        return (
                         <div key={i} className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl">
                           <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
                           <div>
-                            <p className="text-sm text-gray-900 font-medium">{f.requirement_ar}</p>
+                            <p className="text-sm text-gray-900 font-medium">{isAr ? f.requirement_ar : f.requirement_en}</p>
                             <p className="text-[10px] text-orange-500 font-semibold mt-0.5">{f.clause}</p>
-                            {f.note && <p className="text-[10px] text-amber-600 mt-0.5">{f.note}</p>}
+                            {note && <p className="text-[10px] text-amber-600 mt-0.5">{note}</p>}
                           </div>
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -475,13 +523,13 @@ export default function CompliancePage() {
                   <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
                     <h3 className="font-bold text-green-600 mb-4 flex items-center gap-2 text-sm">
                       <CheckCircle className="w-4 h-4" />
-                      المستوفى ({result.passed.length})
+                      {t.passed} ({result.passed.length})
                     </h3>
                     <div className="space-y-1.5">
                       {result.passed.map((p, i) => (
                         <div key={i} className="flex items-center gap-2">
                           <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                          <span className="text-sm text-gray-600">{p.requirement_ar}</span>
+                          <span className="text-sm text-gray-600">{isAr ? p.requirement_ar : p.requirement_en}</span>
                         </div>
                       ))}
                     </div>
