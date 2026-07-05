@@ -22,7 +22,14 @@ const MIN_SAMPLE        = 8      // need this many graded pages before re-weight
 const LEARN_RATE        = 0.30   // how hard we nudge weights per cycle
 const W_MIN = 0.05, W_MAX = 0.60 // clamp so no dimension collapses or dominates
 
-const slugFromUrl = (url: string | null) => (url ?? '').split('/insights/')[1]?.split(/[/?#]/)[0] ?? ''
+// Return the "/section/slug" suffix to match in page_views.path — handles BOTH
+// /insights/<slug> (legacy articles) AND /products/<slug> (organism now publishes
+// here). Previously only /insights matched, so product-published opportunities
+// captured views=0 forever and the relearn loop mis-graded them all as failures.
+const matchPath = (url: string | null): string => {
+  const m = (url ?? '').match(/\/(insights|products)\/([^/?#]+)/)
+  return m ? `/${m[1]}/${m[2]}` : ''
+}
 
 // ─── CAPTURE ─────────────────────────────────────────────────────────────────
 
@@ -42,14 +49,14 @@ export async function captureOutcomes(db: SupabaseClient): Promise<CaptureResult
   let updated = 0, advanced = 0
 
   for (const o of live) {
-    const slug = slugFromUrl(o.published_url)
-    if (!slug) continue
+    const path = matchPath(o.published_url)
+    if (!path) continue
 
-    // Distinct visitors who hit either locale of this insight page
+    // Distinct visitors who hit either locale of this published page (insights OR products)
     const { data: rows } = await db
       .from('page_views')
       .select('visitor_id')
-      .like('path', `%/insights/${slug}%`)
+      .like('path', `%${path}%`)
       .gte('created_at', since)
       .limit(5000)
 
