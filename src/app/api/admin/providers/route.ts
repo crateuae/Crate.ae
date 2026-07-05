@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-function adminDb() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  )
-}
+import { adminClient } from '@/lib/supabase/admin'
+import { cleanEmail } from '@/lib/email/normalize'
 
 // Denormalized activity counters are owned by log_provider_event — never let an
 // admin edit overwrite them (would drift from provider_events).
@@ -24,10 +17,10 @@ function stripCounters(fields: Record<string, unknown>) {
  * Never clobbers an existing contact.
  */
 async function syncProviderEmailToContact(
-  db: ReturnType<typeof adminDb>, providerId: string, email?: unknown, name?: unknown
+  db: ReturnType<typeof adminClient>, providerId: string, email?: unknown, name?: unknown
 ) {
-  const e = String(email ?? '').trim().toLowerCase()
-  if (!e.includes('@')) return
+  const e = cleanEmail(email)
+  if (!e) return
   try {
     const { data: existing } = await db.from('provider_contacts').select('id').eq('email', e).limit(1)
     if (existing?.length) return
@@ -41,7 +34,7 @@ async function syncProviderEmailToContact(
 // GET — paginated admin listing via RPC (server-side filter/search/paging).
 // Falls back to a capped direct query if the RPC isn't deployed yet.
 export async function GET(req: NextRequest) {
-  const db = adminDb()
+  const db = adminClient()
   const sp = req.nextUrl.searchParams
   const page = Math.max(1, parseInt(sp.get('page') ?? '1', 10))
   const size = Math.min(100, Math.max(1, parseInt(sp.get('size') ?? '50', 10)))
@@ -78,7 +71,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { id: _id, created_at: _ca, ...fields } = body
   stripCounters(fields)
-  const db = adminDb()
+  const db = adminClient()
   const { data, error } = await db.from('providers').insert(fields).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (data?.id) await syncProviderEmailToContact(db, data.id, fields.email, fields.name_en ?? fields.name_ar)
@@ -91,7 +84,7 @@ export async function PATCH(req: NextRequest) {
   const { id, created_at: _ca, ...fields } = body
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   stripCounters(fields)
-  const db = adminDb()
+  const db = adminClient()
   const { data, error } = await db.from('providers').update(fields).eq('id', id).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if ('email' in fields) await syncProviderEmailToContact(db, id, fields.email, data?.name_en ?? data?.name_ar)
@@ -102,7 +95,7 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-  const db = adminDb()
+  const db = adminClient()
   const { error } = await db.from('providers').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

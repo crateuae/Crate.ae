@@ -5,8 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { resolveAudience, type AudienceSpec } from '@/lib/campaigns/audience'
+import { adminClient } from '@/lib/supabase/admin'
+import { cleanEmail } from '@/lib/email/normalize'
+import { supplierPitchHtml } from '@/lib/campaigns/outreach-template'
 
 /**
  * CAPTURE → OUTREACH loop closure. An incoming RFQ (demand signal) drafts an
@@ -14,7 +16,7 @@ import { resolveAudience, type AudienceSpec } from '@/lib/campaigns/audience'
  * DRAFT-only (a human reviews & sends), and no-ops until verified contacts exist.
  */
 async function draftSupplierOutreach(
-  supabase: ReturnType<typeof db>,
+  supabase: ReturnType<typeof adminClient>,
   opts: { opportunityId: string | null; productEn: string; productAr: string | null }
 ) {
   if (process.env.ENABLE_OUTREACH !== 'true') return
@@ -31,25 +33,12 @@ async function draftSupplierOutreach(
     await supabase.from('email_campaigns').insert({
       name: `RFQ outreach — ${opts.productEn} (auto)`,
       subject: `طلب توريد: ${name} — Sourcing request`,
-      body_html:
-        `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.8">`
-        + `<p>مرحباً {{company}},</p><p>لدينا طلب استيراد فعّال على <strong>${name}</strong>. `
-        + `إن كنتم توفّرونه أو ما يماثله، شاركونا قائمة الأسعار والحد الأدنى للطلب — بدون التزام.</p></div>`
-        + `<div dir="ltr" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.8;margin-top:12px">`
-        + `<p>Hello {{company}},</p><p>We have an active import request for <strong>${opts.productEn}</strong>. `
-        + `If you supply this or a close match, share your price list and MOQ — no obligation.</p></div>`,
+      body_html: supplierPitchHtml({ productEn: opts.productEn, productAr: opts.productAr }),
       audience: spec, status: 'draft', total_recipients: audience.length,
     })
   } catch (e) {
     console.error('[rfq] auto-outreach:', e)
   }
-}
-
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
 }
 
 /**
@@ -61,11 +50,11 @@ function db() {
  * clobbers an existing contact (a supplier who also buys keeps their record).
  */
 async function promoteRequesterToContact(
-  supabase: ReturnType<typeof db>,
+  supabase: ReturnType<typeof adminClient>,
   opts: { email: string | null; name: string | null; phone: string | null; providerId: string | null }
 ) {
-  const email = opts.email?.trim().toLowerCase()
-  if (!email || !email.includes('@')) return
+  const email = cleanEmail(opts.email)
+  if (!email) return
   try {
     const { data: existing } = await supabase
       .from('provider_contacts').select('id').eq('email', email).limit(1)
@@ -134,7 +123,7 @@ export async function POST(req: NextRequest) {
     notes?.trim() || null,
   ].filter(Boolean).join(' ') || null
 
-  const supabase = db()
+  const supabase = adminClient()
 
   const { data: rfq, error } = await supabase
     .from('rfq_requests')

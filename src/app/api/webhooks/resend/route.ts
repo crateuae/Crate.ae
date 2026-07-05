@@ -10,13 +10,9 @@
  * Not under /api/admin, so the proxy auth gate doesn't block Resend's calls.
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import crypto from 'node:crypto'
-
-function db() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } })
-}
+import { adminClient } from '@/lib/supabase/admin'
+import { cleanEmail } from '@/lib/email/normalize'
 
 // Svix signature verification (Resend uses Svix under the hood).
 function verifySignature(payload: string, headers: Headers): boolean {
@@ -50,11 +46,11 @@ export async function POST(req: NextRequest) {
     : null
   if (!reason) return NextResponse.json({ ok: true, ignored: evt.type }) // delivered/opened/clicked → nothing to do
 
-  const email = (evt.data?.to?.[0] ?? evt.data?.email ?? '').trim().toLowerCase()
-  if (!email.includes('@')) return NextResponse.json({ ok: true, skipped: 'no recipient' })
+  const email = cleanEmail(evt.data?.to?.[0] ?? evt.data?.email)
+  if (!email) return NextResponse.json({ ok: true, skipped: 'no recipient' })
 
   try {
-    await db().from('email_suppressions').upsert(
+    await adminClient().from('email_suppressions').upsert(
       { email, reason, source: 'resend_webhook' },
       { onConflict: 'email' },
     )
