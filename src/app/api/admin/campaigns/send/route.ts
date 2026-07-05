@@ -74,7 +74,28 @@ export async function POST(req: NextRequest) {
     if (suppressed.size) recipients = recipients.filter(r => !suppressed.has(r.email.toLowerCase()))
   }
 
-  if (recipients.length === 0) return NextResponse.json({ error: 'no new recipients to send to' }, { status: 422 })
+  // FREQUENCY CAP: don't re-email a contact emailed by ANY campaign in the last few
+  // days — protects deliverability and the recipient. Skipped on an explicit
+  // "resend to all" (only_new === false, a deliberate override). No-ops gracefully
+  // if last_emailed_at isn't present (query error → ignored).
+  let capped = 0
+  if (only_new !== false) {
+    const CAP_DAYS = 5
+    const cutoff = new Date(Date.now() - CAP_DAYS * 86400000).toISOString()
+    const emails = recipients.map(r => r.email.toLowerCase())
+    const { data: recent, error: capErr } = await supabase
+      .from('provider_contacts').select('email').in('email', emails).gte('last_emailed_at', cutoff)
+    if (!capErr && recent?.length) {
+      const recentSet = new Set((recent as { email: string }[]).map(r => r.email.toLowerCase()))
+      const before = recipients.length
+      recipients = recipients.filter(r => !recentSet.has(r.email.toLowerCase()))
+      capped = before - recipients.length
+    }
+  }
+
+  if (recipients.length === 0) {
+    return NextResponse.json({ error: 'no recipients to send to', capped }, { status: 422 })
+  }
 
   // Update total_recipients to reflect the full audience size
   await supabase.from('email_campaigns').update({
@@ -137,5 +158,5 @@ export async function POST(req: NextRequest) {
     sent_at: new Date().toISOString(),
   }).eq('id', campaign_id)
 
-  return NextResponse.json({ ok: true, sent, total: recipients.length })
+  return NextResponse.json({ ok: true, sent, total: recipients.length, capped })
 }
