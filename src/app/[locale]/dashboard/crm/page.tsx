@@ -1,13 +1,14 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { Users, ShieldCheck, MailCheck, Ban, Activity, Loader2, ArrowUpRight } from 'lucide-react'
+import { Users, ShieldCheck, MailCheck, Ban, Activity, Loader2, ArrowUpRight, Inbox } from 'lucide-react'
 
 interface Crm {
   contacts: { total: number; consented: number; marketable: number; bySource: Record<string, number>; byStatus: Record<string, number> }
   suppressions: number
   recent: { email: string; source: string; status: string; consent: boolean; created_at: string; providers: { name_en: string | null; slug: string | null } | null }[]
   topProviders: { name_en: string | null; slug: string | null; views_count: number | null; rfq_received_count: number | null; emails_count: number | null }[]
+  inbound?: { from_email: string | null; subject: string | null; created_at: string; providers: { name_en: string | null; slug: string | null } | null }[]
 }
 
 export default function CrmOverviewPage() {
@@ -38,6 +39,8 @@ export default function CrmOverviewPage() {
     emails: isAr ? 'مراسلات' : 'Emails',
     none: isAr ? 'لا يوجد بعد' : 'None yet',
     standalone: isAr ? 'مستقل' : 'Standalone',
+    inbound: isAr ? 'ردود الموردين الواردة' : 'Inbound supplier replies',
+    inboundHint: isAr ? 'الردود على uae@crate.ae تظهر هنا (فعّل استقبال Resend)' : 'Replies to uae@crate.ae appear here (enable Resend receiving)',
   }
   const SOURCE_LABEL: Record<string, string> = isAr
     ? { self_claimed: 'مطالبة ذاتية', admin_import: 'استيراد الأدمن', places_api: 'إثراء آلي', rfq_requester: 'مشترٍ (RFQ)', provider_profile: 'بريد مورد' }
@@ -128,6 +131,27 @@ export default function CrmOverviewPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Inbound supplier replies */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5">
+        <h3 className="font-bold text-slate-700 text-sm mb-1 flex items-center gap-2"><Inbox className="w-4 h-4 text-orange-500" />{T.inbound}</h3>
+        <p className="text-[11px] text-slate-400 mb-3">{T.inboundHint}</p>
+        {!d.inbound?.length ? <p className="text-xs text-slate-400">{T.none}</p> : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <tbody>
+                {d.inbound.map((m, i) => (
+                  <tr key={i} className="border-t border-slate-50 first:border-0">
+                    <td className="py-2 text-slate-700 font-semibold truncate max-w-[180px]">{m.from_email ?? '—'}</td>
+                    <td className="py-2 text-slate-500 truncate max-w-[280px]">{m.subject ?? '—'}</td>
+                    <td className="py-2 text-slate-400 truncate max-w-[140px]">{m.providers?.name_en ?? <span className="italic">{T.standalone}</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Recent contacts */}

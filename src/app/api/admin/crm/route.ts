@@ -63,10 +63,21 @@ export async function GET() {
     } catch { return [] }
   })()
 
+  // Inbound supplier replies (empty [] if the table isn't set up yet).
+  const inbound = await (async () => {
+    try {
+      const { data } = await db.from('inbound_emails')
+        .select('from_email, subject, created_at, providers(name_en, slug)')
+        .order('created_at', { ascending: false }).limit(15)
+      return data ?? []
+    } catch { return [] }
+  })()
+
   return NextResponse.json({
     contacts: { total, consented, marketable, bySource, byStatus },
     suppressions,
     recent,
     topProviders,
+    inbound,
   })
 }
