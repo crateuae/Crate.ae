@@ -105,6 +105,24 @@ export async function POST(req: NextRequest) {
 
   if (sendRows.length) await supabase.from('campaign_sends').insert(sendRows)
 
+  // WRITEBACK: record 'email_sent' on the provider record for provider-linked
+  // recipients, so providers.emails_count + the activity log finally reflect
+  // outreach (previously sends never touched the provider). Bounded + non-fatal.
+  try {
+    const sentEmails = sendRows.filter(r => r.status === 'sent').map(r => r.email.toLowerCase())
+    if (sentEmails.length) {
+      const { data: linked } = await supabase
+        .from('provider_contacts').select('provider_id, email')
+        .in('email', sentEmails).not('provider_id', 'is', null).limit(200)
+      await Promise.allSettled(((linked ?? []) as { provider_id: string }[]).map(row =>
+        supabase.rpc('log_provider_event', {
+          p_provider_id: row.provider_id, p_event_type: 'email_sent',
+          p_actor: 'system', p_rfq_id: null, p_payload: { campaign_id },
+        })
+      ))
+    }
+  } catch (e) { console.error('[send] email_sent writeback:', e) }
+
   const newSentCount = (c.sent_count ?? 0) + sent
   await supabase.from('email_campaigns').update({
     status: newSentCount > 0 ? 'sent' : 'failed',

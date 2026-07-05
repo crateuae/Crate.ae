@@ -45,12 +45,9 @@ const EMPTY: Provider = {
 
 const EMIRATES = ['Abu Dhabi','Dubai','Sharjah','Ajman','Umm Al Quwain','Ras Al Khaimah','Fujairah']
 
-const CATEGORIES = [
-  'Restaurants','Fast Food','Cafe & Coffee','Supermarket','Bakery','Catering',
-  'Seafood','Meat & Poultry','Dairy','Frozen','Beverages','Chocolate & Sweets',
-  'Spices','Grains & Flour','Oils & Fats','Organic','Health & Nutrition','Snacks',
-  'Packaging / Repackaging','Grocery & General Food','General Trading','Foodstuff Trading',
-]
+// The edit form MUST use the same vocabulary as the filter (CAT_OPTIONS = real DB
+// values). A separate CATEGORIES list previously wrote non-matching values, which
+// silently dropped edited providers out of every filter and campaign segment.
 
 // ─── Supabase client (service role via API route) ─────────────────────────────
 
@@ -146,7 +143,7 @@ function ProviderForm({ item, onSave, onClose, isAr }: {
           <div className="grid grid-cols-2 gap-3">
             <Field label="التصنيف">
               <select value={form.category} onChange={e => upd('category', e.target.value)} className={sel}>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                {CAT_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
             <Field label="الإمارة">
