@@ -12,6 +12,35 @@ const PROTECTED_PATHS = ['/dashboard']
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Authenticate admin APIs centrally. These use the service-role key and were
+  // previously unauthenticated (the matcher below now includes /api/admin). Only
+  // the dashboard (login-gated to ADMIN_EMAIL) calls them; cron endpoints live
+  // under /api/organism and are NOT matched here — they keep their CRON_SECRET.
+  if (pathname.startsWith('/api/admin')) {
+    const response = NextResponse.next()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return request.cookies.getAll() },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              request.cookies.set(name, value)
+              response.cookies.set(name, value, options)
+            })
+          },
+        },
+      },
+    )
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user?.email !== ADMIN_EMAIL) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    }
+    return response
+  }
+
   const pathWithoutLocale = pathname.replace(/^\/(ar|en)/, '')
   const isProtected = PROTECTED_PATHS.some(p => pathWithoutLocale.startsWith(p))
   const locale = pathname.split('/')[1] || 'ar'
@@ -53,5 +82,7 @@ export async function proxy(request: NextRequest) {
 export default proxy
 
 export const config = {
-  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
+  // First entry: all app pages except api/_next/_vercel/static files (intl + dashboard).
+  // Second entry: admin APIs, so the auth gate above runs on them.
+  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)', '/api/admin/:path*'],
 }
