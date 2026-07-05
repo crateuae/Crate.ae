@@ -2,11 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import { Upload, Loader2, CheckCircle2, XCircle, UserCheck, Mail, Sparkles, ShieldCheck } from 'lucide-react'
+import { Upload, Loader2, CheckCircle2, XCircle, UserCheck, Mail, Sparkles, ShieldCheck, Search, Download } from 'lucide-react'
 
 interface Pending {
   id: string; email: string; contact_name: string | null; phone: string | null
   source: string; created_at: string; providers?: { name_en: string | null; slug: string | null }
+}
+
+interface Contact {
+  id: string; email: string; contact_name: string | null; phone: string | null
+  source: string; status: string; consent: boolean | null; created_at: string
+  providers?: { name_en: string | null; slug: string | null } | null
 }
 
 export default function ContactsPage() {
@@ -76,6 +82,37 @@ export default function ContactsPage() {
     } finally { setVerifying(false) }
   }
 
+  // ── Browse / search ALL contacts (verified included) + CSV export ──
+  const [bq, setBq] = useState('')
+  const [bStatus, setBStatus] = useState('verified')
+  const [bSource, setBSource] = useState('all')
+  const [bRows, setBRows] = useState<Contact[]>([])
+  const [bLoading, setBLoading] = useState(false)
+  const [bLoaded, setBLoaded] = useState(false)
+  const loadBrowse = useCallback(async () => {
+    setBLoading(true)
+    try {
+      const p = new URLSearchParams({ browse: '1', status: bStatus, source: bSource, limit: '1000' })
+      if (bq.trim()) p.set('q', bq.trim())
+      const d = await (await fetch(`/api/admin/contacts?${p}`, { cache: 'no-store' })).json()
+      setBRows(d.contacts ?? []); setBLoaded(true)
+    } finally { setBLoading(false) }
+  }, [bq, bStatus, bSource])
+
+  function exportCsv() {
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const header = ['email', 'contact_name', 'phone', 'source', 'status', 'consent', 'provider', 'created_at']
+    const lines = [header.join(',')]
+    for (const r of bRows) lines.push([r.email, r.contact_name, r.phone, r.source, r.status, r.consent, r.providers?.name_en, r.created_at].map(esc).join(','))
+    const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob); a.download = `crate-contacts-${bStatus}.csv`; a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  const SOURCES = ['all', 'self_claimed', 'admin_import', 'places_api', 'rfq_requester', 'provider_profile']
+  const STATUSES = ['verified', 'pending', 'rejected', 'all']
+
   return (
     <div className="p-6 max-w-4xl mx-auto" dir={isAr ? 'rtl' : 'ltr'}>
       <h1 className="text-xl font-black text-slate-900 mb-1">{isAr ? 'جهات اتصال الموردين' : 'Supplier Contacts'}</h1>
@@ -83,6 +120,63 @@ export default function ContactsPage() {
         {isAr ? 'إثراء السجل بجهات اتصال موثّقة تُستخدم في حملات التواصل (الموافقة على الاستقبال مطلوبة قانونياً).'
               : 'Enrich the registry with verified, consented contacts used by outreach campaigns.'}
       </p>
+
+      {/* Browse & search all contacts + export */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-black text-slate-800 flex items-center gap-2"><Search className="w-4 h-4 text-orange-500" />{isAr ? 'تصفّح وبحث جهات الاتصال' : 'Browse & search contacts'}</h2>
+          <button onClick={exportCsv} disabled={!bRows.length}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 disabled:opacity-40">
+            <Download className="w-3.5 h-3.5" />{isAr ? 'تصدير CSV' : 'Export CSV'}
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="relative flex-1 min-w-[180px]">
+            <input value={bq} onChange={e => setBq(e.target.value)} onKeyDown={e => e.key === 'Enter' && loadBrowse()}
+              placeholder={isAr ? 'ابحث بالإيميل أو الاسم…' : 'Search email or name…'} dir="ltr"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-orange-300" />
+          </div>
+          <select value={bStatus} onChange={e => setBStatus(e.target.value)} className="rounded-xl border border-slate-200 px-2 py-2 text-xs">
+            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={bSource} onChange={e => setBSource(e.target.value)} className="rounded-xl border border-slate-200 px-2 py-2 text-xs">
+            {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <button onClick={loadBrowse} disabled={bLoading}
+            className="inline-flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-4 py-2 rounded-xl disabled:opacity-60">
+            {bLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}{isAr ? 'بحث' : 'Search'}
+          </button>
+        </div>
+        {bLoaded && (
+          <div className="mt-3">
+            <div className="text-[11px] text-slate-400 mb-2">{bRows.length.toLocaleString()} {isAr ? 'نتيجة' : 'results'}</div>
+            {bRows.length > 0 && (
+              <div className="overflow-x-auto max-h-[420px] overflow-y-auto border border-slate-100 rounded-xl">
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-50 sticky top-0"><tr className="text-slate-400 text-[10px] uppercase">
+                    <th className="text-start px-3 py-2 font-bold">Email</th>
+                    <th className="text-start px-2 py-2 font-bold">{isAr ? 'الاسم' : 'Name'}</th>
+                    <th className="text-start px-2 py-2 font-bold">{isAr ? 'المصدر' : 'Source'}</th>
+                    <th className="text-start px-2 py-2 font-bold">{isAr ? 'الحالة' : 'Status'}</th>
+                    <th className="text-start px-2 py-2 font-bold">{isAr ? 'المورد' : 'Provider'}</th>
+                  </tr></thead>
+                  <tbody>
+                    {bRows.map(r => (
+                      <tr key={r.id} className="border-t border-slate-50">
+                        <td className="px-3 py-1.5 text-slate-700 font-medium truncate max-w-[200px]" dir="ltr">{r.email}</td>
+                        <td className="px-2 py-1.5 text-slate-500 truncate max-w-[120px]">{r.contact_name ?? '—'}</td>
+                        <td className="px-2 py-1.5"><span className="text-[10px] bg-slate-100 text-slate-600 rounded-full px-2 py-0.5 font-semibold whitespace-nowrap">{r.source}</span></td>
+                        <td className="px-2 py-1.5"><span className={`text-[10px] rounded-full px-2 py-0.5 font-bold whitespace-nowrap ${r.status === 'verified' ? 'bg-emerald-100 text-emerald-700' : r.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}`}>{r.status}{r.consent === false ? ' ⚠' : ''}</span></td>
+                        <td className="px-2 py-1.5 text-slate-400 truncate max-w-[140px]">{r.providers?.name_en ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Import */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6">

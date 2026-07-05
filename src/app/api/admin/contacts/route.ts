@@ -16,15 +16,43 @@ function db() {
     { auth: { persistSession: false, autoRefreshToken: false } })
 }
 
-export async function GET() {
-  const { data, error } = await db()
+export async function GET(req: NextRequest) {
+  const sp = req.nextUrl.searchParams
+  const q = sp.get('q')?.trim()
+  const status = sp.get('status')          // verified | pending | rejected | all
+  const source = sp.get('source')          // one of the source values, or all
+  const browse = sp.get('browse') === '1' || !!q || !!status || !!source
+
+  const supabase = db()
+
+  // Default (no params) → the pending review queue (backward compatible).
+  if (!browse) {
+    const { data, error } = await supabase
+      .from('provider_contacts')
+      .select('id, email, contact_name, phone, source, status, created_at, providers(name_en, slug)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(200)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ pending: data ?? [] })
+  }
+
+  // Browse / search across ALL contacts (verified included) — makes the unified
+  // contact store viewable & exportable instead of vanishing after verification.
+  let query = supabase
     .from('provider_contacts')
-    .select('id, email, contact_name, phone, source, status, created_at, providers(name_en, slug)')
-    .eq('status', 'pending')
+    .select('id, email, contact_name, phone, source, status, consent, created_at, providers(name_en, slug)')
     .order('created_at', { ascending: false })
-    .limit(200)
+    .limit(Math.min(2000, Math.max(1, parseInt(sp.get('limit') ?? '500', 10))))
+  if (status && status !== 'all') query = query.eq('status', status)
+  if (source && source !== 'all') query = query.eq('source', source)
+  if (q) {
+    const safe = q.replace(/[,()%]/g, ' ').trim() // keep PostgREST .or() syntax safe
+    if (safe) query = query.or(`email.ilike.%${safe}%,contact_name.ilike.%${safe}%`)
+  }
+  const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ pending: data ?? [] })
+  return NextResponse.json({ contacts: data ?? [] })
 }
 
 export async function POST(req: NextRequest) {
