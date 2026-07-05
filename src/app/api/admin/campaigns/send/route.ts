@@ -111,6 +111,13 @@ export async function POST(req: NextRequest) {
   try {
     const sentEmails = sendRows.filter(r => r.status === 'sent').map(r => r.email.toLowerCase())
     if (sentEmails.length) {
+      // Track last-emailed per contact. Best-effort: returns an error (ignored)
+      // until last_emailed_at exists (see crate_activation_checklist.md); once the
+      // column is added this powers a cross-campaign frequency cap.
+      await supabase.from('provider_contacts')
+        .update({ last_emailed_at: new Date().toISOString() })
+        .in('email', sentEmails)
+
       const { data: linked } = await supabase
         .from('provider_contacts').select('provider_id, email')
         .in('email', sentEmails).not('provider_id', 'is', null).limit(200)
