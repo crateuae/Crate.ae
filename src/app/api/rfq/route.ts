@@ -52,6 +52,39 @@ function db() {
   )
 }
 
+/**
+ * UNIFY BUYERS INTO THE CONTACT GRAPH. Every RFQ submitter becomes a
+ * provider_contacts row so buyers live in the same store as suppliers (visible,
+ * linkable, deduped) — NOT as an isolated rfq_requests email. Compliance-safe:
+ * consent=false + status='pending' (they requested quotes, that is NOT marketing
+ * consent), so audience.ts (consent=true only) never auto-emails them. Never
+ * clobbers an existing contact (a supplier who also buys keeps their record).
+ */
+async function promoteRequesterToContact(
+  supabase: ReturnType<typeof db>,
+  opts: { email: string | null; name: string | null; phone: string | null; providerId: string | null }
+) {
+  const email = opts.email?.trim().toLowerCase()
+  if (!email || !email.includes('@')) return
+  try {
+    const { data: existing } = await supabase
+      .from('provider_contacts').select('id').eq('email', email).limit(1)
+    if (existing?.length) return // one human = one contact record
+    await supabase.from('provider_contacts').insert({
+      provider_id: opts.providerId || null,
+      email,
+      contact_name: opts.name || null,
+      phone: opts.phone || null,
+      source: 'rfq_requester',
+      consent: false,   // requested quotes ≠ marketing consent (TDRA)
+      status: 'pending',
+      confidence: 90,
+    })
+  } catch (e) {
+    console.error('[rfq] promote requester:', e)
+  }
+}
+
 async function notifyAdmin(payload: {
   product: string; contact: string; company: string | null
   phone: string | null; email: string | null; quantity: string | null; page: string | null
@@ -154,6 +187,14 @@ export async function POST(req: NextRequest) {
     email: contact_email?.trim() || null,
     quantity: quantity?.trim() || null,
     page: source_page || null,
+  })
+
+  // UNIFY: fold the buyer into the shared contact graph (compliance-safe, non-marketing).
+  await promoteRequesterToContact(supabase, {
+    email: contact_email?.trim() || null,
+    name: contact_name.trim(),
+    phone: contact_phone?.trim() || null,
+    providerId: provider_id || null,
   })
 
   // CAPTURE → OUTREACH: draft a supplier outreach for this demand (gated, draft-only).

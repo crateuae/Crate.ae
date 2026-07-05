@@ -73,14 +73,18 @@ export async function resolveAudience(db: SupabaseClient, spec: AudienceSpec): P
       }
     }
   } else {
-    // Outreach uses provider_contacts (status='verified' only — consented self-claim
-    // or admin-verified import). Rows may be registry-linked OR standalone (no provider).
-    // LEFT join so standalone contacts (provider_id null) are included too.
+    // Outreach uses provider_contacts that are BOTH verified AND consented.
+    // consent=true is required for TDRA compliance: admin-import and self-claim set
+    // consent=true, but scraped places_api rows are consent=false — so even if an
+    // admin bulk-"verifies" them, they are never marketed to. (Previously only
+    // status was checked, which let non-consented scraped contacts leak in.)
+    // Rows may be registry-linked OR standalone; LEFT join includes standalone too.
     const hasFilter = Boolean(spec.provider_type || spec.category || spec.emirate)
     const { data } = await db
       .from('provider_contacts')
       .select('email, contact_name, providers(name_en, name_ar, type, category, emirate, is_active)')
       .eq('status', 'verified')
+      .eq('consent', true)
       .not('email', 'is', null)
       .limit(limit)
     type Row = { email: string; contact_name: string | null; providers: { name_en: string | null; name_ar: string | null; type: string | null; category: string | null; emirate: string | null; is_active: boolean | null } | null }
