@@ -38,15 +38,27 @@ const FAQ = (isAr: boolean) => isAr ? [
 
 export default async function ComplianceLayout({ children, params }: { children: React.ReactNode; params: Promise<{ locale: string }> }) {
   const { locale } = await params
+  const isAr = locale === 'ar'
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    isPartOf: { '@id': 'https://www.crate.ae/#website' },
-    inLanguage: locale === 'ar' ? 'ar' : 'en',
-    mainEntity: FAQ(locale === 'ar').map(f => ({
-      '@type': 'Question', name: f.q,
-      acceptedAnswer: { '@type': 'Answer', text: f.a },
-    })),
+    '@graph': [
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Crate', item: `https://www.crate.ae/${locale}` },
+          { '@type': 'ListItem', position: 2, name: isAr ? 'اشتراطات الاستيراد' : 'Import Requirements', item: `https://www.crate.ae/${locale}/compliance` },
+        ],
+      },
+      {
+        '@type': 'FAQPage',
+        isPartOf: { '@id': 'https://www.crate.ae/#website' },
+        inLanguage: isAr ? 'ar' : 'en',
+        mainEntity: FAQ(isAr).map(f => ({
+          '@type': 'Question', name: f.q,
+          acceptedAnswer: { '@type': 'Answer', text: f.a },
+        })),
+      },
+    ],
   }
   return (
     <>

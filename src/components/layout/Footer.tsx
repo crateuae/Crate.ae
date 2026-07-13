@@ -64,6 +64,7 @@ export default function Footer({ locale = 'ar' }: { locale?: string }) {
             <FooterLink href={L('/insights')}>{isAr ? 'المدونة والرؤى' : 'Blog & Insights'}</FooterLink>
             <FooterLink href={L('/market')}>{isAr ? 'لوحة الفرص المباشرة' : 'Live Opportunity Board'}</FooterLink>
             <FooterLink href={L('/compliance')}>{isAr ? 'فحص منتج جديد' : 'Check a New Product'}</FooterLink>
+            <FooterLink href={L('/tools/nutrition')}>{isAr ? 'حاسبة الحقائق الغذائية' : 'Nutrition Facts Calculator'}</FooterLink>
           </FooterCol>
 
           {/* Standards */}

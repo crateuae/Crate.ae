@@ -22,18 +22,29 @@ export default async function NutritionToolLayout({ children, params }: { childr
   const isAr = locale === 'ar'
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
-    name: isAr ? 'حاسبة الحقائق الغذائية' : 'Nutrition Facts Calculator',
-    applicationCategory: 'BusinessApplication',
-    operatingSystem: 'Web',
-    url: `https://www.crate.ae/${locale}/tools/nutrition`,
-    inLanguage: isAr ? 'ar' : 'en',
-    isPartOf: { '@id': 'https://www.crate.ae/#website' },
-    publisher: { '@id': 'https://www.crate.ae/#organization' },
-    description: isAr
-      ? 'أداة تحوّل مكوّنات الوصفة إلى جدول حقائق غذائية (لكل 100غم/حصة و%DV) للسوق الإماراتي.'
-      : 'A tool that turns recipe ingredients into a nutrition-facts table (per 100 g / serving and %DV) for the UAE market.',
-    offers: { '@type': 'Offer', price: '0', priceCurrency: 'AED' },
+    '@graph': [
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Crate', item: `https://www.crate.ae/${locale}` },
+          { '@type': 'ListItem', position: 2, name: isAr ? 'حاسبة الحقائق الغذائية' : 'Nutrition Facts Calculator', item: `https://www.crate.ae/${locale}/tools/nutrition` },
+        ],
+      },
+      {
+        '@type': 'SoftwareApplication',
+        name: isAr ? 'حاسبة الحقائق الغذائية' : 'Nutrition Facts Calculator',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        url: `https://www.crate.ae/${locale}/tools/nutrition`,
+        inLanguage: isAr ? 'ar' : 'en',
+        isPartOf: { '@id': 'https://www.crate.ae/#website' },
+        publisher: { '@id': 'https://www.crate.ae/#organization' },
+        description: isAr
+          ? 'أداة تحوّل مكوّنات الوصفة إلى جدول حقائق غذائية (لكل 100غم/حصة و%DV) للسوق الإماراتي.'
+          : 'A tool that turns recipe ingredients into a nutrition-facts table (per 100 g / serving and %DV) for the UAE market.',
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'AED' },
+      },
+    ],
   }
   return (
     <>
