@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { TrendingUp, Search, MousePointerClick, Eye, Zap, RefreshCw, ChevronUp, ChevronDown, Minus, ExternalLink } from 'lucide-react'
+import { TrendingUp, Search, MousePointerClick, Eye, Zap, RefreshCw, ChevronUp, ChevronDown, Minus, ExternalLink, CheckCircle2, XCircle, Activity, Loader2 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -231,6 +231,51 @@ function GaPanel({ range }: { range: number }) {
   )
 }
 
+// Live, automatic technical SEO/AEO health — self-checks every asset we ship
+// (sitemap, robots+AI crawlers, llms.txt, RSS, IndexNow, schema, headers).
+interface HealthCheck { name: string; ok: boolean; detail: string; group: string }
+function HealthPanel() {
+  const [d, setD] = useState<{ checks: HealthCheck[]; score: number; total: number; checked_at: string } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const load = useCallback(() => {
+    setLoading(true)
+    fetch('/api/admin/seo-health', { cache: 'no-store' }).then(r => r.json()).then(setD).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const pct = d ? Math.round(d.score / d.total * 100) : 0
+  const bar = pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500'
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-black text-slate-800 flex items-center gap-2"><Activity className="w-4 h-4 text-orange-500" />الصحة التقنية (SEO/AEO) — فحص تلقائي حيّ</h2>
+        <button onClick={load} disabled={loading} className="text-slate-400 hover:text-slate-600"><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /></button>
+      </div>
+      {!d ? (
+        <div className="py-6 flex justify-center text-slate-300"><Loader2 className="w-5 h-5 animate-spin" /></div>
+      ) : (
+        <>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="text-2xl font-black text-slate-900 tabular-nums">{d.score}/{d.total}</div>
+            <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden"><div className={`h-full ${bar} rounded-full transition-all`} style={{ width: `${pct}%` }} /></div>
+            <span className="text-xs text-slate-400">{pct}%</span>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1">
+            {d.checks.map((c, i) => (
+              <div key={i} className="flex items-center gap-2 text-xs py-1">
+                {c.ok ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" /> : <XCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
+                <span className="font-semibold text-slate-700">{c.name}</span>
+                <span className="text-slate-400 ms-auto truncate max-w-[45%] text-end">{c.detail}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[10px] text-slate-300">فحص مباشر لكل ما نُشِر · آخر فحص: {new Date(d.checked_at).toLocaleString('ar')}</p>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function SeoPage() {
   const [range, setRange]   = useState(28)
   const [data, setData]     = useState<GscData | null>(null)
@@ -287,6 +332,9 @@ export default function SeoPage() {
           </button>
         </div>
       </div>
+
+      {/* Live technical SEO/AEO health — everything we ship, auto-verified */}
+      <HealthPanel />
 
       {/* Google Analytics (GA4) */}
       <GaPanel range={range} />
