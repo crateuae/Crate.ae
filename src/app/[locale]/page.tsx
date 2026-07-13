@@ -95,15 +95,35 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   return (
     <div className="min-h-screen bg-white" dir={isAr ? 'rtl' : 'ltr'}>
 
-      {/* JSON-LD */}
+      {/* JSON-LD — Organization + WebSite (with a real SearchAction over /products?q=),
+          linked by a single @id so every other page's schema can reference this entity. */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        '@context': 'https://schema.org', '@type': 'Organization',
-        name: 'Crate', url: 'https://www.crate.ae',
-        email: 'uae@crate.ae', telephone: '+971543000415',
-        description: isAr
-          ? 'منصة الاستيراد والتوريد الذكية في السوق الإماراتي'
-          : 'The smart import and supply platform for the UAE market',
-        address: { '@type': 'PostalAddress', addressCountry: 'AE' },
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'Organization',
+            '@id': 'https://www.crate.ae/#organization',
+            name: 'Crate', url: 'https://www.crate.ae',
+            email: 'uae@crate.ae', telephone: '+971543000415',
+            description: isAr
+              ? 'منصة الاستيراد والتوريد الذكية في السوق الإماراتي'
+              : 'The smart import and supply platform for the UAE market',
+            address: { '@type': 'PostalAddress', addressCountry: 'AE' },
+            areaServed: { '@type': 'Country', name: 'United Arab Emirates' },
+          },
+          {
+            '@type': 'WebSite',
+            '@id': 'https://www.crate.ae/#website',
+            url: 'https://www.crate.ae', name: 'Crate',
+            inLanguage: ['ar', 'en'],
+            publisher: { '@id': 'https://www.crate.ae/#organization' },
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: { '@type': 'EntryPoint', urlTemplate: `https://www.crate.ae/${isAr ? 'ar' : 'en'}/products?q={search_term_string}` },
+              'query-input': 'required name=search_term_string',
+            },
+          },
+        ],
       }) }} />
 
       {/* ════ HERO ════ */}
