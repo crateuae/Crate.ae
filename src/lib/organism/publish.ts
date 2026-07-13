@@ -50,17 +50,21 @@ function contentGate(a: GeneratedArticle): string | null {
   return null
 }
 
-/** Optional IndexNow ping — notifies Bing/Google instantly. No-op if no key set. */
-async function pingIndexNow(slug: string) {
-  const key = process.env.INDEXNOW_KEY
-  if (!key) return
+// IndexNow key. Public BY DESIGN (ownership is proven by serving it at
+// /<key>.txt) — so it is hardcoded, needs no env var, and works out of the box.
+const INDEXNOW_KEY = '9d4f1a7c8e2b0f635a1c7e9d3b6f204a'
+
+/** IndexNow ping — instant "please (re)crawl" to Bing/Yandex/Seznam (Google also
+ * reads IndexNow). Pings BOTH locales of each published path. Best-effort. */
+async function pingIndexNow(paths: string[]) {
   const host = 'www.crate.ae'
-  const urls = [`https://${host}/ar/insights/${slug}`, `https://${host}/en/insights/${slug}`]
+  const urlList = paths.flatMap(p => [`https://${host}/ar${p}`, `https://${host}/en${p}`])
+  if (!urlList.length) return
   try {
     await fetch('https://api.indexnow.org/indexnow', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ host, key, keyLocation: `https://${host}/${key}.txt`, urlList: urls }),
+      body: JSON.stringify({ host, key: INDEXNOW_KEY, keyLocation: `https://${host}/${INDEXNOW_KEY}.txt`, urlList }),
     })
   } catch { /* best-effort */ }
 }
@@ -98,6 +102,7 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
   if (!queue?.length) return { attempted: 0, published: 0, blocked: 0, cap_reached: false }
 
   let published = 0, blocked = 0
+  const publishedPaths: string[] = [] // collected for a single IndexNow ping at the end
   for (const o of queue) {
     if (budget <= 0) break
     // Time governor: if we're past the wall-clock budget, stop before generating
@@ -156,6 +161,7 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
             url: publishedUrl,
           })
 
+          publishedPaths.push(publishedUrl)
           published++; budget--
           continue
         }
@@ -196,6 +202,7 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
         url: publishedUrl,
       })
 
+      publishedPaths.push(publishedUrl)
       published++; budget--
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -203,6 +210,9 @@ export async function publishApproved(db: SupabaseClient, brain: BrainConfig): P
       blocked++
     }
   }
+
+  // One IndexNow ping for everything published this run (instant recrawl signal).
+  if (publishedPaths.length) await pingIndexNow(publishedPaths)
 
   return { attempted: queue.length, published, blocked, cap_reached: budget <= 0 }
 }
