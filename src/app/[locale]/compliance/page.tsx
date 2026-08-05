@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
 import { ShieldCheck, ShieldX, AlertTriangle, CheckCircle, XCircle, Loader2, Plus, X, ScanLine, Sparkles } from 'lucide-react'
 import type { ScanResult } from './SmartScanner'
+import OrderLabelCTA from './OrderLabelCTA'
 
 // Lazy-loaded so the ~8 MB OpenCV.js pipeline never touches the initial page bundle
 const SmartScanner = dynamic(() => import('./SmartScanner'), { ssr: false })
@@ -535,6 +536,9 @@ export default function CompliancePage() {
                     </div>
                   </div>
                 )}
+
+                {/* Bridge to fulfilment: order a compliant label (dropship via Art for Printing) */}
+                <OrderLabelCTA isAr={isAr} productName={productName} verdict={result.verdict} />
               </div>
             )}
           </div>
