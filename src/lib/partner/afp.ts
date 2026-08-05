@@ -12,7 +12,16 @@
  */
 import crypto from 'node:crypto'
 
-const AFP_URL = () => (process.env.AFP_PARTNER_URL || '').replace(/\/$/, '')
+// Crate talks to exactly ONE partner (Art for Printing) at one stable origin, so
+// the URL has a safe hardcoded default. AFP_PARTNER_URL can still override it, but
+// a missing/truncated env value (e.g. someone saved just "https") falls back to the
+// default instead of breaking the integration. The SECRET is never defaulted —
+// auth must come from env.
+const DEFAULT_AFP_URL = 'https://www.artforprinting.ae'
+const AFP_URL = () => {
+  const raw = (process.env.AFP_PARTNER_URL || '').trim().replace(/\/+$/, '')
+  return /^https?:\/\/[^/]+/i.test(raw) ? raw : DEFAULT_AFP_URL
+}
 const SECRET = () => process.env.PARTNER_SHARED_SECRET || ''
 
 export function afpConfigured(): boolean {
