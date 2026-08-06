@@ -8,6 +8,36 @@ type Partner = Record<string, any>
 interface Order { id: string; created_at: string; afp_ref: string; product_slug: string | null; quantity: number; buyer_name: string | null; buyer_email: string | null; afp_total_aed: number; commission_aed: number; status: string; compliance_product: string | null }
 interface Payload { partner: Partner; orders: Order[]; summary: { count: number; total_aed: number; commission_aed: number; byStatus: Record<string, number> } | null }
 
+// Module-level so their identity is STABLE across renders. (Defining these inside
+// the page recreated them every keystroke → React remounted each <input> and focus
+// was lost after every character.)
+const INP = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-400 transition-colors'
+function Field({ label, value, onChange, type = 'text', dir }: { label: string; value: any; onChange: (v: string) => void; type?: string; dir?: 'rtl' | 'ltr' }) {
+  return (
+    <div className="space-y-1">
+      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block">{label}</label>
+      <input type={type} value={value ?? ''} onChange={e => onChange(e.target.value)} className={INP} dir={dir} />
+    </div>
+  )
+}
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+      <h3 className="font-bold text-slate-700 text-sm">{title}</h3>{children}
+    </div>
+  )
+}
+function Toggle({ on, onClick, icon, label }: { on: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+  return (
+    <label className="flex items-center gap-2 cursor-pointer select-none" onClick={onClick}>
+      <span className={`w-10 h-5 rounded-full transition-colors relative ${on ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${on ? 'start-5' : 'start-0.5'}`} />
+      </span>
+      <span className="text-sm font-semibold text-slate-700 inline-flex items-center gap-1">{icon}{label}</span>
+    </label>
+  )
+}
+
 export default function PartnerDetailPage() {
   const isAr = !usePathname()?.startsWith('/en')
   const locale = isAr ? 'ar' : 'en'
@@ -65,12 +95,12 @@ export default function PartnerDetailPage() {
     fulfillment: isAr ? 'شريك تنفيذ (دروبشيب)' : 'Fulfillment partner (dropship)',
     published: isAr ? 'نشر الصفحة العامة' : 'Publish public page',
     account: isAr ? 'بريد حساب الدخول' : 'Account login email',
-    soon: isAr ? 'قريباً' : 'soon',
     orders: isAr ? 'طلبات الدروبشيب' : 'Dropship orders', refresh: isAr ? 'تحديث الحالات من AFP' : 'Refresh statuses from AFP',
     count: isAr ? 'الطلبات' : 'Orders', value: isAr ? 'إجمالي القيمة' : 'Total value', comm: isAr ? 'عمولتك' : 'Your commission',
     none: isAr ? 'لا طلبات بعد' : 'No orders yet',
     ref: isAr ? 'المرجع' : 'Ref', buyer: isAr ? 'المشتري' : 'Buyer', product: isAr ? 'المنتج' : 'Product',
     qty: isAr ? 'كمية' : 'Qty', total: isAr ? 'الإجمالي' : 'Total', cut: isAr ? 'عمولتك' : 'Commission', st: isAr ? 'الحالة' : 'Status', date: isAr ? 'التاريخ' : 'Date',
+    viewPublic: isAr ? 'عرض الصفحة العامة' : 'View public page',
     aed: isAr ? 'د.إ' : 'AED',
   }
   const STATUS: Record<string, { label: string; cls: string }> = {
@@ -87,19 +117,6 @@ export default function PartnerDetailPage() {
   if (err && !d) return <div className="p-10 text-center text-red-500">{err}</div>
   if (!d) return <div className="p-20 flex justify-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin" /></div>
 
-  const inp = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-400 transition-colors'
-  const F = ({ label, k, type = 'text', dir }: { label: string; k: string; type?: string; dir?: string }) => (
-    <div className="space-y-1">
-      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block">{label}</label>
-      <input type={type} value={form[k] ?? ''} onChange={e => upd(k, e.target.value)} className={inp} dir={dir as any} />
-    </div>
-  )
-  const Card = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
-      <h3 className="font-bold text-slate-700 text-sm">{title}</h3>{children}
-    </div>
-  )
-
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-5" dir={isAr ? 'rtl' : 'ltr'}>
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -111,31 +128,54 @@ export default function PartnerDetailPage() {
             {d.partner.is_fulfillment && <Truck className="w-5 h-5 text-orange-500" />}{d.partner.name_en}
           </h1>
         </div>
-        <button onClick={save} disabled={saving}
-          className="inline-flex items-center gap-2 rounded-xl bg-orange-500 text-white text-sm font-semibold px-5 py-2.5 hover:bg-orange-600 disabled:opacity-60 shadow-sm shadow-orange-500/30">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}{saved ? T.saved : T.save}
-        </button>
+        <div className="flex items-center gap-2">
+          {d.partner.public_published && d.partner.slug && (
+            <a href={`/${locale}/partners/${d.partner.slug}`} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 text-sm px-4 py-2.5 text-slate-600 hover:bg-slate-50">
+              <Globe className="w-4 h-4" />{T.viewPublic}
+            </a>
+          )}
+          <button onClick={save} disabled={saving}
+            className="inline-flex items-center gap-2 rounded-xl bg-orange-500 text-white text-sm font-semibold px-5 py-2.5 hover:bg-orange-600 disabled:opacity-60 shadow-sm shadow-orange-500/30">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}{saved ? T.saved : T.save}
+          </button>
+        </div>
       </div>
       {err && <p className="text-sm text-red-500">{err}</p>}
 
       <div className="grid lg:grid-cols-2 gap-5">
         <Card title={T.identity}>
-          <div className="grid grid-cols-2 gap-3"><F label={T.nameEn} k="name_en" /><F label={T.nameAr} k="name_ar" dir="rtl" /></div>
-          <F label={T.slug} k="slug" dir="ltr" />
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={T.nameEn} value={form.name_en} onChange={v => upd('name_en', v)} />
+            <Field label={T.nameAr} value={form.name_ar} onChange={v => upd('name_ar', v)} dir="rtl" />
+          </div>
+          <Field label={T.slug} value={form.slug} onChange={v => upd('slug', v)} dir="ltr" />
         </Card>
         <Card title={T.legal}>
-          <div className="grid grid-cols-2 gap-3"><F label={T.licNo} k="trade_license_no" dir="ltr" /><F label={T.licType} k="trade_license_type" /></div>
-          <div className="grid grid-cols-2 gap-3"><F label={T.licExp} k="trade_license_expiry" type="date" /><F label={T.trn} k="trn" dir="ltr" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={T.licNo} value={form.trade_license_no} onChange={v => upd('trade_license_no', v)} dir="ltr" />
+            <Field label={T.licType} value={form.trade_license_type} onChange={v => upd('trade_license_type', v)} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={T.licExp} value={form.trade_license_expiry} onChange={v => upd('trade_license_expiry', v)} type="date" />
+            <Field label={T.trn} value={form.trn} onChange={v => upd('trn', v)} dir="ltr" />
+          </div>
         </Card>
         <Card title={T.contact}>
-          <div className="grid grid-cols-2 gap-3"><F label={T.phone} k="phone" dir="ltr" /><F label={T.email} k="email" dir="ltr" /></div>
-          <div className="grid grid-cols-2 gap-3"><F label={T.website} k="website" dir="ltr" /><F label={T.emirate} k="emirate" /></div>
-          <F label={T.address} k="address" />
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={T.phone} value={form.phone} onChange={v => upd('phone', v)} dir="ltr" />
+            <Field label={T.email} value={form.email} onChange={v => upd('email', v)} dir="ltr" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={T.website} value={form.website} onChange={v => upd('website', v)} dir="ltr" />
+            <Field label={T.emirate} value={form.emirate} onChange={v => upd('emirate', v)} />
+          </div>
+          <Field label={T.address} value={form.address} onChange={v => upd('address', v)} />
         </Card>
         <Card title={T.offering}>
-          <F label={T.services} k="services" />
-          <F label={T.materials} k="materials" />
-          <F label={T.desc} k="description" />
+          <Field label={T.services} value={form.services} onChange={v => upd('services', v)} />
+          <Field label={T.materials} value={form.materials} onChange={v => upd('materials', v)} />
+          <Field label={T.desc} value={form.description} onChange={v => upd('description', v)} />
         </Card>
       </div>
 
@@ -143,25 +183,24 @@ export default function PartnerDetailPage() {
         <div className="grid sm:grid-cols-3 gap-3">
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block">{T.status}</label>
-            <select value={form.status ?? 'active'} onChange={e => upd('status', e.target.value)} className={inp}>
+            <select value={form.status ?? 'active'} onChange={e => upd('status', e.target.value)} className={INP}>
               <option value="active">{isAr ? 'نشط' : 'Active'}</option>
               <option value="pending">{isAr ? 'قيد المراجعة' : 'Pending'}</option>
               <option value="paused">{isAr ? 'موقوف' : 'Paused'}</option>
             </select>
           </div>
-          <F label={T.commission} k="commission_pct" type="number" />
+          <Field label={T.commission} value={form.commission_pct} onChange={v => upd('commission_pct', v)} type="number" />
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block flex items-center gap-1"><KeyRound className="w-3 h-3" />{T.account} <span className="text-slate-300">({T.soon})</span></label>
-            <input value={form.account_email ?? ''} onChange={e => upd('account_email', e.target.value)} className={inp} dir="ltr" />
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block flex items-center gap-1"><KeyRound className="w-3 h-3" />{T.account}</label>
+            <input value={form.account_email ?? ''} onChange={e => upd('account_email', e.target.value)} className={INP} dir="ltr" />
           </div>
         </div>
         <div className="flex flex-wrap gap-5 pt-1">
           <Toggle on={!!form.is_fulfillment} onClick={() => upd('is_fulfillment', !form.is_fulfillment)} icon={<Truck className="w-3.5 h-3.5" />} label={T.fulfillment} />
-          <Toggle on={!!form.public_published} onClick={() => upd('public_published', !form.public_published)} icon={<Globe className="w-3.5 h-3.5" />} label={`${T.published} (${T.soon})`} />
+          <Toggle on={!!form.public_published} onClick={() => upd('public_published', !form.public_published)} icon={<Globe className="w-3.5 h-3.5" />} label={T.published} />
         </div>
       </Card>
 
-      {/* Dropship orders — only for fulfillment partners */}
       {d.partner.is_fulfillment && (
         <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -214,16 +253,5 @@ export default function PartnerDetailPage() {
         </div>
       )}
     </div>
-  )
-}
-
-function Toggle({ on, onClick, icon, label }: { on: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
-  return (
-    <label className="flex items-center gap-2 cursor-pointer select-none" onClick={onClick}>
-      <span className={`w-10 h-5 rounded-full transition-colors relative ${on ? 'bg-emerald-500' : 'bg-slate-200'}`}>
-        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${on ? 'start-5' : 'start-0.5'}`} />
-      </span>
-      <span className="text-sm font-semibold text-slate-700 inline-flex items-center gap-1">{icon}{label}</span>
-    </label>
   )
 }
