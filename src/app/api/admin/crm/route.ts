@@ -8,6 +8,7 @@
  */
 import { NextResponse } from 'next/server'
 import { adminClient } from '@/lib/supabase/admin'
+import { assessInboundRisk, htmlToText } from '@/lib/security/inbound-risk'
 
 const SOURCES = ['self_claimed', 'admin_import', 'places_api', 'rfq_requester', 'provider_profile']
 const STATUSES = ['pending', 'verified', 'rejected']
@@ -63,13 +64,29 @@ export async function GET() {
     } catch { return [] }
   })()
 
-  // Inbound supplier replies (empty [] if the table isn't set up yet).
+  // Inbound supplier replies (empty [] if the table isn't set up yet). We surface a
+  // PLAIN-TEXT preview + a phishing-risk assessment per message so the owner can
+  // read the details safely (no HTML is ever sent to the browser).
   const inbound = await (async () => {
     try {
       const { data } = await db.from('inbound_emails')
-        .select('from_email, subject, created_at, providers(name_en, slug)')
+        .select('id, from_email, to_email, subject, body_text, body_html, created_at, providers(name_en, slug)')
         .order('created_at', { ascending: false }).limit(15)
-      return data ?? []
+      return (data ?? []).map((m: any) => {
+        const text = (m.body_text && String(m.body_text).trim())
+          ? String(m.body_text)
+          : (m.body_html ? htmlToText(String(m.body_html)) : '')
+        return {
+          id: m.id ?? null,
+          from_email: m.from_email ?? null,
+          to_email: m.to_email ?? null,
+          subject: m.subject ?? null,
+          created_at: m.created_at,
+          providers: m.providers ?? null,
+          body_preview: text.slice(0, 2000),
+          risk: assessInboundRisk({ from_email: m.from_email, subject: m.subject, body: text }),
+        }
+      })
     } catch { return [] }
   })()
 

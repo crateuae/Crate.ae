@@ -1,20 +1,25 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { Users, ShieldCheck, MailCheck, Ban, Activity, Loader2, ArrowUpRight, Inbox } from 'lucide-react'
+import { Users, ShieldCheck, MailCheck, Ban, Activity, Loader2, ArrowUpRight, Inbox, AlertTriangle, ShieldAlert, ChevronDown } from 'lucide-react'
 
 interface Crm {
   contacts: { total: number; consented: number; marketable: number; bySource: Record<string, number>; byStatus: Record<string, number> }
   suppressions: number
   recent: { email: string; source: string; status: string; consent: boolean; created_at: string; providers: { name_en: string | null; slug: string | null } | null }[]
   topProviders: { name_en: string | null; slug: string | null; views_count: number | null; rfq_received_count: number | null; emails_count: number | null }[]
-  inbound?: { from_email: string | null; subject: string | null; created_at: string; providers: { name_en: string | null; slug: string | null } | null }[]
+  inbound?: {
+    id: string | null; from_email: string | null; to_email: string | null; subject: string | null
+    created_at: string; providers: { name_en: string | null; slug: string | null } | null
+    body_preview: string; risk: { level: 'high' | 'medium' | 'low'; reasons: string[] }
+  }[]
 }
 
 export default function CrmOverviewPage() {
   const isAr = !usePathname()?.startsWith('/en')
   const [d, setD] = useState<Crm | null>(null)
   const [err, setErr] = useState('')
+  const [openMail, setOpenMail] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/crm', { cache: 'no-store' })
@@ -49,6 +54,22 @@ export default function CrmOverviewPage() {
     ? { pending: 'قيد المراجعة', verified: 'متحقّق', rejected: 'مرفوض' }
     : { pending: 'Pending', verified: 'Verified', rejected: 'Rejected' }
   const STATUS_COLOR: Record<string, string> = { pending: 'bg-amber-100 text-amber-700', verified: 'bg-emerald-100 text-emerald-700', rejected: 'bg-red-100 text-red-600' }
+  const RISK: Record<string, { badge: string; dot: string; label: string }> = {
+    high:   { badge: 'bg-red-100 text-red-700',        dot: 'bg-red-500',     label: isAr ? 'مشبوه' : 'Suspicious' },
+    medium: { badge: 'bg-amber-100 text-amber-700',    dot: 'bg-amber-500',   label: isAr ? 'انتبه' : 'Caution' },
+    low:    { badge: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-400', label: isAr ? 'يبدو سليماً' : 'Looks clean' },
+  }
+  const REASON: Record<string, string> = isAr ? {
+    risky_tld: 'نطاق TLD مشبوه', unusual_domain: 'اسم نطاق غير معتاد', lure_salary: 'طُعم رواتب',
+    lure_invoice: 'طُعم فواتير/دفع', lure_verify: 'طلب تحقّق/تحديث بيانات', lure_credentials: 'يذكر كلمة مرور/دخول',
+    lure_urgency: 'إلحاح/تهديد', lure_money: 'تحويل مالي/بطاقات', lure_click: 'حثّ على النقر/فتح مرفق',
+    ip_url: 'رابط بعنوان IP', short_url: 'رابط مختصر', brand_spoof: 'يستخدم اسم Crate من نطاق خارجي',
+  } : {
+    risky_tld: 'Suspicious TLD', unusual_domain: 'Unusual domain', lure_salary: 'Salary bait',
+    lure_invoice: 'Invoice/payment bait', lure_verify: 'Asks to verify/update details', lure_credentials: 'Mentions password/login',
+    lure_urgency: 'Urgency/threat', lure_money: 'Money transfer/gift cards', lure_click: 'Pushes click/open attachment',
+    ip_url: 'Raw IP link', short_url: 'Shortened link', brand_spoof: 'Uses "Crate" from external domain',
+  }
 
   if (err) return <div className="p-10 text-center text-red-500">{err}</div>
   if (!d) return <div className="p-20 flex justify-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin" /></div>
@@ -138,18 +159,48 @@ export default function CrmOverviewPage() {
         <h3 className="font-bold text-slate-700 text-sm mb-1 flex items-center gap-2"><Inbox className="w-4 h-4 text-orange-500" />{T.inbound}</h3>
         <p className="text-[11px] text-slate-400 mb-3">{T.inboundHint}</p>
         {!d.inbound?.length ? <p className="text-xs text-slate-400">{T.none}</p> : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <tbody>
-                {d.inbound.map((m, i) => (
-                  <tr key={i} className="border-t border-slate-50 first:border-0">
-                    <td className="py-2 text-slate-700 font-semibold truncate max-w-[180px]">{m.from_email ?? '—'}</td>
-                    <td className="py-2 text-slate-500 truncate max-w-[280px]">{m.subject ?? '—'}</td>
-                    <td className="py-2 text-slate-400 truncate max-w-[140px]">{m.providers?.name_en ?? <span className="italic">{T.standalone}</span>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-1.5">
+            {d.inbound.map((m, i) => {
+              const key = m.id ?? String(i)
+              const r = RISK[m.risk?.level ?? 'low'] ?? RISK.low
+              const open = openMail === key
+              return (
+                <div key={key} className="border border-slate-100 rounded-xl overflow-hidden">
+                  <button onClick={() => setOpenMail(open ? null : key)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-start hover:bg-slate-50 transition-colors">
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${r.dot}`} title={r.label} />
+                    <span className="text-xs font-semibold text-slate-700 truncate max-w-[150px]">{m.from_email ?? '—'}</span>
+                    <span className="text-xs text-slate-500 truncate flex-1">{m.subject ?? '—'}</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${r.badge}`}>{r.label}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-300 transition-transform ${open ? 'rotate-180' : ''}`} />
+                  </button>
+                  {open && (
+                    <div className="px-3 pb-3 pt-1 border-t border-slate-100 bg-slate-50/50">
+                      {m.risk?.level === 'high' && (
+                        <div className="flex items-start gap-2 bg-red-50 border border-red-100 text-red-700 rounded-lg px-3 py-2 mb-2 text-[11px]">
+                          <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                          <span>{isAr ? 'مؤشّرات تصيّد — لا تفتح أي مرفق أو رابط، ولا تردّ.' : 'Phishing signals — do not open attachments/links, and do not reply.'}</span>
+                        </div>
+                      )}
+                      {!!m.risk?.reasons?.length && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {m.risk.reasons.map(rk => (
+                            <span key={rk} className="inline-flex items-center gap-1 text-[10px] bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5">
+                              <AlertTriangle className="w-2.5 h-2.5 text-amber-500" />{REASON[rk] ?? rk}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="text-[10px] text-slate-400 mb-1">
+                        {m.from_email}{m.to_email ? ` → ${m.to_email}` : ''} · {new Date(m.created_at).toLocaleString(isAr ? 'ar-AE' : 'en-AE')}
+                        {m.providers?.name_en ? ` · ${m.providers.name_en}` : ''}
+                      </div>
+                      <pre className="text-[11px] text-slate-600 whitespace-pre-wrap break-words font-sans max-h-64 overflow-y-auto m-0">{m.body_preview || (isAr ? '(لا نص)' : '(no text)')}</pre>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
