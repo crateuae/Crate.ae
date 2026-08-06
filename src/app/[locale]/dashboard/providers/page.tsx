@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, Edit2, Trash2, X, Save, RefreshCw, Search, CheckCircle, XCircle, Eye, Inbox, Send, Mail } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Plus, Edit2, Trash2, X, Save, RefreshCw, Search, CheckCircle, XCircle, Eye, Inbox, Send, Mail, Handshake } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -326,6 +327,10 @@ interface Stats { total: number; active: number; verified: number; traders: numb
 
 export default function ProvidersAdminPage() {
   const [isAr] = useState(true)
+  const router = useRouter()
+  const pathname = usePathname()
+  const locale = pathname?.split('/')[1] || 'ar'
+  const [converting, setConverting] = useState<string | null>(null)
   const [providers, setProviders]   = useState<Provider[]>([])
   const [loading, setLoading]       = useState(true)
   const [search, setSearch]         = useState('')
@@ -391,6 +396,19 @@ export default function ProvidersAdminPage() {
   async function remove(id: string) { await apiCall('DELETE', { id }); setDeleting(null); await load() }
   async function toggleActive(p: Provider)   { await apiCall('PATCH', { id: p.id, is_active: !p.is_active }); await load() }
   async function toggleVerified(p: Provider) { await apiCall('PATCH', { id: p.id, is_verified: !p.is_verified }); await load() }
+  // ONE-WAY promotion: a directory provider becomes a curated partner (idempotent).
+  async function convertToPartner(p: Provider) {
+    if (!p.id) return
+    setConverting(p.id)
+    try {
+      const res = await fetch('/api/admin/partners', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'convert', provider_id: p.id }),
+      })
+      const j = await res.json()
+      if (j.id) router.push(`/${locale}/dashboard/partners/${j.id}`)
+    } finally { setConverting(null) }
+  }
 
   // Server already filters — render rows as-is.
   const filtered = providers
@@ -535,6 +553,11 @@ export default function ProvidersAdminPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-1">
+                        <button onClick={() => convertToPartner(p)} disabled={converting === p.id}
+                          title={isAr ? 'تحويل إلى شريك' : 'Convert to partner'}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 transition-colors disabled:opacity-50">
+                          {converting === p.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin"/> : <Handshake className="w-3.5 h-3.5"/>}
+                        </button>
                         <button onClick={() => setEditing(p)}
                           className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-orange-50 text-slate-400 hover:text-orange-500 transition-colors">
                           <Edit2 className="w-3.5 h-3.5"/>
