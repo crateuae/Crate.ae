@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Boxes, FolderTree, Package, ShieldCheck, LayoutDashboard, ArrowRight, LogOut, Store, LineChart, Activity, FileText, Megaphone, Telescope, UserCheck, Network } from 'lucide-react'
+import { Boxes, FolderTree, Package, ShieldCheck, LayoutDashboard, ArrowRight, LogOut, Store, LineChart, Activity, FileText, Megaphone, Telescope, UserCheck, Network, Handshake } from 'lucide-react'
 
 const SIDEBAR_ITEMS = [
   { href: '/dashboard', icon: LayoutDashboard, label_ar: 'نظرة عامة', label_en: 'Overview', exact: true },
@@ -11,6 +11,7 @@ const SIDEBAR_ITEMS = [
   { href: '/dashboard/campaigns', icon: Megaphone, label_ar: 'الحملات', label_en: 'Campaigns' },
   { href: '/dashboard/contacts', icon: UserCheck, label_ar: 'جهات الاتصال', label_en: 'Contacts' },
   { href: '/dashboard/providers', icon: Store, label_ar: 'الموردون', label_en: 'Providers' },
+  { href: '/dashboard/partners', icon: Handshake, label_ar: 'الشركاء والتنفيذ', label_en: 'Partners & Fulfillment' },
   { href: '/dashboard/products', icon: Boxes, label_ar: 'المنتجات', label_en: 'Products' },
   { href: '/dashboard/products-categories', icon: FolderTree, label_ar: 'تصنيفات المنتجات', label_en: 'Product Categories' },
   { href: '/dashboard/discovery', icon: Telescope, label_ar: 'اكتشاف الفرص', label_en: 'Discovery' },
