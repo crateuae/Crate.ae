@@ -9,7 +9,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
-import { extractLabelFromImage } from '@/lib/ai/vision'
+import { extractLabelFromImage, type LabelExtraction } from '@/lib/ai/vision'
+import { extractLabelViaFreeOCR } from '@/lib/ai/ocr-free'
 import { checkComplianceDeterministic } from '@/lib/compliance/engine'
 
 export const maxDuration = 60
@@ -33,8 +34,12 @@ function rateLimited(ip: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ error: 'vision not configured' }, { status: 503 })
+  // The scanner can run on Claude Vision (best), a FREE OCR fallback (OCR.space,
+  // zero Anthropic credit), or both. Configured if either provider has a key.
+  const hasClaude = !!process.env.ANTHROPIC_API_KEY && process.env.SCAN_FREE_ONLY !== '1'
+  const hasFree = !!process.env.OCRSPACE_API_KEY
+  if (!hasClaude && !hasFree) {
+    return NextResponse.json({ error: 'scanner not configured' }, { status: 503 })
   }
 
   const ip = (req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()) || req.headers.get('x-real-ip') || 'unknown'
@@ -52,13 +57,25 @@ export async function POST(req: NextRequest) {
   const base64 = m[3]
   if (base64.length > MAX_B64) return NextResponse.json({ error: 'image too large — capture a smaller/compressed frame' }, { status: 413 })
 
-  // 1. Vision OCR + extraction — isolated so an AI/credit failure is distinguishable
-  //    from a downstream engine/DB failure (both used to collapse into one 500).
-  let extracted
-  try {
-    extracted = await extractLabelFromImage(base64, mediaType)
-  } catch (e: any) {
-    console.error('[scan] vision error:', e)
+  // 1. OCR + extraction — Claude Vision first (best structured read), falling back
+  //    to FREE OCR (OCR.space) on ANY Claude failure so a zero-credit Anthropic
+  //    account still scans. SCAN_FREE_ONLY=1 skips Claude entirely (never touches
+  //    credit). stage/cause distinguishes an AI/service outage from a bad image.
+  let extracted: LabelExtraction | undefined
+  let provider = ''
+  let visErr: any = null
+
+  if (hasClaude) {
+    try { extracted = await extractLabelFromImage(base64, mediaType); provider = 'claude' }
+    catch (e) { visErr = e; console.error('[scan] vision error:', e) }
+  }
+  if (!extracted && hasFree) {
+    try { extracted = await extractLabelViaFreeOCR(base64, mediaType); provider = 'ocrspace' }
+    catch (e) { console.error('[scan] free OCR error:', e); if (!visErr) visErr = e }
+  }
+
+  if (!extracted) {
+    const e: any = visErr || {}
     const status = e?.status ?? e?.response?.status
     const msg = String(e?.error?.error?.message || e?.error?.message || e?.message || '')
     const isCredit = /credit|balance|billing|quota|insufficient|too low/i.test(msg)
@@ -70,10 +87,8 @@ export async function POST(req: NextRequest) {
       : (status >= 500) ? 'ai_upstream'
       : isCredit ? 'ai_credit'
       : 'ai_failed'
-    // Distinct user-facing message when the AI service itself is down (credit/auth/
-    // upstream) vs a genuinely unreadable image — don't tell a user to retake a
-    // photo when the problem is our API key. `detail` (the raw provider message) is
-    // deliberately NOT returned to the public.
+    // Service-down (credit/auth/upstream) vs a genuinely unreadable image — don't
+    // tell a user to retake a photo when the real problem is our API key/credit.
     const serviceDown = cause !== 'ai_request'
     return NextResponse.json(
       {
@@ -108,7 +123,7 @@ export async function POST(req: NextRequest) {
       missing_count: compliance.missing_count,
     }).then(({ error }) => { if (error) console.error('[scan] history:', error.message) })
 
-    return NextResponse.json({ ok: true, extracted, compliance })
+    return NextResponse.json({ ok: true, extracted, compliance, provider })
   } catch (e) {
     console.error('[scan] engine error:', e)
     return NextResponse.json({ error: 'scan engine error', stage: 'engine' }, { status: 500 })
