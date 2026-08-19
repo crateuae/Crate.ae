@@ -60,15 +60,18 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     console.error('[scan] vision error:', e)
     const status = e?.status ?? e?.response?.status
+    const msg = String(e?.error?.error?.message || e?.error?.message || e?.message || '')
+    const isCredit = /credit|balance|billing|quota|insufficient|too low/i.test(msg)
     const cause = status === 401 ? 'ai_auth'
       : status === 403 ? 'ai_forbidden'
       : status === 429 ? 'ai_rate_limited'
+      : (status === 400 && isCredit) ? 'ai_credit'
       : status === 400 ? 'ai_request'
       : (status >= 500) ? 'ai_upstream'
-      : /credit|balance|billing/i.test(String(e?.message || '')) ? 'ai_credit'
+      : isCredit ? 'ai_credit'
       : 'ai_failed'
     return NextResponse.json(
-      { error: 'could not read the label — try a clearer, well-lit photo', stage: 'vision', cause },
+      { error: 'could not read the label — try a clearer, well-lit photo', stage: 'vision', cause, detail: msg.slice(0, 160) },
       { status: 502 },
     )
   }
