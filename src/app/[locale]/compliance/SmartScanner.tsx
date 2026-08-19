@@ -163,7 +163,12 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
         body: JSON.stringify({ image: processed }), signal: ctrl.signal,
       })
       const d = await res.json()
-      if (!res.ok) { setErr(d.error || (isAr ? 'خطأ' : 'error')); setStage('preview'); return }
+      if (!res.ok) {
+        setErr(d.service_down
+          ? (isAr ? 'خدمة قراءة البطاقة غير متاحة مؤقتاً — حاول لاحقاً' : 'Label reader temporarily unavailable — try again later')
+          : (d.error || (isAr ? 'خطأ' : 'error')))
+        setStage('preview'); return
+      }
       setResult(d); setStage('result')
     } catch (e) {
       const aborted = (e as Error)?.name === 'AbortError'

@@ -70,9 +70,19 @@ export async function POST(req: NextRequest) {
       : (status >= 500) ? 'ai_upstream'
       : isCredit ? 'ai_credit'
       : 'ai_failed'
+    // Distinct user-facing message when the AI service itself is down (credit/auth/
+    // upstream) vs a genuinely unreadable image — don't tell a user to retake a
+    // photo when the problem is our API key. `detail` (the raw provider message) is
+    // deliberately NOT returned to the public.
+    const serviceDown = cause !== 'ai_request'
     return NextResponse.json(
-      { error: 'could not read the label — try a clearer, well-lit photo', stage: 'vision', cause, detail: msg.slice(0, 160) },
-      { status: 502 },
+      {
+        error: serviceDown
+          ? 'label reader is temporarily unavailable — please try again later'
+          : 'could not read the label — try a clearer, well-lit photo',
+        stage: 'vision', cause, service_down: serviceDown,
+      },
+      { status: serviceDown ? 503 : 502 },
     )
   }
 
