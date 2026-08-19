@@ -40,7 +40,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${origin}/${locale}/auth/callback`,
+        redirectTo: `${origin}/${locale}/auth/callback${searchParams.get('next') ? `?next=${encodeURIComponent(searchParams.get('next')!)}` : ''}`,
         queryParams: { access_type: 'offline', prompt: 'consent' },
       },
     })
@@ -67,7 +67,7 @@ export default function LoginPage() {
         if (data.user.email === ADMIN_EMAIL) {
           router.push(`/${locale}/dashboard`)
         } else {
-          router.push(`/${locale}`)
+          router.push(searchParams.get('next') || `/${locale}`)
         }
       }
     } else {
