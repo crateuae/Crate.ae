@@ -17,19 +17,32 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   let orders: any[] = []
   let summary: { count: number; total_aed: number; commission_aed: number; byStatus: Record<string, number> } | null = null
+  let monthly: { month: string; count: number; total_aed: number; commission_aed: number }[] = []
 
   if (partner.is_fulfillment) {
     try {
       // AFP is the only fulfiller today, so its page shows all dropship orders.
       const { data } = await db.from('partner_orders').select('*')
-        .order('created_at', { ascending: false }).limit(200)
+        .order('created_at', { ascending: false }).limit(500)
       orders = data ?? []
       const sum = (k: string) => orders.reduce((s, o) => s + (Number(o[k]) || 0), 0)
       const byStatus: Record<string, number> = {}
       for (const o of orders) byStatus[o.status || 'pending'] = (byStatus[o.status || 'pending'] || 0) + 1
       summary = { count: orders.length, total_aed: round2(sum('afp_total_aed')), commission_aed: round2(sum('commission_aed')), byStatus }
-    } catch { orders = []; summary = { count: 0, total_aed: 0, commission_aed: 0, byStatus: {} } }
+
+      // Monthly settlement rollup (commission owed to Crate per calendar month).
+      const byMonth = new Map<string, { count: number; total: number; commission: number }>()
+      for (const o of orders) {
+        const month = String(o.created_at || '').slice(0, 7) || 'unknown' // YYYY-MM
+        const cur = byMonth.get(month) || { count: 0, total: 0, commission: 0 }
+        cur.count++; cur.total += Number(o.afp_total_aed) || 0; cur.commission += Number(o.commission_aed) || 0
+        byMonth.set(month, cur)
+      }
+      monthly = [...byMonth.entries()]
+        .map(([month, v]) => ({ month, count: v.count, total_aed: round2(v.total), commission_aed: round2(v.commission) }))
+        .sort((a, b) => b.month.localeCompare(a.month))
+    } catch { orders = []; summary = { count: 0, total_aed: 0, commission_aed: 0, byStatus: {} }; monthly = [] }
   }
 
-  return NextResponse.json({ partner, orders, summary })
+  return NextResponse.json({ partner, orders, summary, monthly })
 }

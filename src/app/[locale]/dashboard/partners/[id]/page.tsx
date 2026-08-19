@@ -6,7 +6,11 @@ import { ArrowLeft, Loader2, Save, Truck, RefreshCw, Coins, Package, ListChecks,
 
 type Partner = Record<string, any>
 interface Order { id: string; created_at: string; afp_ref: string; product_slug: string | null; quantity: number; buyer_name: string | null; buyer_email: string | null; afp_total_aed: number; commission_aed: number; status: string; compliance_product: string | null }
-interface Payload { partner: Partner; orders: Order[]; summary: { count: number; total_aed: number; commission_aed: number; byStatus: Record<string, number> } | null }
+interface Payload {
+  partner: Partner; orders: Order[]
+  summary: { count: number; total_aed: number; commission_aed: number; byStatus: Record<string, number> } | null
+  monthly?: { month: string; count: number; total_aed: number; commission_aed: number }[]
+}
 
 // Module-level so their identity is STABLE across renders. (Defining these inside
 // the page recreated them every keystroke → React remounted each <input> and focus
@@ -224,6 +228,33 @@ export default function PartnerDetailPage() {
               ))}
             </div>
           )}
+          {/* Monthly settlement rollup — commission owed to Crate per calendar month */}
+          {!!d.monthly?.length && (
+            <div className="border border-slate-100 rounded-xl overflow-hidden">
+              <div className="bg-slate-50 px-3 py-2 text-[11px] font-bold text-slate-500">{isAr ? 'التسوية الشهرية — العمولة المستحقّة لك' : 'Monthly settlement — commission owed to you'}</div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead><tr className="text-slate-400 text-[10px] uppercase">
+                    <th className="text-start px-3 py-1.5 font-bold">{isAr ? 'الشهر' : 'Month'}</th>
+                    <th className="text-center px-3 py-1.5 font-bold">{isAr ? 'طلبات' : 'Orders'}</th>
+                    <th className="text-end px-3 py-1.5 font-bold">{isAr ? 'الإجمالي' : 'Total'}</th>
+                    <th className="text-end px-3 py-1.5 font-bold">{isAr ? 'عمولتك' : 'Commission'}</th>
+                  </tr></thead>
+                  <tbody>
+                    {d.monthly.map(m => (
+                      <tr key={m.month} className="border-t border-slate-50">
+                        <td className="px-3 py-1.5 font-mono text-slate-700 whitespace-nowrap">{m.month}</td>
+                        <td className="px-3 py-1.5 text-center tabular-nums text-slate-500">{m.count}</td>
+                        <td className="px-3 py-1.5 text-end tabular-nums text-slate-600">{money(m.total_aed)}</td>
+                        <td className="px-3 py-1.5 text-end tabular-nums text-emerald-600 font-semibold">{money(m.commission_aed)} {T.aed}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {!d.orders.length ? <p className="text-sm text-slate-400 py-4 text-center">{T.none}</p> : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
