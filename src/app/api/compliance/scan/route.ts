@@ -52,11 +52,29 @@ export async function POST(req: NextRequest) {
   const base64 = m[3]
   if (base64.length > MAX_B64) return NextResponse.json({ error: 'image too large — capture a smaller/compressed frame' }, { status: 413 })
 
+  // 1. Vision OCR + extraction — isolated so an AI/credit failure is distinguishable
+  //    from a downstream engine/DB failure (both used to collapse into one 500).
+  let extracted
   try {
-    // 1. Vision OCR + extraction
-    const extracted = await extractLabelFromImage(base64, mediaType)
+    extracted = await extractLabelFromImage(base64, mediaType)
+  } catch (e: any) {
+    console.error('[scan] vision error:', e)
+    const status = e?.status ?? e?.response?.status
+    const cause = status === 401 ? 'ai_auth'
+      : status === 403 ? 'ai_forbidden'
+      : status === 429 ? 'ai_rate_limited'
+      : status === 400 ? 'ai_request'
+      : (status >= 500) ? 'ai_upstream'
+      : /credit|balance|billing/i.test(String(e?.message || '')) ? 'ai_credit'
+      : 'ai_failed'
+    return NextResponse.json(
+      { error: 'could not read the label — try a clearer, well-lit photo', stage: 'vision', cause },
+      { status: 502 },
+    )
+  }
 
-    // 2. Deterministic compliance verdict from the extracted data
+  // 2. Deterministic compliance verdict from the extracted data
+  try {
     const supabase = await createAdminClient()
     const compliance = await checkComplianceDeterministic(supabase, {
       product_class: extracted.product_class,
@@ -79,7 +97,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, extracted, compliance })
   } catch (e) {
-    console.error('[scan] error:', e)
-    return NextResponse.json({ error: 'could not read the label — try a clearer, well-lit photo' }, { status: 500 })
+    console.error('[scan] engine error:', e)
+    return NextResponse.json({ error: 'scan engine error', stage: 'engine' }, { status: 500 })
   }
 }
