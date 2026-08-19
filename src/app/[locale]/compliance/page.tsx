@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { ShieldCheck, ShieldX, AlertTriangle, CheckCircle, XCircle, Loader2, Plus, X, ScanLine, Sparkles } from 'lucide-react'
 import type { ScanResult } from './SmartScanner'
 import OrderLabelCTA from './OrderLabelCTA'
+import LabelGenerator from './LabelGenerator'
 
 // Lazy-loaded so the ~8 MB OpenCV.js pipeline never touches the initial page bundle
 const SmartScanner = dynamic(() => import('./SmartScanner'), { ssr: false })
@@ -536,6 +537,17 @@ export default function CompliancePage() {
                     </div>
                   </div>
                 )}
+
+                {/* Generate a print-ready compliant label from this product's data (free, no AI) */}
+                <LabelGenerator isAr={isAr} data={{
+                  product_name: productName,
+                  product_class: productClass,
+                  ingredients: ingredients.join('، '),
+                  has_sulfites: hasSulfites,
+                  net_content: labelText.match(/(\d+(?:\.\d+)?)\s?(ml|مل|l|لتر|g|جم|غم|kg|كجم)\b/i)?.[0] ?? null,
+                  country_of_origin: labelText.match(/(?:product of|بلد المنشأ|صنع في)[:\s]+([A-Za-z؀-ۿ ]{2,30})/i)?.[1]?.trim() ?? null,
+                  nutrition: { columns: cols, rows: tableRows.map(r => ({ label: r.ingredient, values: r.values })) },
+                }} />
 
                 {/* Bridge to fulfilment: order a compliant label (dropship via Art for Printing) */}
                 <OrderLabelCTA isAr={isAr} productName={productName} verdict={result.verdict} />
