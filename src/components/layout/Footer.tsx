@@ -50,6 +50,7 @@ export default function Footer({ locale = 'ar' }: { locale?: string }) {
 
           {/* Platform */}
           <FooterCol isAr={isAr} title={isAr ? 'المنصة' : 'Platform'}>
+            <FooterLink href={L('/search')}>{isAr ? 'بحث ذكي عن الموردين' : 'Smart Supplier Search'}</FooterLink>
             <FooterLink href={L('/market')}>{isAr ? 'فرص السوق' : 'Market Opportunities'}</FooterLink>
             <FooterLink href={L('/products')}>{isAr ? 'المنتجات' : 'Products'}</FooterLink>
             <FooterLink href={L('/providers')}>{isAr ? 'سجل الموردين' : 'Supplier Registry'}</FooterLink>
