@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import CertificatesClient from './CertificatesClient'
+import { pageAlternates } from '@/lib/seo/alternates'
 
 const FAQ = {
   en: [
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     description: isAr
       ? 'أداة مجانية تحدد شهادات المطابقة المطلوبة لمنتجك في الإمارات (ECAS، علامة الجودة EQM، حلال، عضوي، شهادة صحية) مع الرسوم الرسمية لوزارة الصناعة والمدد والجهة المصدرة.'
       : 'Free tool: which UAE conformity certificates your product needs (ECAS, Emirates Quality Mark, halal, organic, health certificate) with official MoIAT fees, timelines and issuing bodies.',
-    alternates: { canonical: `https://www.crate.ae/${locale}/tools/certificates-uae` },
+    alternates: pageAlternates(locale, '/tools/certificates-uae'),
   }
 }
 

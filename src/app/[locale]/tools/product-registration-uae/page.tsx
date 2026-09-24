@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import PortalRouterClient from './PortalRouterClient'
+import { pageAlternates } from '@/lib/seo/alternates'
 
 const FAQ = {
   en: [
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     description: isAr
       ? 'أداة مجانية تحدد الجهة والبوابة والرسوم الرسمية والمستندات ومدة التسجيل لمنتجك (أغذية، مكمّلات، تجميل، منظفات، أغذية حيوانات) بحسب الإمارة. نتيجة فورية وقائمة تحقق بالبريد.'
       : 'Free tool: the exact authority, portal, official fees, documents and timeline to register your product in the UAE (food, supplements, cosmetics, detergents, pet food) by emirate. Instant result + emailed checklist.',
-    alternates: { canonical: `https://www.crate.ae/${locale}/tools/product-registration-uae` },
+    alternates: pageAlternates(locale, '/tools/product-registration-uae'),
   }
 }
 

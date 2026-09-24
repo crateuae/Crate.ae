@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import LandedCostClient from './LandedCostClient'
+import { pageAlternates } from '@/lib/seo/alternates'
 
 const FAQ = {
   en: [
@@ -24,7 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     description: isAr
       ? 'ابحث عن رمز HS لمنتجات FMCG واحسب التكلفة الواصلة: CIF، الرسوم الجمركية 5%/0%، الضريبة الانتقائية 2026 بالشرائح الحجمية، ضريبة القيمة المضافة، التكاليف المحلية، وسعر البيع المقترح.'
       : 'Find the HS code for FMCG products and compute the landed cost: CIF, 5%/0% customs duty, 2026 volumetric excise, VAT, local costs and a suggested selling price.',
-    alternates: { canonical: `https://www.crate.ae/${locale}/tools/landed-cost-uae` },
+    alternates: pageAlternates(locale, '/tools/landed-cost-uae'),
   }
 }
 

@@ -43,7 +43,6 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     description: isAr
       ? 'منصة متكاملة تدير دورة الاستيراد كاملة — اكتشاف فرص السوق، فحص اشتراطات التسجيل، وتخطيط التوريد والتعبئة للسوق الإماراتي'
       : 'An all-in-one platform for the full import cycle — market opportunity discovery, registration compliance checks, and supply & packing planning for the UAE market',
-    alternates: { languages: { ar: '/ar', en: '/en', 'x-default': '/ar' } },
   }
 }
 

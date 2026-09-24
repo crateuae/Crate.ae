@@ -1,3 +1,5 @@
+import { pageAlternates } from '@/lib/seo/alternates'
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { SECTIONS } from '@/lib/sections'
@@ -62,6 +64,11 @@ async function getLiveData() {
 const fmt = (n: number) => n.toLocaleString('en-US')
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params
+  return { alternates: pageAlternates(locale, '') }
+}
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params

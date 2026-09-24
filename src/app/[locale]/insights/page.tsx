@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { ChevronLeft, Newspaper } from 'lucide-react'
+import { pageAlternates } from '@/lib/seo/alternates'
 
 export const revalidate = 1800
 
@@ -19,7 +20,7 @@ export async function generateMetadata(
     description: isAr
       ? 'تحليلات وفرص السوق للمنتجات الغذائية و FMCG في الإمارات.'
       : 'Market analysis and product opportunities for FMCG & food trade in the UAE.',
-    alternates: { canonical: `https://www.crate.ae/${locale}/insights` },
+    alternates: pageAlternates(locale, '/insights'),
   }
 }
 

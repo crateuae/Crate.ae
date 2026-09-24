@@ -40,7 +40,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...pair('/packaging/suppliers', TOOLS_LASTMOD, 0.8, 'weekly'),
     ...KINDS.flatMap(k => pair(`/packaging/suppliers?kind=${k.key}`, TOOLS_LASTMOD, 0.6, 'weekly')),
     ...pair('/guides/carton-specs', STATIC_LASTMOD, 0.6, 'monthly'),
-    ...pair('/rfq', STATIC_LASTMOD, 0.5, 'monthly'),
     // Free tools + generated import guides (reviewed 2026-09-24)
     ...pair('/tools/product-registration-uae', TOOLS_LASTMOD, 0.9, 'monthly'),
     ...pair('/tools/certificates-uae', TOOLS_LASTMOD, 0.9, 'monthly'),
