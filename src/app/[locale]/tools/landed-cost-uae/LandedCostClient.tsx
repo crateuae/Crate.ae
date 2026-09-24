@@ -1,5 +1,5 @@
 'use client'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Calculator, Printer, Search, AlertTriangle, BadgeCheck, Compass } from 'lucide-react'
 import { HS_FMCG, searchHs, type HsEntry, type Excise } from '@/lib/customs/hs-fmcg'
 import { computeLandedCost, sweetTier } from '@/lib/customs/landed-cost'
@@ -21,6 +21,13 @@ export default function LandedCostClient({ locale, faq }: { locale: 'ar' | 'en';
   const results = useMemo(() => searchHs(q), [q])
 
   const pick = (e: HsEntry) => { setHs(e); setExcise(e.excise ?? 'none'); setQ('') }
+
+  // Deep link from the import guides: ?hs=1006 preselects the heading (and its excise class).
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('hs')
+    const e = code ? HS_FMCG.find(x => x.code === code) : null
+    if (e) { setHs(e); setExcise(e.excise ?? 'none') }
+  }, [])
 
   const r = useMemo(() => computeLandedCost({
     goodsValue: num(f.goods), freight: num(f.freight), insurance: num(f.insurance), units: num(f.units),

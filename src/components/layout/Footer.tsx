@@ -68,6 +68,7 @@ export default function Footer({ locale = 'ar' }: { locale?: string }) {
             <FooterLink href={L('/tools/product-registration-uae')}>{isAr ? 'أين أسجّل منتجي؟' : 'Where to Register My Product'}</FooterLink>
             <FooterLink href={L('/tools/certificates-uae')}>{isAr ? 'هل أحتاج شهادة ECAS / EQM / حلال؟' : 'Do I need ECAS / EQM / Halal?'}</FooterLink>
             <FooterLink href={L('/tools/landed-cost-uae')}>{isAr ? 'رمز HS وحاسبة التكلفة الواصلة' : 'HS Code & Landed-Cost Calculator'}</FooterLink>
+            <FooterLink href={L('/import')}>{isAr ? 'أدلة استيراد المنتجات' : 'Product Import Guides'}</FooterLink>
             <FooterLink href={L('/tools/nutrition')}>{isAr ? 'حاسبة الحقائق الغذائية' : 'Nutrition Facts Calculator'}</FooterLink>
           </FooterCol>
 

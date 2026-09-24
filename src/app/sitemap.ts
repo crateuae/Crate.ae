@@ -1,7 +1,9 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { GUIDE_PRODUCTS, REVIEWED } from '@/lib/import-guides/products'
 
 const BASE = 'https://www.crate.ae'
+const TOOLS_LASTMOD = new Date(REVIEWED)
 
 // Stable lastmod for static pages — bump when a static page's content meaningfully changes.
 // (Using new Date() here would change every revalidate and train Google to distrust the sitemap.)
@@ -33,6 +35,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...pair('/packaging', STATIC_LASTMOD, 0.7, 'monthly'),
     ...pair('/guides/carton-specs', STATIC_LASTMOD, 0.6, 'monthly'),
     ...pair('/rfq', STATIC_LASTMOD, 0.5, 'monthly'),
+    // Free tools + generated import guides (reviewed 2026-09-24)
+    ...pair('/tools/product-registration-uae', TOOLS_LASTMOD, 0.9, 'monthly'),
+    ...pair('/tools/certificates-uae', TOOLS_LASTMOD, 0.9, 'monthly'),
+    ...pair('/tools/landed-cost-uae', TOOLS_LASTMOD, 0.9, 'monthly'),
+    ...pair('/tools/nutrition', TOOLS_LASTMOD, 0.6, 'monthly'),
+    ...pair('/search', TOOLS_LASTMOD, 0.5, 'weekly'),
+    ...pair('/import', TOOLS_LASTMOD, 0.9, 'monthly'),
+    ...GUIDE_PRODUCTS.flatMap(p => pair(`/import/${p.slug}`, TOOLS_LASTMOD, 0.8, 'monthly')),
   ]
 
   // Product pages — use the keyword slug (falls back to id only if slug missing).

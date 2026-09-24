@@ -17,7 +17,11 @@ const NAV_GROUPS = [
   {
     label_ar: 'أدوات الاستيراد', label_en: 'Import Tools', icon: ShieldCheck,
     items: [
-      { href: '/compliance', icon: ShieldCheck, label_ar: 'اشتراطات الاستيراد', label_en: 'Import Requirements' },
+      { href: '/compliance', icon: ShieldCheck, label_ar: 'فحص الملصق (بلدية دبي)', label_en: 'Label Pre-check (Dubai)' },
+      { href: '/tools/product-registration-uae', icon: FileText, label_ar: 'أين أسجّل منتجي؟', label_en: 'Where to Register' },
+      { href: '/tools/certificates-uae', icon: ShieldCheck, label_ar: 'ECAS / EQM / حلال', label_en: 'ECAS / EQM / Halal' },
+      { href: '/tools/landed-cost-uae', icon: BarChart2, label_ar: 'HS والتكلفة الواصلة', label_en: 'HS & Landed Cost' },
+      { href: '/import', icon: BookOpen, label_ar: 'أدلة الاستيراد', label_en: 'Import Guides' },
       { href: '/packaging',  icon: Package,     label_ar: 'إعادة التعبئة',      label_en: 'Repackaging' },
       { href: '/providers',  icon: Users,       label_ar: 'الموردون',           label_en: 'Suppliers' },
     ],
