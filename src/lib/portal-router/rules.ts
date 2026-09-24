@@ -101,7 +101,7 @@ const LOCAL_CONSUMER = (name: Bi): Step => ({
 })
 const EDE: Step = {
   authority: { en: 'Emirates Drug Establishment (EDE) — formerly MoHAP services', ar: 'مؤسسة الإمارات للدواء — خدمات وزارة الصحة سابقاً' },
-  portal: { en: 'EDE registration + supplement import permit', ar: 'تسجيل لدى مؤسسة الإمارات للدواء + إذن استيراد المكمّلات' },
+  portal: { en: 'EDE health-product registration', ar: 'تسجيل منتج صحي لدى مؤسسة الإمارات للدواء' },
   url: 'https://www.ede.gov.ae/',
   purpose: { en: 'Products with therapeutic/disease claims or pharmaceutical actives are regulated federally as health products, not consumer goods. EDE took over MoHAP drug & supplement services in late 2025; the supplement import permit is an EDE service.', ar: 'المنتجات التي تحمل ادعاءات علاجية/مرضية أو مواد فعّالة دوائية تُنظَّم اتحادياً كمنتجات صحية لا سلعاً استهلاكية. تولّت المؤسسة خدمات الأدوية والمكمّلات من وزارة الصحة أواخر 2025؛ وإذن استيراد المكمّلات خدمة لديها.' },
   fee: { en: 'Consultant-reported AED 2,000–6,000 per product (verify on EDE fee schedule)', ar: 'المنقول عن الاستشاريين 2,000–6,000 درهم للمنتج (تحقق من جدول رسوم المؤسسة)' },
