@@ -132,6 +132,12 @@ function GateModal({ isAr, locale, action, onClose, onSubmit }: { isAr: boolean;
           <input type="checkbox" checked={subscribe} onChange={e => setSubscribe(e.target.checked)} className="mt-0.5 accent-orange-500" />
           <span>{T.subscribe}</span>
         </label>
+        <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">
+          {isAr ? 'بمتابعتك توافق على ' : 'By continuing you agree to the '}
+          <a href={`/${locale}/privacy`} target="_blank" rel="noopener" className="text-orange-600 hover:underline">{isAr ? 'سياسة الخصوصية' : 'Privacy Policy'}</a>
+          {isAr ? ' و' : ' and '}
+          <a href={`/${locale}/terms`} target="_blank" rel="noopener" className="text-orange-600 hover:underline">{isAr ? 'الشروط والأحكام' : 'Terms'}</a>.
+        </p>
         <button type="submit" disabled={busy} className="w-full rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white text-sm py-2.5 flex items-center justify-center gap-2">
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}{T.go}
         </button>

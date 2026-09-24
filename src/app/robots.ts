@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 // Keep admin/dashboard/api/auth out of every index.
-const OFF_LIMITS = ['/api/', '/ar/dashboard/', '/en/dashboard/', '/ar/admin/', '/en/admin/', '/ar/login', '/en/login', '/ar/auth/', '/en/auth/']
+const OFF_LIMITS = ['/api/', '/ar/dashboard/', '/en/dashboard/', '/ar/admin/', '/en/admin/', '/ar/login', '/en/login', '/ar/auth/', '/en/auth/', '/ar/partner-portal', '/en/partner-portal']
 
 // AI answer-engine + training crawlers we WANT to be cited by (AEO). Listing them
 // explicitly (allowed, same off-limits) signals intent and avoids accidental blocks

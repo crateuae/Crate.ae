@@ -90,7 +90,7 @@ export default async function ImportGuidePage({ params }: { params: Promise<{ lo
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
-      { '@type': 'Article', headline: H.h1, inLanguage: locale, dateModified: REVIEWED, datePublished: REVIEWED, author: { '@type': 'Organization', name: 'Crate', url: 'https://www.crate.ae' }, publisher: { '@type': 'Organization', name: 'Crate', url: 'https://www.crate.ae' }, mainEntityOfPage: `https://www.crate.ae/${locale}/import/${slug}` },
+      { '@type': 'Article', headline: H.h1, inLanguage: locale, dateModified: REVIEWED, datePublished: REVIEWED, author: { '@type': 'Organization', name: 'Crate', url: 'https://www.crate.ae' }, publisher: { '@type': 'Organization', name: 'Crate', url: 'https://www.crate.ae' }, mainEntityOfPage: `https://www.crate.ae/${locale}/import/${slug}`, citation: g.route.sources.map(s => ({ '@type': 'CreativeWork', name: s.label, url: s.url })) },
       { '@type': 'BreadcrumbList', itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Crate', item: `https://www.crate.ae/${locale}` },
         { '@type': 'ListItem', position: 2, name: H.crumbTools, item: `https://www.crate.ae/${locale}/import` },

@@ -190,6 +190,10 @@ function ContactModal({ p, name, locale, isAr, sourcePage, onClose }: {
             <input type="email" value={form.contact_email} onChange={e => set('contact_email', e.target.value)}
               placeholder={isAr ? 'البريد الإلكتروني' : 'Email'} className={inp} />
 
+            <p className="text-[10px] text-gray-400 leading-relaxed">
+              {isAr ? 'بإرسال الطلب توافق على ' : 'By sending you agree to the '}
+              <a href={`/${locale}/privacy`} target="_blank" rel="noopener" className="text-indigo-600 hover:underline">{isAr ? 'سياسة الخصوصية' : 'Privacy Policy'}</a>.
+            </p>
             <button type="submit" disabled={submitting}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 disabled:opacity-60 transition-colors">
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}

@@ -254,6 +254,10 @@ function EmailCapture({ answers, locale, T }: { answers: Answers; locale: 'ar' |
             <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-0.5 accent-orange-500" />
             <span>{T.consent}</span>
           </label>
+          <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">
+            {locale === 'ar' ? 'بإرسالك هذا النموذج توافق على ' : 'By submitting you agree to the '}
+            <a href={`/${locale}/privacy`} target="_blank" rel="noopener" className="text-orange-600 hover:underline">{locale === 'ar' ? 'سياسة الخصوصية' : 'Privacy Policy'}</a>.
+          </p>
           <button type="submit" disabled={state === 'sending'} className="rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white text-sm px-5 py-2.5">
             {state === 'sending' ? T.sending : T.send}
           </button>

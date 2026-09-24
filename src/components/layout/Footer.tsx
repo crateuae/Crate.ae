@@ -81,6 +81,9 @@ export default function Footer({ locale = 'ar' }: { locale?: string }) {
             <Link href={L('/terms')} className="hover:text-orange-500 transition-colors">
               {isAr ? 'الشروط والأحكام' : 'Terms & Conditions'}
             </Link>
+            <Link href={L('/about')} className="hover:text-orange-500 transition-colors">
+              {isAr ? 'عن Crate والمنهجية' : 'About & Methodology'}
+            </Link>
             <a href="https://www.crate.ae" className="hover:text-orange-500 transition-colors inline-flex items-center gap-1.5">
               <Globe2 className="w-3 h-3" /> www.crate.ae
             </a>

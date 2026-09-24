@@ -111,6 +111,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               : 'The smart import and supply platform for the UAE market',
             address: { '@type': 'PostalAddress', addressCountry: 'AE' },
             areaServed: { '@type': 'Country', name: 'United Arab Emirates' },
+            contactPoint: { '@type': 'ContactPoint', contactType: 'customer support', email: 'uae@crate.ae', telephone: '+971543000415', availableLanguage: ['ar', 'en'], areaServed: 'AE' },
+            publishingPrinciples: `https://www.crate.ae/${isAr ? 'ar' : 'en'}/about#methodology`,
           },
           {
             '@type': 'WebSite',

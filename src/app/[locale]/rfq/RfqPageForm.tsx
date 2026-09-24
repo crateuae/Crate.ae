@@ -161,6 +161,13 @@ export default function RfqPageForm({ product, type, isAr, locale }: Props) {
           <div className="text-xs bg-rose-50 text-rose-600 border border-rose-100 rounded-xl px-4 py-2.5">{error}</div>
         )}
 
+        <p className="text-[11px] text-gray-400 leading-relaxed">
+          {isAr ? 'بإرسال الطلب توافق على ' : 'By sending this request you agree to the '}
+          <Link href={`/${locale}/privacy`} className="text-orange-600 hover:underline">{isAr ? 'سياسة الخصوصية' : 'Privacy Policy'}</Link>
+          {isAr ? ' و' : ' and '}
+          <Link href={`/${locale}/terms`} className="text-orange-600 hover:underline">{isAr ? 'الشروط والأحكام' : 'Terms'}</Link>.
+        </p>
+
         <button type="submit" disabled={submitting}
           className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold disabled:opacity-60 transition-all shadow-lg shadow-orange-500/20">
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}

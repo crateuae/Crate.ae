@@ -47,6 +47,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...pair('/tools/landed-cost-uae', TOOLS_LASTMOD, 0.9, 'monthly'),
     ...pair('/tools/nutrition', TOOLS_LASTMOD, 0.6, 'monthly'),
     ...pair('/search', TOOLS_LASTMOD, 0.5, 'weekly'),
+    ...pair('/about', TOOLS_LASTMOD, 0.7, 'monthly'),
+    ...pair('/privacy', TOOLS_LASTMOD, 0.3, 'yearly'),
+    ...pair('/terms', TOOLS_LASTMOD, 0.3, 'yearly'),
     ...pair('/import', TOOLS_LASTMOD, 0.9, 'monthly'),
     ...GUIDE_PRODUCTS.flatMap(p => pair(`/import/${p.slug}`, TOOLS_LASTMOD, 0.8, 'monthly')),
   ]

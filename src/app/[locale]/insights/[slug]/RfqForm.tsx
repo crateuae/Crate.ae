@@ -115,6 +115,10 @@ export default function RfqForm({ opportunityId, productName, productNameAr, sou
             rows={3} placeholder={T.notes}
             className="w-full rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none" />
 
+          <p className="text-[11px] text-gray-400 leading-relaxed">
+            {isAr ? 'بإرسال الطلب توافق على ' : 'By sending this request you agree to the '}
+            <a href={`/${locale}/privacy`} target="_blank" rel="noopener" className="text-orange-600 hover:underline">{isAr ? 'سياسة الخصوصية' : 'Privacy Policy'}</a>.
+          </p>
           <div className="flex gap-2 pt-1">
             <button type="submit" disabled={submitting}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 disabled:opacity-60 transition-colors">
