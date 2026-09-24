@@ -35,7 +35,7 @@ export default async function ImportHub({ params }: { params: Promise<{ locale: 
         {/* Tools of the Import section (from src/lib/sections.ts) */}
         <section className="mb-8">
           <h2 className="text-sm font-semibold text-gray-800 mb-2">{isAr ? 'أدوات الاستيراد والتسجيل' : 'Import & registration tools'}</h2>
-          <div className="grid sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {sectionOf('import').links.filter(l => l.href !== '/import').map(l => (
               <Link key={l.href} href={`/${locale}${l.href}`} className="bg-white border border-orange-100 hover:border-orange-300 rounded-xl px-4 py-3 transition-colors">
                 <div className="text-sm font-semibold text-gray-900">{t(l.label)}</div>
@@ -49,7 +49,7 @@ export default async function ImportHub({ params }: { params: Promise<{ locale: 
         {GROUPS.map(g => (
           <section key={g.key} className="mb-6">
             <h2 className="text-sm font-semibold text-gray-800 mb-2">{t(g.label)}</h2>
-            <div className="grid sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {GUIDE_PRODUCTS.filter(p => p.group === g.key).map(p => {
                 const hs = HS_FMCG.find(e => e.code === p.hs)!
                 return (

@@ -118,7 +118,7 @@ export default async function PackagingSuppliersPage({ params, searchParams }: {
           </div>
         ) : (
           <>
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {first.map(p => <ProviderCard key={p.id} p={p} locale={locale} isAr={isAr} sourcePage={`/${locale}/packaging/suppliers`} />)}
             </div>
             <LoadMore locale={locale} isAr={isAr} cat="" q={q} kind={kind?.key ?? ''} endpoint="/api/packaging/suppliers"

@@ -181,7 +181,7 @@ export default async function ProvidersPage({
           </div>
         ) : (
           <>
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {firstRows.map(p => <ProviderCard key={p.id} p={p} locale={locale} isAr={isAr} />)}
             </div>
 

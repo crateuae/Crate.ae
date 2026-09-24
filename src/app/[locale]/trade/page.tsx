@@ -82,7 +82,7 @@ export default async function TradeHub({ params }: { params: Promise<{ locale: s
       </section>
 
       <div className="max-w-5xl mx-auto px-5 py-10 flex flex-col gap-10">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {sec.links.map((l, i) => {
             const c = CARDS.find(x => x.href === l.href)!
             return (

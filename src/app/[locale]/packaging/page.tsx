@@ -72,7 +72,7 @@ export default async function PackagingHub({ params }: { params: Promise<{ local
         <section>
           <h2 className="text-lg font-semibold text-gray-900 mb-1">{isAr ? 'خطّط للتعبئة' : 'Plan your packing'}</h2>
           <p className="text-sm text-gray-500 mb-4">{isAr ? 'حاسبة مجانية بلا تسجيل — النتيجة خلال ثوانٍ.' : 'A free calculator, no sign-up — results in seconds.'}</p>
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {TOOLS.map(x => (
               <Link key={x.mode} href={`/${locale}/packaging/planner?mode=${x.mode}`} className={card}>
                 <span className="w-10 h-10 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center mb-3"><x.icon className="w-5 h-5" /></span>
@@ -97,7 +97,7 @@ export default async function PackagingHub({ params }: { params: Promise<{ local
             </div>
             <Link href={`/${locale}/packaging/suppliers`} className="inline-flex items-center gap-1.5 text-sm text-orange-600 hover:text-orange-700">{isAr ? 'عرض الكل' : 'View all'}<Arrow className="w-4 h-4" /></Link>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {KINDS.map(k => {
               const Icon = KIND_ICON[k.key]
               return (

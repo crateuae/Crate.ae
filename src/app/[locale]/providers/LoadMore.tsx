@@ -38,7 +38,7 @@ export default function LoadMore({
   return (
     <>
       {items.length > 0 && (
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 mt-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mt-5">
           {items.map(p => <ProviderCard key={p.id} p={p} locale={locale} isAr={isAr} sourcePage={sourcePage} />)}
         </div>
       )}

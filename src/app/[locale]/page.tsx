@@ -324,7 +324,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {SECTIONS.map((sec, idx) => {
               const Icon = [ShieldCheck, BarChart2, Package][idx]
               return (
