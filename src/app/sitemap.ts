@@ -58,6 +58,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .from('products')
     .select('id, slug, updated_at')
     .eq('is_active', true)
+    .eq('is_published', true) // the product page 404s unless published — never submit a URL that 404s
 
   const productUrls = (products ?? []).flatMap(p =>
     pair(`/products/${p.slug ?? p.id}`, p.updated_at ? new Date(p.updated_at) : STATIC_LASTMOD, 0.8, 'weekly')
