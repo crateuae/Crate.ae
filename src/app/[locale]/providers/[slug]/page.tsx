@@ -235,7 +235,7 @@ export default async function ProviderDetailPage({
                 {isAr ? 'روابط ذات صلة' : 'Related'}
               </div>
               {isRepack ? (
-                <Link href={`/${locale}/packaging`}
+                <Link href={`/${locale}/packaging/planner`}
                   className="flex items-center gap-2.5 text-xs text-gray-600 hover:text-orange-600 py-1">
                   <Package className="w-4 h-4 text-orange-400 flex-shrink-0" />
                   {isAr ? 'أداة خطة التعبئة' : 'Packaging Plan Tool'}
@@ -252,7 +252,7 @@ export default async function ProviderDetailPage({
                 <ShieldCheck className="w-4 h-4 text-blue-400 flex-shrink-0" />
                 {isAr ? 'اشتراطات الاستيراد ESMA' : 'ESMA Import Requirements'}
               </Link>
-              <Link href={`/${locale}/providers?emirate=${p.emirate ?? ''}&type=${p.type ?? ''}`}
+              <Link href={isRepack ? `/${locale}/packaging/suppliers` : `/${locale}/providers?emirate=${p.emirate ?? ''}&type=${p.type ?? ''}`}
                 className="flex items-center gap-2.5 text-xs text-gray-600 hover:text-gray-900 py-1">
                 <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 {isAr

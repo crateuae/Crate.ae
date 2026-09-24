@@ -18,11 +18,17 @@ Base URL: https://www.crate.ae
 Sitemap: https://www.crate.ae/sitemap.xml
 Languages: Arabic (/ar, default) and English (/en)
 
+## Site structure — three sections
+- Import ( /import ): every import tool, product registration and the related guides and articles.
+- Trade ( /trade ): market opportunities, products and suppliers (trading companies).
+- Packaging ( /packaging ): packing, repacking and packaging; packaging suppliers, factories and companies (kept separate from import and trade).
+
 ## Core tools
 - [Compliance Checker](https://www.crate.ae/en/compliance): Check a food/beverage product against UAE.S 9:2019 and ESMA registration requirements; includes a camera Smart Scanner that reads a label and returns a deterministic pass/fail with the exact gaps.
 - [Nutrition Facts Calculator](https://www.crate.ae/en/tools/nutrition): Turn a recipe's ingredients into a submission-ready UAE nutrition-facts table (per 100 g, per serving, % Daily Value).
 - [Supplier Directory](https://www.crate.ae/en/providers): ~47,000 licensed UAE food-sector companies; request quotes (RFQ) directly.
-- [Packaging Planner](https://www.crate.ae/en/packaging): Plan cartons, repackaging and box specifications for the UAE market.
+- [Packaging Planner](https://www.crate.ae/en/packaging/planner): Plan cartons, repackaging and box specifications for the UAE market.
+- [Packaging Suppliers](https://www.crate.ae/en/packaging/suppliers): Directory of licensed packaging companies in Dubai — materials suppliers, manufacturers, packing and repacking services.
 
 ## Knowledge & market
 - [Market Opportunities](https://www.crate.ae/en/market): Live UAE demand signals and sourcing opportunities.

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { SECTIONS } from '@/lib/sections'
 import {
   BarChart2, ShieldCheck, Package, Boxes, Users, BookOpen,
   ArrowLeft, ArrowRight, TrendingUp, TrendingDown, Minus,
@@ -306,80 +307,55 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         </div>
       </section>
 
-      {/* ════ MODULES ════ */}
+      {/* ════ THREE SECTIONS ════ */}
       <section className="bg-gradient-to-b from-white to-orange-50/40">
         <div className="max-w-6xl mx-auto px-5 py-16 lg:py-20">
           <div className="mb-10">
             <div className={`text-[10px] font-bold text-orange-500 uppercase mb-3 ${track('tracking-[0.22em]')}`}>
-              {isAr ? 'وحدات المنصة' : 'Platform Modules'}
+              {isAr ? 'أقسام المنصة' : 'Platform Sections'}
             </div>
             <h2 className="text-3xl font-black text-stone-900 tracking-tight mb-3">
-              {isAr ? 'ست وحدات. دورة استيراد واحدة متكاملة.' : 'Six modules. One integrated import cycle.'}
+              {isAr ? 'ثلاثة أقسام. كلٌّ في مساره.' : 'Three sections. Each on its own track.'}
             </h2>
             <p className="text-stone-500 text-sm max-w-2xl leading-relaxed">
               {isAr
-                ? 'كل وحدة مبنية على بيانات حية ومعايير رسمية — لا محتوى إنشائي، ولا أرقام تقديرية.'
-                : 'Every module is built on live data and official standards — no filler content, no estimated figures.'}
+                ? 'الاستيراد للتسجيل والامتثال، والتجارة للفرص والموردين، والتعبئة والتغليف للتعبئة وإعادة التعبئة وشركات التغليف — أدوات مبنية على بيانات ومعايير رسمية.'
+                : 'Import for registration and compliance, Trade for opportunities and suppliers, Packaging for packing, repacking and packaging companies — tools built on official data and standards.'}
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[
-              {
-                code: '01', icon: BarChart2, href: '/market',
-                t_ar: 'تحليلات السوق', t_en: 'Market Analytics',
-                d_ar: 'متابعة يومية لنون وأمازون.ae وكارفور ولولو وGoogle Trends — تحسب فجوات العرض والطلب وترتّب الفرص بدرجة مركّبة من أربعة مؤشرات.',
-                d_en: 'Daily tracking of Noon, Amazon.ae, Carrefour, Lulu & Google Trends — computing supply/demand gaps and ranking opportunities by a four-factor composite score.',
-              },
-              {
-                code: '02', icon: ShieldCheck, href: '/compliance',
-                t_ar: 'محرك الاشتراطات', t_en: 'Compliance Engine',
-                d_ar: 'فحص فوري ضد ESMA وUAE.S 9:2019 و1926:2015 — قائمة نواقص كاملة ببنودها الدقيقة بدل شهر من الاكتشاف التدريجي.',
-                d_en: 'Instant checks against ESMA, UAE.S 9:2019 and 1926:2015 — a complete gap list with exact clauses instead of a month of gradual discovery.',
-              },
-              {
-                code: '03', icon: Package, href: '/packaging',
-                t_ar: 'تخطيط التوريد والتعبئة', t_en: 'Supply & Repack Planner',
-                d_ar: 'من الطلب إلى الطن: مصادر الشراء، توزيع الكراتين والباليتات، التكلفة الكاملة، السعر المقترح، وليبل مطابق جاهز للطباعة.',
-                d_en: 'From order to tonnage: sourcing, carton and pallet distribution, full costing, suggested pricing, and a compliant print-ready label.',
-              },
-              {
-                code: '04', icon: Users, href: '/providers',
-                t_ar: 'سجل الموردين', t_en: 'Supplier Registry',
-                d_ar: `${fmt(d.providers)} شركة مرخّصة من سجل دبي التجاري — بتصنيفاتها ورخصها وحالتها القانونية، وبحث ثنائي اللغة فوري.`,
-                d_en: `${fmt(d.providers)} licensed companies from the Dubai Commerce Registry — with categories, licenses and legal status, instantly searchable in both languages.`,
-              },
-              {
-                code: '05', icon: Boxes, href: '/products',
-                t_ar: 'صفحات المنتجات والإشارات', t_en: 'Product Signal Pages',
-                d_ar: 'لكل منتج صفحة تحليل كاملة: مسارات الربح المحلية والاستيرادية، إشارات السوق، سرعة الدوران، والمواصفات التفصيلية.',
-                d_en: 'A full analysis page per product: local and import profit paths, market signals, sales velocity, and detailed specifications.',
-              },
-              {
-                code: '06', icon: BookOpen, href: '/guides/carton-specs',
-                t_ar: 'مركز معرفة الكراتين', t_en: 'Carton Knowledge Hub',
-                d_ar: 'دليل المواصفات الكامل: أنواع الفلوت والطبقات ودرجات الورق والقياسات الستاندرد المتداولة في السوق الإماراتي.',
-                d_en: 'The complete specifications guide: flute types, wall layers, paper grades, and standard sizes traded in the UAE market.',
-              },
-            ].map(m => (
-              <Link key={m.code} href={`/${locale}${m.href}`}
-                className="group bg-white border border-stone-200/80 hover:border-orange-200 rounded-2xl p-6 transition-all hover:shadow-xl hover:shadow-orange-500/5 hover:-translate-y-0.5 flex flex-col">
-                <div className="flex items-center justify-between mb-5">
-                  <div className="w-11 h-11 rounded-2xl bg-orange-50 border border-orange-100 group-hover:bg-orange-100 flex items-center justify-center transition-colors">
-                    <m.icon className="w-[19px] h-[19px] text-orange-500 transition-colors" />
+          <div className="grid md:grid-cols-3 gap-5">
+            {SECTIONS.map((sec, idx) => {
+              const Icon = [ShieldCheck, BarChart2, Package][idx]
+              return (
+                <div key={sec.key} className="bg-white border border-stone-200/80 hover:border-orange-200 rounded-2xl p-6 transition-all hover:shadow-xl hover:shadow-orange-500/5 flex flex-col">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="w-11 h-11 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center">
+                      <Icon className="w-[19px] h-[19px] text-orange-500" />
+                    </div>
+                    <span className={`font-mono text-[10px] font-semibold text-stone-300 ${track('tracking-[0.18em]')}`}>
+                      {isAr ? `قسم ${idx + 1}` : `SECTION ${idx + 1}`}
+                    </span>
                   </div>
-                  <span className={`font-mono text-[10px] font-semibold text-stone-300 group-hover:text-orange-300 transition-colors ${track('tracking-[0.18em]')}`}>
-                    {isAr ? `وحدة ${m.code}` : `MODULE ${m.code}`}
-                  </span>
+                  <h3 className="font-black text-stone-900 text-lg mb-2">
+                    <Link href={`/${locale}${sec.hub}`} className="hover:text-orange-600 transition-colors">{isAr ? sec.label.ar : sec.label.en}</Link>
+                  </h3>
+                  <p className="text-[13px] text-stone-500 leading-relaxed mb-4">{isAr ? sec.tagline.ar : sec.tagline.en}</p>
+                  <ul className="flex flex-col gap-1.5 mb-5 flex-1">
+                    {sec.links.slice(0, 5).map(l => (
+                      <li key={l.href}>
+                        <Link href={`/${locale}${l.href}`} className="text-[13px] text-stone-600 hover:text-orange-600 transition-colors flex items-center gap-1.5">
+                          <span className="w-1 h-1 rounded-full bg-orange-300 flex-shrink-0" />{isAr ? l.label.ar : l.label.en}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href={`/${locale}${sec.hub}`} className="text-[12px] font-semibold text-stone-400 hover:text-orange-500 transition-colors flex items-center gap-1.5">
+                    {isAr ? 'افتح القسم' : 'Open section'}<Arrow className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
-                <h3 className="font-black text-stone-900 text-base mb-2">{isAr ? m.t_ar : m.t_en}</h3>
-                <p className="text-[13px] text-stone-500 leading-relaxed flex-1">{isAr ? m.d_ar : m.d_en}</p>
-                <div className="mt-5 text-[12px] font-semibold text-stone-400 group-hover:text-orange-500 transition-colors flex items-center gap-1.5">
-                  {isAr ? 'افتح الوحدة' : 'Open module'}
-                  <Arrow className="w-3.5 h-3.5" />
-                </div>
-              </Link>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>

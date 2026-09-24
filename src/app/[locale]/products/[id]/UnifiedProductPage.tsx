@@ -350,7 +350,7 @@ export default function UnifiedProductPage({
                       ? 'إذا كنت تريد استيراد المادة الخام بالجملة وإعادة تعبئتها تحت علامتك الخاصة، استخدم حاسبة إعادة التعبئة.'
                       : 'If you want to import the raw material in bulk and repackage under your own brand, use the Repackaging Calculator.'}
                   </p>
-                  <Link href={`/${locale}/packaging`}
+                  <Link href={`/${locale}/packaging/planner`}
                     className="inline-flex items-center gap-1.5 mt-2 text-xs font-bold text-orange-500 hover:text-orange-600">
                     {isAr ? 'حاسبة إعادة التعبئة' : 'Repackaging Calculator'}
                     <ArrowRight className={`w-3.5 h-3.5 ${isAr ? 'rotate-180' : ''}`} />

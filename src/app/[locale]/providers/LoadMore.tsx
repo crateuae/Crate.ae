@@ -7,9 +7,10 @@ import ProviderCard, { type PublicProvider } from './ProviderCard'
 const PAGE = 15
 
 export default function LoadMore({
-  locale, isAr, cat, q, initialFrom, total,
+  locale, isAr, cat, q, initialFrom, total, endpoint = '/api/providers', kind = '', sourcePage,
 }: {
   locale: string; isAr: boolean; cat: string; q: string; initialFrom: number; total: number
+  endpoint?: string; kind?: string; sourcePage?: string
 }) {
   const [items, setItems] = useState<PublicProvider[]>([])
   const [from, setFrom] = useState(initialFrom)
@@ -23,21 +24,22 @@ export default function LoadMore({
     try {
       const qs = new URLSearchParams({ from: String(from), size: String(PAGE) })
       if (cat) qs.set('cat', cat)
+      if (kind) qs.set('kind', kind)
       if (q) qs.set('q', q)
-      const res = await fetch(`/api/providers?${qs.toString()}`, { cache: 'no-store' })
+      const res = await fetch(`${endpoint}?${qs.toString()}`, { cache: 'no-store' })
       const data = await res.json()
       setItems(prev => [...prev, ...(data.rows ?? [])])
       setFrom(f => f + PAGE)
     } finally {
       setLoading(false)
     }
-  }, [from, cat, q])
+  }, [from, cat, q, kind, endpoint])
 
   return (
     <>
       {items.length > 0 && (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 mt-5">
-          {items.map(p => <ProviderCard key={p.id} p={p} locale={locale} isAr={isAr} />)}
+          {items.map(p => <ProviderCard key={p.id} p={p} locale={locale} isAr={isAr} sourcePage={sourcePage} />)}
         </div>
       )}
 

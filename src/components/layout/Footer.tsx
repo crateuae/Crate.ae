@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Package, Mail, Phone, MapPin, Globe2 } from 'lucide-react'
+import { SECTIONS } from '@/lib/sections'
 
 export default function Footer({ locale = 'ar' }: { locale?: string }) {
   const isAr = locale === 'ar'
@@ -21,14 +22,14 @@ export default function Footer({ locale = 'ar' }: { locale?: string }) {
               <div>
                 <div className="font-black text-stone-900 text-lg leading-none">Crate</div>
                 <div className={`text-[9px] font-semibold text-stone-400 uppercase mt-1 ${track('tracking-[0.18em]')}`}>
-                  {isAr ? 'الاستيراد والتوريد · الإمارات' : 'Import & Supply · UAE'}
+                  {isAr ? 'الاستيراد · التجارة · التعبئة · الإمارات' : 'Import · Trade · Packaging · UAE'}
                 </div>
               </div>
             </div>
             <p className="text-xs leading-relaxed text-stone-500 mb-5 max-w-xs">
               {isAr
-                ? 'منصة متكاملة تدير دورة الاستيراد — اكتشاف الفرص، فحص الاشتراطات، وتخطيط التوريد والتعبئة للسوق الإماراتي.'
-                : 'An all-in-one platform for the full import cycle — opportunity discovery, requirement checks, and supply & packing planning for the UAE market.'}
+                ? 'منصة الاستيراد والتجارة والتعبئة والتغليف في الإمارات — أدوات التسجيل والامتثال، فرص السوق والموردون، وتخطيط التعبئة وإعادة التعبئة.'
+                : 'The UAE platform for import, trade and packaging — registration and compliance tools, market opportunities and suppliers, and packing and repacking planning.'}
             </p>
             <ul className="space-y-2.5 text-xs">
               <li>
@@ -48,46 +49,24 @@ export default function Footer({ locale = 'ar' }: { locale?: string }) {
             </ul>
           </div>
 
-          {/* Platform */}
-          <FooterCol isAr={isAr} title={isAr ? 'المنصة' : 'Platform'}>
-            <FooterLink href={L('/search')}>{isAr ? 'بحث ذكي عن الموردين' : 'Smart Supplier Search'}</FooterLink>
-            <FooterLink href={L('/market')}>{isAr ? 'فرص السوق' : 'Market Opportunities'}</FooterLink>
-            <FooterLink href={L('/products')}>{isAr ? 'المنتجات' : 'Products'}</FooterLink>
-            <FooterLink href={L('/providers')}>{isAr ? 'سجل الموردين' : 'Supplier Registry'}</FooterLink>
-            <FooterLink href={L('/compliance')}>{isAr ? 'اشتراطات الاستيراد' : 'Import Requirements'}</FooterLink>
-            <FooterLink href={L('/packaging')}>{isAr ? 'تخطيط التوريد والتعبئة' : 'Supply & Repack Planning'}</FooterLink>
-            <FooterLink href={L('/rfq')}>{isAr ? 'اطلب عرض سعر' : 'Request a Quote'}</FooterLink>
-          </FooterCol>
+          {/* The three sections — one column each, from src/lib/sections.ts */}
+          {SECTIONS.map(sec => (
+            <FooterCol key={sec.key} isAr={isAr} title={isAr ? sec.label.ar : sec.label.en} href={L(sec.hub)}>
+              {sec.links.map(l => (
+                <FooterLink key={l.href} href={L(l.href)}>{isAr ? l.label.ar : l.label.en}</FooterLink>
+              ))}
+            </FooterCol>
+          ))}
 
-          {/* Knowledge */}
-          <FooterCol isAr={isAr} title={isAr ? 'المعرفة والأدلة' : 'Knowledge & Guides'}>
-            <FooterLink href={L('/guides/carton-specs')}>{isAr ? 'دليل مواصفات الكراتين' : 'Carton Specs Guide'}</FooterLink>
-            <FooterLink href={L('/insights')}>{isAr ? 'المدونة والرؤى' : 'Blog & Insights'}</FooterLink>
-            <FooterLink href={L('/market')}>{isAr ? 'لوحة الفرص المباشرة' : 'Live Opportunity Board'}</FooterLink>
-            <FooterLink href={L('/compliance')}>{isAr ? 'فحص منتج جديد' : 'Check a New Product'}</FooterLink>
-            <FooterLink href={L('/tools/product-registration-uae')}>{isAr ? 'أين أسجّل منتجي؟' : 'Where to Register My Product'}</FooterLink>
-            <FooterLink href={L('/tools/certificates-uae')}>{isAr ? 'هل أحتاج شهادة ECAS / EQM / حلال؟' : 'Do I need ECAS / EQM / Halal?'}</FooterLink>
-            <FooterLink href={L('/tools/landed-cost-uae')}>{isAr ? 'رمز HS وحاسبة التكلفة الواصلة' : 'HS Code & Landed-Cost Calculator'}</FooterLink>
-            <FooterLink href={L('/import')}>{isAr ? 'أدلة استيراد المنتجات' : 'Product Import Guides'}</FooterLink>
-            <FooterLink href={L('/tools/nutrition')}>{isAr ? 'حاسبة الحقائق الغذائية' : 'Nutrition Facts Calculator'}</FooterLink>
-          </FooterCol>
-
-          {/* Standards */}
-          <FooterCol isAr={isAr} title={isAr ? 'المعايير المعتمدة' : 'Covered Standards'}>
-            <FooterText>UAE.S 9:2019 — {isAr ? 'الليبل الغذائي' : 'Food labeling'}</FooterText>
-            <FooterText>UAE.S 1926:2015 — {isAr ? 'النقاء' : 'Purity'}</FooterText>
-            <FooterText>ESMA — {isAr ? 'اشتراطات التسجيل' : 'Registration'}</FooterText>
-            <FooterText>ADAFSA — {isAr ? 'أبوظبي للغذاء' : 'Abu Dhabi Food'}</FooterText>
+          {/* Standards + data sources */}
+          <FooterCol isAr={isAr} title={isAr ? 'المعايير ومصادر البيانات' : 'Standards & Data Sources'}>
+            <FooterText>UAE.S 9 (GSO 9) — {isAr ? 'الليبل الغذائي' : 'Food labelling'}</FooterText>
+            <FooterText>MoIAT (ESMA) · ECAS · EQM</FooterText>
+            <FooterText>{isAr ? 'بلدية دبي' : 'Dubai Municipality'} · ADAFSA</FooterText>
             <FooterText>Halal — {isAr ? 'متطلبات الحلال' : 'Halal requirements'}</FooterText>
-          </FooterCol>
-
-          {/* Data sources */}
-          <FooterCol isAr={isAr} title={isAr ? 'مصادر البيانات' : 'Data Sources'}>
             <FooterText>{isAr ? 'سجل دبي التجاري (DED)' : 'Dubai DED Registry'}</FooterText>
-            <FooterText>Noon · Amazon.ae</FooterText>
-            <FooterText>Carrefour · Lulu</FooterText>
+            <FooterText>Noon · Amazon.ae · Carrefour · Lulu</FooterText>
             <FooterText>Google Trends</FooterText>
-            <FooterText>{isAr ? 'تحديث تلقائي يومي' : 'Automated daily update'}</FooterText>
           </FooterCol>
         </div>
       </div>
@@ -107,7 +86,7 @@ export default function Footer({ locale = 'ar' }: { locale?: string }) {
             </a>
           </div>
           <span className="text-[11px] text-stone-400">
-            © 2026 Crate — {isAr ? 'منصة الاستيراد والتوريد في الإمارات 🇦🇪' : 'UAE Import & Supply Platform 🇦🇪'}
+            © 2026 Crate — {isAr ? 'الاستيراد والتجارة والتعبئة في الإمارات 🇦🇪' : 'UAE Import, Trade & Packaging 🇦🇪'}
           </span>
         </div>
       </div>
@@ -117,11 +96,12 @@ export default function Footer({ locale = 'ar' }: { locale?: string }) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function FooterCol({ title, children, isAr }: { title: string; children: React.ReactNode; isAr?: boolean }) {
+function FooterCol({ title, children, isAr, href }: { title: string; children: React.ReactNode; isAr?: boolean; href?: string }) {
   // letter-spacing tears cursive Arabic glyph joins — Latin titles only
+  const cls = `text-[10px] font-bold text-stone-400 uppercase mb-4 ${isAr ? '' : 'tracking-[0.18em]'}`
   return (
     <div>
-      <div className={`text-[10px] font-bold text-stone-400 uppercase mb-4 ${isAr ? '' : 'tracking-[0.18em]'}`}>{title}</div>
+      <div className={cls}>{href ? <Link href={href} className="hover:text-orange-500 transition-colors">{title}</Link> : title}</div>
       <ul className="space-y-2.5">{children}</ul>
     </div>
   )

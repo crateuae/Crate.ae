@@ -9,8 +9,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     : 'From an institutional order to a full packing plan: weights & quantities, carton and pallet distribution, cost, suggested price, and a UAE-compliant label.'
   return {
     title, description,
-    alternates: { canonical: `https://www.crate.ae/${locale}/packaging`, languages: { ar: '/ar/packaging', en: '/en/packaging', 'x-default': '/ar/packaging' } },
-    openGraph: { title, description, url: `https://www.crate.ae/${locale}/packaging` },
+    alternates: { canonical: `https://www.crate.ae/${locale}/packaging/planner`, languages: { ar: '/ar/packaging/planner', en: '/en/packaging/planner', 'x-default': '/ar/packaging/planner' } },
+    openGraph: { title, description, url: `https://www.crate.ae/${locale}/packaging/planner` },
   }
 }
 

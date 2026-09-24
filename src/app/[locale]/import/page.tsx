@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { GUIDE_PRODUCTS, GROUPS, REVIEWED } from '@/lib/import-guides/products'
 import { HS_FMCG } from '@/lib/customs/hs-fmcg'
 import { dutyPhrase } from '@/lib/import-guides/build'
+import { sectionOf } from '@/lib/sections'
 
 export const revalidate = 86400
 
@@ -31,6 +32,20 @@ export default async function ImportHub({ params }: { params: Promise<{ locale: 
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">{isAr ? 'أدلة استيراد المنتجات إلى الإمارات' : 'Product import guides for the UAE'}</h1>
         <p className="text-gray-500 text-sm mb-6 max-w-2xl">{isAr ? 'اختر منتجك: رمز HS، الرسوم الجمركية، مسار التسجيل في دبي، الشهادات المطلوبة، ومثال تكلفة واصلة — كل دليل يُولَّد من نفس أدوات Crate المجانية فلا تتناقض معها.' : 'Pick your product: HS code, customs duty, the Dubai registration route, required certificates and a landed-cost example — every guide is generated from the same free Crate tools, so they never disagree.'}</p>
+        {/* Tools of the Import section (from src/lib/sections.ts) */}
+        <section className="mb-8">
+          <h2 className="text-sm font-semibold text-gray-800 mb-2">{isAr ? 'أدوات الاستيراد والتسجيل' : 'Import & registration tools'}</h2>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {sectionOf('import').links.filter(l => l.href !== '/import').map(l => (
+              <Link key={l.href} href={`/${locale}${l.href}`} className="bg-white border border-orange-100 hover:border-orange-300 rounded-xl px-4 py-3 transition-colors">
+                <div className="text-sm font-semibold text-gray-900">{t(l.label)}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{t(l.hint)}</div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <h2 className="text-sm font-semibold text-gray-800 mb-3">{isAr ? `أدلة الاستيراد بحسب المنتج (${GUIDE_PRODUCTS.length})` : `Import guides by product (${GUIDE_PRODUCTS.length})`}</h2>
         {GROUPS.map(g => (
           <section key={g.key} className="mb-6">
             <h2 className="text-sm font-semibold text-gray-800 mb-2">{t(g.label)}</h2>

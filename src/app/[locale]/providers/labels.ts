@@ -33,6 +33,14 @@ export const CATEGORY_LABELS_AR: Record<string, string> = {
   'Food Packaging': 'تعبئة وتغليف',
   'General Trading': 'تجارة عامة',
   'Foodstuff Trading': 'تجارة مواد غذائية',
+  'Packaging Services': 'خدمات التعبئة والتغليف',
+  'Packaging Materials Trading': 'تجارة مواد التغليف',
+  'Packaging Industries': 'صناعات التغليف',
+  'Repackaging Services': 'خدمات إعادة التعبئة',
+  'Labeling & Printing': 'الملصقات والطباعة',
+  'Fruits & Vegetables Packaging': 'تعبئة الفواكه والخضروات',
+  'Spices & Condiments Packaging': 'تعبئة التوابل',
+  'Sugar & Sweets Packaging': 'تعبئة السكر والحلويات',
 }
 
 // Curated chip order (rest appended dynamically by live count).

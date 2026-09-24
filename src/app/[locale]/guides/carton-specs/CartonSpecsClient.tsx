@@ -555,7 +555,7 @@ export default function CartonSpecsClient({ locale }: { locale: string }) {
               ? 'استخدم حاسبة Crate للتغليف لاختيار المواصفات المثالية وحساب التكاليف بدقة'
               : 'Use Crate\'s packaging calculator to select the right specs and calculate costs accurately'}
           </p>
-          <Link href={`/${locale}/packaging`}
+          <Link href={`/${locale}/packaging/planner`}
             className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-black px-8 py-3 rounded-2xl transition-colors text-sm">
             {isAr ? 'حاسبة التغليف' : 'Packaging Calculator'}
             <ArrowRight className={`w-4 h-4 ${isAr ? 'rotate-180' : ''}`} />

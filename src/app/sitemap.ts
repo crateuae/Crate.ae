@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { GUIDE_PRODUCTS, REVIEWED } from '@/lib/import-guides/products'
+import { KINDS } from '@/lib/packaging/directory'
 
 const BASE = 'https://www.crate.ae'
 const TOOLS_LASTMOD = new Date(REVIEWED)
@@ -32,7 +33,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...pair('/insights', STATIC_LASTMOD, 0.8, 'daily'),
     ...pair('/providers', STATIC_LASTMOD, 0.8, 'weekly'),
     ...pair('/compliance', STATIC_LASTMOD, 0.7, 'monthly'),
-    ...pair('/packaging', STATIC_LASTMOD, 0.7, 'monthly'),
+    // Section hubs (Import · Trade · Packaging) + the packaging section pages
+    ...pair('/trade', TOOLS_LASTMOD, 0.9, 'weekly'),
+    ...pair('/packaging', TOOLS_LASTMOD, 0.9, 'weekly'),
+    ...pair('/packaging/planner', TOOLS_LASTMOD, 0.8, 'monthly'),
+    ...pair('/packaging/suppliers', TOOLS_LASTMOD, 0.8, 'weekly'),
+    ...KINDS.flatMap(k => pair(`/packaging/suppliers?kind=${k.key}`, TOOLS_LASTMOD, 0.6, 'weekly')),
     ...pair('/guides/carton-specs', STATIC_LASTMOD, 0.6, 'monthly'),
     ...pair('/rfq', STATIC_LASTMOD, 0.5, 'monthly'),
     // Free tools + generated import guides (reviewed 2026-09-24)

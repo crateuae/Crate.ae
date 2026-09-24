@@ -235,7 +235,7 @@ export default async function ProductDetailPage({
                 <div>
                   <p className="text-xs font-bold text-gray-600 mb-1">{isAr ? 'هل تفكر في إعادة التعبئة؟' : 'Thinking about repackaging?'}</p>
                   <p className="text-xs text-gray-400 leading-relaxed">{isAr ? 'إذا كنت تريد استيراد المادة الخام بالجملة وإعادة تعبئتها تحت علامتك الخاصة، استخدم حاسبة إعادة التعبئة.' : 'Import raw material in bulk and repackage under your own brand.'}</p>
-                  <Link href={`/${locale}/packaging`} className="inline-flex items-center gap-1.5 mt-2 text-xs font-bold text-orange-500">{isAr ? 'حاسبة إعادة التعبئة' : 'Repackaging Calculator'}<ArrowRight className={`w-3.5 h-3.5 ${isAr ? 'rotate-180' : ''}`} /></Link>
+                  <Link href={`/${locale}/packaging/planner`} className="inline-flex items-center gap-1.5 mt-2 text-xs font-bold text-orange-500">{isAr ? 'حاسبة إعادة التعبئة' : 'Repackaging Calculator'}<ArrowRight className={`w-3.5 h-3.5 ${isAr ? 'rotate-180' : ''}`} /></Link>
                 </div>
               </div>
             </div>

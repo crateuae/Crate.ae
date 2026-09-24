@@ -28,8 +28,8 @@ const INTENTS: { key: Intent; ar: string; en: string }[] = [
   { key: 'requirement', ar: 'متطلب توريد',  en: 'Supply requirement' },
 ]
 
-export default function ProviderCard({ p, locale, isAr }: {
-  p: PublicProvider; locale: string; isAr: boolean
+export default function ProviderCard({ p, locale, isAr, sourcePage }: {
+  p: PublicProvider; locale: string; isAr: boolean; sourcePage?: string
 }) {
   const [open, setOpen] = useState(false)
   const name = isAr ? (p.name_ar || p.name_en) : (p.name_en || p.name_ar)
@@ -88,7 +88,7 @@ export default function ProviderCard({ p, locale, isAr }: {
       </div>
 
       {open && (
-        <ContactModal p={p} name={name ?? ''} locale={locale} isAr={isAr} onClose={() => setOpen(false)} />
+        <ContactModal p={p} name={name ?? ''} locale={locale} isAr={isAr} sourcePage={sourcePage} onClose={() => setOpen(false)} />
       )}
     </>
   )
@@ -96,8 +96,8 @@ export default function ProviderCard({ p, locale, isAr }: {
 
 // ─── Broker contact modal ────────────────────────────────────────────────────
 
-function ContactModal({ p, name, locale, isAr, onClose }: {
-  p: PublicProvider; name: string; locale: string; isAr: boolean; onClose: () => void
+function ContactModal({ p, name, locale, isAr, sourcePage, onClose }: {
+  p: PublicProvider; name: string; locale: string; isAr: boolean; sourcePage?: string; onClose: () => void
 }) {
   const [intent, setIntent] = useState<Intent>('quote')
   const [submitting, setSubmitting] = useState(false)
@@ -124,7 +124,7 @@ function ContactModal({ p, name, locale, isAr, onClose }: {
           contact_email: form.contact_email,
           contact_phone: form.contact_phone,
           company_name: name,
-          source_page: `/${locale}/providers/${p.slug}`,
+          source_page: sourcePage ?? `/${locale}/providers/${p.slug}`,
           locale,
         }),
       })

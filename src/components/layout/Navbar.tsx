@@ -1,39 +1,25 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Package, BarChart2, ShieldCheck, Boxes, Users, LayoutDashboard, Menu, X, LogIn, LogOut, ChevronDown, Bell, BookOpen, FileText } from 'lucide-react'
+import { Package, BarChart2, ShieldCheck, Boxes, Users, LayoutDashboard, Menu, X, LogIn, LogOut, ChevronDown, Bell, BookOpen, FileText, ScanLine, Calculator, Search, Factory } from 'lucide-react'
+import { SECTIONS } from '@/lib/sections'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/components/providers/AuthProvider'
 
-// Grouped into 3 clear buckets so the nav guides rather than scatters.
-const NAV_GROUPS = [
-  {
-    label_ar: 'الفرص', label_en: 'Opportunities', icon: BarChart2,
-    items: [
-      { href: '/market',   icon: BarChart2, label_ar: 'فرص السوق', label_en: 'Market Opportunities' },
-      { href: '/products', icon: Boxes,     label_ar: 'المنتجات',   label_en: 'Products' },
-    ],
-  },
-  {
-    label_ar: 'أدوات الاستيراد', label_en: 'Import Tools', icon: ShieldCheck,
-    items: [
-      { href: '/compliance', icon: ShieldCheck, label_ar: 'فحص الملصق (بلدية دبي)', label_en: 'Label Pre-check (Dubai)' },
-      { href: '/tools/product-registration-uae', icon: FileText, label_ar: 'أين أسجّل منتجي؟', label_en: 'Where to Register' },
-      { href: '/tools/certificates-uae', icon: ShieldCheck, label_ar: 'ECAS / EQM / حلال', label_en: 'ECAS / EQM / Halal' },
-      { href: '/tools/landed-cost-uae', icon: BarChart2, label_ar: 'HS والتكلفة الواصلة', label_en: 'HS & Landed Cost' },
-      { href: '/import', icon: BookOpen, label_ar: 'أدلة الاستيراد', label_en: 'Import Guides' },
-      { href: '/packaging',  icon: Package,     label_ar: 'إعادة التعبئة',      label_en: 'Repackaging' },
-      { href: '/providers',  icon: Users,       label_ar: 'الموردون',           label_en: 'Suppliers' },
-    ],
-  },
-  {
-    label_ar: 'المعرفة', label_en: 'Knowledge', icon: BookOpen,
-    items: [
-      { href: '/insights',            icon: FileText, label_ar: 'المدونة والرؤى', label_en: 'Blog & Insights' },
-      { href: '/guides/carton-specs', icon: BookOpen, label_ar: 'دليل الكراتين',  label_en: 'Carton Guide' },
-    ],
-  },
-]
+// The three sections of the site (Import · Trade · Packaging) come from ONE source: src/lib/sections.ts.
+const ICON_BY_HREF: Record<string, typeof Package> = {
+  '/import': BookOpen, '/compliance': ScanLine, '/tools/product-registration-uae': FileText, '/tools/certificates-uae': ShieldCheck,
+  '/tools/landed-cost-uae': Calculator, '/tools/nutrition': Calculator, '/insights': FileText,
+  '/market': BarChart2, '/products': Boxes, '/providers': Users, '/search': Search, '/rfq': FileText,
+  '/packaging': Package, '/packaging/planner': Calculator, '/packaging/suppliers': Factory, '/guides/carton-specs': BookOpen,
+}
+const SECTION_ICON = { import: ShieldCheck, trade: BarChart2, packaging: Package } as const
+const NAV_GROUPS = SECTIONS.map(sec => {
+  const links = sec.links.map(l => ({ href: l.href, icon: ICON_BY_HREF[l.href] ?? FileText, label_ar: l.label.ar, label_en: l.label.en }))
+  // every section gets an "overview" entry pointing to its hub, unless the hub is already one of its links
+  if (!links.some(l => l.href === sec.hub)) links.unshift({ href: sec.hub, icon: ICON_BY_HREF[sec.hub] ?? FileText, label_ar: 'نظرة عامة — ' + sec.label.ar, label_en: sec.label.en + ' overview' })
+  return { hub: sec.hub, label_ar: sec.label.ar, label_en: sec.label.en, icon: SECTION_ICON[sec.key], items: links }
+})
 
 // ── Notification type ──────────────────────────────────────────────────────
 interface RfqNotif {
@@ -192,14 +178,14 @@ export default function Navbar() {
             const active = group.items.some(i => pathname.includes(i.href))
             return (
               <div key={group.label_en} className="relative group">
-                <button
+                <Link href={`/${locale}${group.hub}`}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all whitespace-nowrap ${
                     active ? 'bg-orange-50 text-orange-600 font-semibold' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}>
                   <group.icon className="w-4 h-4 flex-shrink-0" />
                   {isAr ? group.label_ar : group.label_en}
                   <ChevronDown className="w-3 h-3 opacity-50 transition-transform group-hover:rotate-180" />
-                </button>
+                </Link>
                 {/* pt-1 bridges the hover gap so the menu doesn't close mid-move */}
                 <div className="absolute top-full start-0 pt-1.5 hidden group-hover:block min-w-[220px] z-50">
                   <div className="bg-white border border-gray-200 rounded-2xl shadow-xl shadow-gray-100/70 py-1.5">
