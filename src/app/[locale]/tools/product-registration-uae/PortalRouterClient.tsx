@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Compass, Printer, ScanLine, Mail, Check, AlertTriangle, ExternalLink } from 'lucide-react'
 import { CATEGORIES, EMIRATES, routeProduct, parseAnswers, answersToQuery, type Answers, type Bi } from '@/lib/portal-router/rules'
+import { useLeadGate } from '@/components/leadgate/LeadGateProvider'
 
 const DEFAULT: Answers = { category: 'food', emirate: 'dubai', imported: true, animal: false, ecasWatch: false, claims: false }
 
@@ -10,6 +11,7 @@ export default function PortalRouterClient({ locale, faq }: { locale: 'ar' | 'en
   const t = (b: Bi) => (isAr ? b.ar : b.en)
   const [a, setA] = useState<Answers>(DEFAULT)
   const [hydrated, setHydrated] = useState(false)
+  const { gate } = useLeadGate()
 
   // Shareable state: read on load, write on change (no reload, no history spam).
   useEffect(() => {
@@ -166,7 +168,12 @@ export default function PortalRouterClient({ locale, faq }: { locale: 'ar' | 'en
           </div>
 
           <div className="flex flex-wrap gap-2 print:hidden">
-            <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:border-orange-300"><Printer className="w-4 h-4" />{T.print}</button>
+            <button type="button" onClick={() => gate({
+              kind: 'pdf',
+              title: `مسار التسجيل: ${CATEGORIES.find(c => c.key === a.category)!.label.ar} — ${EMIRATES.find(e => e.key === a.emirate)!.label.ar}`,
+              category: `موجّه البوابات · ${CATEGORIES.find(c => c.key === a.category)!.label.ar} · ${EMIRATES.find(e => e.key === a.emirate)!.label.ar}`,
+              run: () => window.print(),
+            })} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:border-orange-300"><Printer className="w-4 h-4" />{T.print}</button>
             <a href={`/${locale}/compliance`} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:border-orange-300"><ScanLine className="w-4 h-4" />{T.scan}</a>
           </div>
 

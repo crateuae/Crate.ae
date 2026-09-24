@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import {
   Inbox, Store, Package, Repeat2, ShoppingBasket, Loader2, X, Plus,
-  Mail, Phone, Building2, FileText, Send, CheckCircle2, MessageSquare,
+  Mail, Phone, Building2, FileText, Send, CheckCircle2, MessageSquare, Download,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Source = 'trader' | 'packaging' | 'repack' | 'basket'
+type Source = 'trader' | 'packaging' | 'repack' | 'basket' | 'download'
 type Status = 'new' | 'contacted' | 'quoted' | 'won' | 'lost'
 const STATUSES: Status[] = ['new', 'contacted', 'quoted', 'won', 'lost']
 
@@ -26,6 +26,7 @@ const SECTIONS: { key: Source; ar: string; Icon: typeof Store; color: string }[]
   { key: 'packaging', ar: 'تغليف المنتجات',            Icon: Package,        color: 'text-orange-600 bg-orange-50 border-orange-200' },
   { key: 'basket',    ar: 'السلال الغذائية المختلطة',  Icon: ShoppingBasket, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
   { key: 'repack',    ar: 'إعادة التعبئة',             Icon: Repeat2,        color: 'text-purple-600 bg-purple-50 border-purple-200' },
+  { key: 'download',  ar: 'تحميلات الأدوات',           Icon: Download,       color: 'text-teal-600 bg-teal-50 border-teal-200' },
 ]
 
 const STATUS_STYLE: Record<string, string> = {
@@ -120,8 +121,13 @@ export default function UnifiedRequestsPage() {
                     <div className="min-w-0">
                       <div className="font-bold text-sm text-slate-900 truncate">{r.title}</div>
                       <div className="text-xs text-slate-500 truncate">
-                        {r.contact_name}{r.company ? ` · ${r.company}` : ''}
+                        {r.contact_name}{r.company ? ` · ${r.company}` : ''}{r.email ? ` · ${r.email}` : ''}
                       </div>
+                      {r.source === 'download' && (
+                        <div className="text-[10px] text-teal-700 truncate mt-0.5">
+                          {String(r.detail.kind_label ?? '')} · {String(r.detail.category ?? '')}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -181,7 +187,12 @@ function DetailPanel({ r, isAr, onClose, onPatch }: {
         </div>
         <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
       </div>
-      <span className={`inline-block text-[10px] px-2 py-0.5 rounded-lg border font-medium mb-3 ${m.color}`}>{m.ar}</span>
+      <span className={`inline-block text-[10px] px-2 py-0.5 rounded-lg border font-medium mb-3 ${m.color}`}>
+        {m.ar}{r.source === 'download' && r.detail.kind_label ? ` · ${String(r.detail.kind_label)} · ${String(r.detail.category ?? '')}` : ''}
+      </span>
+      {r.source === 'download' && r.detail.source_page ? (
+        <div className="text-[10px] text-slate-400 mb-3 break-all">{String(r.detail.source_page)}</div>
+      ) : null}
 
       {/* Contact */}
       <div className="space-y-1.5 text-xs text-slate-600 mb-4">

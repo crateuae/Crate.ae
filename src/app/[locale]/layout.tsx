@@ -9,6 +9,7 @@ import Footer from '@/components/layout/Footer'
 import VisitorTracker from '@/components/layout/VisitorTracker'
 import FloatingContact from '@/components/layout/FloatingContact'
 import { AuthProvider } from '@/components/providers/AuthProvider'
+import { LeadGateProvider } from '@/components/leadgate/LeadGateProvider'
 import '../globals.css'
 
 // English → Poppins, Arabic → Noto Sans Arabic. Exposed as CSS vars --font-en / --font-ar.
@@ -73,11 +74,13 @@ export default async function LocaleLayout({
       <body className="min-h-screen bg-white text-gray-900 font-sans">
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
-            <Navbar />
-            <main>{children}</main>
-            <Footer locale={locale} />
-            <FloatingContact locale={locale} />
-            <VisitorTracker />
+            <LeadGateProvider>
+              <Navbar />
+              <main>{children}</main>
+              <Footer locale={locale} />
+              <FloatingContact locale={locale} />
+              <VisitorTracker />
+            </LeadGateProvider>
           </AuthProvider>
         </NextIntlClientProvider>
       </body>

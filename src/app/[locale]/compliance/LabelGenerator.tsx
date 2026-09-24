@@ -7,6 +7,7 @@
 import { useMemo, useState } from 'react'
 import { FileText, Download, ImageDown, X } from 'lucide-react'
 import { buildLabelSVG, type LabelData } from '@/lib/label/compliant-label'
+import { useLeadGate } from '@/components/leadgate/LeadGateProvider'
 
 export default function LabelGenerator({ isAr, data }: { isAr: boolean; data: LabelData }) {
   const [open, setOpen] = useState(false)
@@ -39,8 +40,17 @@ export default function LabelGenerator({ isAr, data }: { isAr: boolean; data: La
 
 function LabelModal({ isAr, t, data, onClose }: { isAr: boolean; t: Record<string, string>; data: LabelData; onClose: () => void }) {
   const svg = useMemo(() => buildLabelSVG(data), [JSON.stringify(data)])
+  const { gate } = useLeadGate()
 
-  const download = (kind: 'svg' | 'png') => {
+  // Every download passes through the site-wide lead gate (signed in → direct; else email first).
+  const download = (kind: 'svg' | 'png') => gate({
+    kind: 'download',
+    title: `ملصق مطابق ${kind.toUpperCase()}${data.product_name ? ` (${data.product_name})` : ''}`,
+    category: 'مولّد الملصق المطابق',
+    run: () => doDownload(kind),
+  })
+
+  const doDownload = (kind: 'svg' | 'png') => {
     if (kind === 'svg') {
       const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
       const url = URL.createObjectURL(blob)

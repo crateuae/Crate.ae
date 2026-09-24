@@ -25,7 +25,12 @@ function db() {
 
 const FROM = process.env.RESEND_FROM_EMAIL ?? 'uae@crate.ae'
 
-export type ReqSource = 'trader' | 'packaging' | 'repack' | 'basket'
+export type ReqSource = 'trader' | 'packaging' | 'repack' | 'basket' | 'download'
+
+// Anonymous download/print/scan captures (LeadGate) live in rfq_requests with a
+// machine-readable notes prefix so they get their own inbox section + classification.
+const DL_RE = /^\[DL:([a-z]+):([^\]]*)\]\s*/
+const DL_KIND_AR: Record<string, string> = { pdf: 'حفظ PDF', download: 'تحميل', print: 'طباعة', scan: 'فحص بالماسح' }
 
 export interface UnifiedRequest {
   id: string
@@ -75,21 +80,24 @@ function normalizePlan(row: Record<string, unknown>): UnifiedRequest {
 }
 
 function normalizeRfq(row: Record<string, unknown>): UnifiedRequest {
+  const rawNotes = (row.notes as string) ?? ''
+  const dl = DL_RE.exec(rawNotes)
   return {
     id: String(row.id),
-    source: 'trader',
+    source: dl ? 'download' : 'trader',
     title: (row.product_name as string) ?? 'طلب تواصل',
     contact_name: (row.contact_name as string) ?? null,
     email: (row.contact_email as string) ?? null,
     phone: (row.contact_phone as string) ?? null,
     company: (row.company_name as string) ?? null,
-    notes: (row.notes as string) ?? null,
+    notes: dl ? (rawNotes.replace(DL_RE, '') || null) : (rawNotes || null),
     status: (row.status as string) ?? 'new',
     admin_notes: (row.admin_notes as string | null) ?? null,
     created_at: String(row.created_at),
     detail: {
       quantity: row.quantity, destination: row.destination,
       budget_aed: row.budget_aed, provider_id: row.provider_id, source_page: row.source_page,
+      ...(dl ? { kind: dl[1], kind_label: DL_KIND_AR[dl[1]] ?? dl[1], category: dl[2] } : {}),
     },
   }
 }
@@ -100,10 +108,10 @@ export async function GET(req: NextRequest) {
   const supabase = db()
 
   const [{ data: rfqs }, { data: plans }] = await Promise.all([
-    section === 'all' || section === 'trader'
+    section === 'all' || section === 'trader' || section === 'download'
       ? supabase.from('rfq_requests').select('*').order('created_at', { ascending: false }).limit(500)
       : Promise.resolve({ data: [] as Record<string, unknown>[] }),
-    section === 'all' || section !== 'trader'
+    section === 'all' || (section !== 'trader' && section !== 'download')
       ? supabase.from('packaging_plans').select('*').order('created_at', { ascending: false }).limit(500)
       : Promise.resolve({ data: [] as Record<string, unknown>[] }),
   ])
@@ -118,7 +126,7 @@ export async function GET(req: NextRequest) {
   items.sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
 
   // Counts per section (always over the full set for the tab badges)
-  const counts = { all: 0, trader: 0, packaging: 0, repack: 0, basket: 0 } as Record<string, number>
+  const counts = { all: 0, trader: 0, packaging: 0, repack: 0, basket: 0, download: 0 } as Record<string, number>
   const everyone: UnifiedRequest[] = [...(rfqs ?? []).map(normalizeRfq), ...(plans ?? []).map(normalizePlan)]
   for (const i of everyone) { counts[i.source]++; counts.all++ }
 
@@ -129,7 +137,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const { id, source, status, admin_notes } = await req.json()
   if (!id || !source) return NextResponse.json({ error: 'id and source required' }, { status: 400 })
-  const table = source === 'trader' ? 'rfq_requests' : 'packaging_plans'
+  const table = source === 'trader' || source === 'download' ? 'rfq_requests' : 'packaging_plans'
   const patch: Record<string, unknown> = {}
   if (status !== undefined) patch.status = status
   if (admin_notes !== undefined) patch.admin_notes = admin_notes
@@ -185,7 +193,7 @@ export async function POST(req: NextRequest) {
 
   // Best-effort: mark as contacted + log the reply in admin_notes
   if (id && source) {
-    const table = source === 'trader' ? 'rfq_requests' : 'packaging_plans'
+    const table = source === 'trader' || source === 'download' ? 'rfq_requests' : 'packaging_plans'
     await db().from(table).update({ status: 'contacted' }).eq('id', id)
   }
   return NextResponse.json({ ok: true })

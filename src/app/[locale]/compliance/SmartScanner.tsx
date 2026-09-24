@@ -6,6 +6,7 @@ import {
   Camera, X, Loader2, RotateCcw, ScanLine, Sparkles, Upload,
   CheckCircle2, XCircle, AlertTriangle, ImageIcon,
 } from 'lucide-react'
+import { useLeadGate } from '@/components/leadgate/LeadGateProvider'
 
 // Snapshot any source (video frame / bitmap / image) into a stable, downscaled
 // canvas we can re-enhance from repeatedly (a stopped video won't redraw later).
@@ -52,6 +53,7 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
   const [result, setResult] = useState<ScanResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [camReady, setCamReady] = useState(false)
+  const { gate } = useLeadGate()
 
   const T = {
     title: isAr ? 'الماسح الذكي' : 'Smart Scanner',
@@ -152,7 +154,10 @@ export default function SmartScanner({ isAr, onClose, onApply }: Props) {
     if (baseRef.current) setProcessed(enhance(baseRef.current, m))
   }
 
-  async function analyze() {
+  // The scan itself is gated: signed in → runs; anonymous → email first (site-wide rule).
+  const analyze = () => gate({ kind: 'scan', title: 'فحص ملصق بالماسح الذكي', category: 'الماسح الذكي', run: runAnalyze })
+
+  async function runAnalyze() {
     if (!processed) return
     setStage('analyzing'); setErr(null)
     const ctrl = new AbortController()
