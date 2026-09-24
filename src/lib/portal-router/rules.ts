@@ -63,7 +63,6 @@ const ZAD: Step = {
   portal: { en: 'ZAD — national food product registration', ar: 'زاد — النظام الوطني لتسجيل المنتجات الغذائية' },
   url: 'https://www.moccae.gov.ae/',
   purpose: { en: 'Register every food SKU (brand × product × size × barcode) once, federally, before it is handled in the UAE. Local authorities read this record.', ar: 'تسجيل كل صنف غذائي (علامة × منتج × حجم × باركود) مرة واحدة اتحادياً قبل تداوله في الدولة. الجهات المحلية تقرأ هذا السجل.' },
-  time: { en: 'Days to ~2 weeks per SKU when the file is complete (varies)', ar: 'أيام إلى نحو أسبوعين لكل صنف عند اكتمال الملف (يختلف)' },
 }
 const DM_FIRS: Step = {
   authority: { en: 'Dubai Municipality — Food Safety Department', ar: 'بلدية دبي — إدارة سلامة الغذاء' },
@@ -71,7 +70,7 @@ const DM_FIRS: Step = {
   url: 'https://www.dm.gov.ae/',
   purpose: { en: 'Register your establishment, get the label assessed, register each food item, then file an import application before the shipment lands. Food does NOT go through Montaji — that is an outright rejection.', ar: 'تسجيل المنشأة، تقييم الملصق، تسجيل كل صنف، ثم طلب استيراد قبل وصول الشحنة. الأغذية لا تُقدَّم عبر منتاجي — يُرفض الطلب فوراً.' },
   fee: { en: 'Official DM fees reported at AED 10 application + AED 100–220 certificate (≈ AED 110–240 per product variant)', ar: 'رسوم البلدية الرسمية المنقولة: 10 دراهم للطلب + 100–220 درهماً للشهادة (نحو 110–240 درهماً لكل صنف)' },
-  time: { en: '2–4 weeks typical; 22 working days is the commonly quoted standard', ar: 'عادةً 2–4 أسابيع؛ 22 يوم عمل هو المعيار المتداول' },
+  time: { en: 'Consultants report 2–4 weeks; 22 working days is the commonly quoted standard', ar: 'يذكر الاستشاريون 2–4 أسابيع؛ و22 يوم عمل هو المعيار المتداول' },
 }
 const DM_MONTAJI: Step = {
   authority: { en: 'Dubai Municipality — Consumer Products Safety', ar: 'بلدية دبي — سلامة المنتجات الاستهلاكية' },
@@ -79,7 +78,7 @@ const DM_MONTAJI: Step = {
   url: 'https://montaji.dm.gov.ae/',
   purpose: { en: 'Register cosmetics, personal care, health supplements, detergents/disinfectants and pet food sold in Dubai. One application per product variant.', ar: 'تسجيل مستحضرات التجميل والعناية الشخصية والمكمّلات والمنظفات/المطهرات وأغذية الحيوانات الأليفة المباعة في دبي. طلب لكل صنف.' },
   fee: { en: 'AED 10 application + AED 220 certificate issuance (official DM fees; per variant)', ar: '10 دراهم للطلب + 220 درهماً لإصدار الشهادة (رسوم البلدية الرسمية؛ لكل صنف)' },
-  time: { en: '2–6 weeks depending on category (skincare 2–4, fragrances 3–6)', ar: '2–6 أسابيع بحسب الفئة (عناية بالبشرة 2–4، عطور 3–6)' },
+  time: { en: 'Consultants report 2–6 weeks by category (skincare 2–4, fragrances 3–6)', ar: 'يذكر الاستشاريون 2–6 أسابيع بحسب الفئة (عناية بالبشرة 2–4، عطور 3–6)' },
 }
 const ADAFSA: Step = {
   authority: { en: 'Abu Dhabi Agriculture & Food Safety Authority (ADAFSA)', ar: 'هيئة أبوظبي للزراعة والسلامة الغذائية' },
@@ -97,7 +96,7 @@ const LOCAL_CONSUMER = (name: Bi): Step => ({
   authority: name,
   portal: { en: 'Local consumer-products registration', ar: 'تسجيل المنتجات الاستهلاكية محلياً' },
   url: 'https://u.ae/en/information-and-services/business',
-  purpose: { en: 'Outside Dubai, consumer-product registration is handled by the local municipality / quality authority. A Dubai Montaji certificate is widely accepted by retailers across the UAE, but confirm with the local authority for the emirate where you sell.', ar: 'خارج دبي، تسجيل المنتجات الاستهلاكية تديره البلدية/جهة الجودة المحلية. شهادة منتاجي من دبي مقبولة على نطاق واسع لدى تجار التجزئة في الدولة، لكن أكّد مع الجهة المحلية في إمارة البيع.' },
+  purpose: { en: 'Outside Dubai, consumer-product registration is handled by the local municipality / quality authority. Montaji covers Dubai only — confirm with the local authority for the emirate where you sell.', ar: 'خارج دبي، تسجيل المنتجات الاستهلاكية تديره البلدية/جهة الجودة المحلية. منتاجي يغطي دبي فقط — أكّد مع الجهة المحلية في إمارة البيع.' },
 })
 const EDE: Step = {
   authority: { en: 'Emirates Drug Establishment (EDE) — formerly MoHAP services', ar: 'مؤسسة الإمارات للدواء — خدمات وزارة الصحة سابقاً' },

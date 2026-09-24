@@ -72,9 +72,9 @@ export default function CompliancePage() {
   const isAr = !pathname?.startsWith('/en')
 
   const t = isAr ? {
-    title: '🛡 فاحص المطابقة',
-    subtitle: 'أدخل بيانات المنتج — يفحص ضد UAE.S ويعرض جميع النواقص دفعة واحدة لا شهراً كاملاً',
-    coverage: 'يغطي: UAE.S 9:2019 · UAE.S 1926:2015 · معايير ESMA',
+    title: '🛡 فحص الملصق قبل التقديم لبلدية دبي',
+    subtitle: 'افحص ملصق منتجك مجاناً قبل رفعه في FIRS أو منتاجي — كل النواقص دفعة واحدة بدل الرفض بعد أسابيع',
+    coverage: 'يغطي: UAE.S 9 / GSO 9 (بطاقة الأغذية) · UAE.S 1926 (مشروبات الطاقة) · مواصفات وزارة الصناعة (ESMA سابقاً)',
     scanTitle: 'مسح ذكي بالكاميرا',
     scanSub: 'صوّر بطاقة المنتج — نقرأها ونملأ الحقول ونفحص المطابقة تلقائياً',
     orManual: 'أو أدخل البيانات يدوياً',
@@ -93,9 +93,9 @@ export default function CompliancePage() {
     emptyResult1: 'ستظهر نتائج الفحص هنا', emptyResult2: 'يغطي الفحص جميع متطلبات UAE.S دفعة واحدة',
     missing: 'نقص', failed: 'النواقص', review: 'تحقّق يدوياً على التصميم', passed: 'المستوفى',
   } : {
-    title: '🛡 Compliance Checker',
-    subtitle: 'Enter your product data — checked against UAE.S with every gap shown at once, not over a whole month',
-    coverage: 'Covers: UAE.S 9:2019 · UAE.S 1926:2015 · ESMA standards',
+    title: '🛡 Dubai Municipality label pre-check',
+    subtitle: 'Pre-check your label for free before filing with FIRS or Montaji — every gap at once, instead of a rejection weeks later',
+    coverage: 'Covers: UAE.S 9 / GSO 9 (food labelling) · UAE.S 1926 (energy drinks) · MoIAT standards (formerly ESMA)',
     scanTitle: 'Smart camera scan',
     scanSub: 'Photograph the label — we read it, fill the fields, and check compliance automatically',
     orManual: 'or enter data manually',

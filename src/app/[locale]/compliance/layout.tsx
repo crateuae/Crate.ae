@@ -3,10 +3,10 @@ import type { Metadata } from 'next'
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
   const isAr = locale === 'ar'
-  const title = isAr ? 'اشتراطات استيراد الأغذية في الإمارات — ESMA / UAE.S / ADAFSA' : 'UAE Food Import Requirements — ESMA / UAE.S / ADAFSA'
+  const title = isAr ? 'فحص الملصق قبل التقديم لبلدية دبي — UAE.S / GSO 9 — مجاناً' : 'Dubai Municipality label pre-check — UAE.S / GSO 9 — free'
   const description = isAr
-    ? 'افحص منتجك أمام معايير ESMA وUAE.S قبل التسجيل واحصل على قائمة النواقص كاملة دفعة واحدة — للمستوردين والتجار في الإمارات.'
-    : 'Check your product against ESMA and UAE.S standards before registration and get the full gap list at once — for UAE importers and traders.'
+    ? 'افحص ملصق منتجك الغذائي مجاناً قبل رفعه في FIRS أو منتاجي: كل نواقص المواصفة UAE.S 9 / GSO 9 دفعة واحدة (العربية، التواريخ، المكوّنات، الحقائق الغذائية، المنشأ) — بالكاميرا أو يدوياً.'
+    : 'Pre-check your food label for free before filing with Dubai Municipality (FIRS / Montaji): every UAE.S 9 / GSO 9 gap at once (Arabic, dates, ingredients, nutrition, origin) — by camera or manually.'
   return {
     title, description,
     alternates: { canonical: `https://www.crate.ae/${locale}/compliance`, languages: { ar: '/ar/compliance', en: '/en/compliance', 'x-default': '/ar/compliance' } },
@@ -20,7 +20,9 @@ const FAQ = (isAr: boolean) => isAr ? [
   { q: 'ما الذي يجب أن يظهر باللغة العربية على ملصق منتج غذائي في الإمارات؟',
     a: 'وفق UAE.S 9:2019 يجب أن تظهر بالعربية: اسم المنتج، المكوّنات، تاريخا الإنتاج والانتهاء، ظروف التخزين، والحقائق الغذائية — إضافةً إلى المحتوى الصافي بوحدات مترية وبلد المنشأ.' },
   { q: 'ما المعيار الذي يُفحص المنتج الغذائي ضدّه قبل التسجيل في الإمارات؟',
-    a: 'المعيار الإماراتي UAE.S 9:2019 لبطاقات الأغذية المعبّأة، إلى جانب اشتراطات هيئة ESMA. الجهة الملزمة للتسجيل هي ESMA.' },
+    a: 'المواصفة الإماراتية/الخليجية UAE.S 9 (GSO 9) لبطاقات الأغذية المعبّأة، التي تصدرها وزارة الصناعة والتكنولوجيا المتقدمة (هيئة المواصفات ESMA سابقاً). أما تقييم الملصق وتسجيل الصنف في دبي فتجريهما بلدية دبي عبر نظام FIRS، وفي أبوظبي هيئة ADAFSA.' },
+  { q: 'أين أرفع الملصق بعد الفحص؟',
+    a: 'الأغذية: نظام FIRS في بلدية دبي بعد التسجيل الاتحادي في زاد. مستحضرات التجميل والمكمّلات والمنظفات: منتاجي. استخدم «موجّه البوابات» في Crate لتحديد الجهة بحسب المنتج والإمارة.' },
   { q: 'هل يجب إعلان السلفايت على ملصق المنتج؟',
     a: 'نعم؛ إذا احتوى المنتج على سلفايت (E220–E228) وجب إعلانه على البطاقة برقم الـE الخاص به.' },
   { q: 'ما الذي يجعل المنتج غير قابل للتسجيل؟',
@@ -29,7 +31,9 @@ const FAQ = (isAr: boolean) => isAr ? [
   { q: 'What must appear in Arabic on a UAE food label?',
     a: 'Under UAE.S 9:2019 the product name, ingredients, production & expiry dates, storage conditions and nutrition facts must appear in Arabic — plus net content in metric units and country of origin.' },
   { q: 'Which standard is a food product checked against before UAE registration?',
-    a: 'UAE.S 9:2019 for the labelling of prepackaged foodstuffs, together with ESMA requirements. ESMA is the binding registration authority.' },
+    a: 'UAE.S 9 (GSO 9) for the labelling of prepackaged foodstuffs, issued by MoIAT (formerly ESMA). Label assessment and item registration in Dubai are done by Dubai Municipality through FIRS; in Abu Dhabi by ADAFSA.' },
+  { q: 'Where do I file the label after the pre-check?',
+    a: 'Food: Dubai Municipality\'s FIRS after federal ZAD registration. Cosmetics, supplements and detergents: Montaji. Use Crate\'s Portal Router to get the exact authority by product and emirate.' },
   { q: 'Must sulphites be declared on the product label?',
     a: 'Yes. If the product contains sulphites (E220–E228) they must be declared on the label by their E-number.' },
   { q: 'What makes a product not registerable?',

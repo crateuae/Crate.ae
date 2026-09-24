@@ -163,22 +163,38 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               </p>
               <p className="text-[13px] text-stone-400 font-medium mb-9">
                 {isAr
-                  ? `مدعومة بسجل ${fmt(d.providers)} شركة مرخّصة · ESMA · UAE.S · ADAFSA`
-                  : `Backed by a registry of ${fmt(d.providers)} licensed companies · ESMA · UAE.S · ADAFSA`}
+                  ? `مدعومة بسجل ${fmt(d.providers)} شركة مرخّصة · بلدية دبي · MoIAT (ESMA) · UAE.S · ADAFSA`
+                  : `Backed by a registry of ${fmt(d.providers)} licensed companies · Dubai Municipality · MoIAT (ESMA) · UAE.S · ADAFSA`}
               </p>
 
               <div className="flex flex-wrap gap-3">
-                <Link href={`/${locale}/market`}
-                  className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-7 py-3.5 rounded-2xl transition-all text-sm shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 hover:-translate-y-0.5">
-                  <Sparkles className="w-4 h-4" />
-                  {isAr ? 'اكتشف فرص السوق' : 'Explore opportunities'}
+                <Link href={`/${locale}/compliance`}
+                  className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-7 py-4 rounded-2xl transition-all text-[15px] shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 hover:-translate-y-0.5">
+                  <ShieldCheck className="w-5 h-5" />
+                  {isAr ? 'افحص ملصقك قبل التقديم لبلدية دبي — مجاناً' : 'Pre-check your label for Dubai Municipality — free'}
                   <Arrow className="w-4 h-4" />
                 </Link>
-                <Link href={`/${locale}/compliance`}
+                <Link href={`/${locale}/market`}
                   className="inline-flex items-center gap-2 bg-white hover:bg-orange-50 text-stone-700 font-semibold px-6 py-3.5 rounded-2xl border border-stone-200 hover:border-orange-200 transition-all text-sm">
-                  <ShieldCheck className="w-4 h-4 text-orange-500" />
-                  {isAr ? 'افحص اشتراطات منتجك' : 'Check product requirements'}
+                  <Sparkles className="w-4 h-4 text-orange-500" />
+                  {isAr ? 'اكتشف فرص السوق' : 'Explore opportunities'}
                 </Link>
+              </div>
+
+              {/* Free tools strip — most visitors land here and never reach a tool */}
+              <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { href: '/compliance', ar: 'فحص الملصق', en: 'Label pre-check', sub_ar: 'بالكاميرا أو يدوياً', sub_en: 'camera or manual' },
+                  { href: '/tools/product-registration-uae', ar: 'أين أسجّل منتجي؟', en: 'Where to register', sub_ar: 'منتاجي · FIRS · زاد', sub_en: 'Montaji · FIRS · ZAD' },
+                  { href: '/tools/certificates-uae', ar: 'هل أحتاج شهادات؟', en: 'Certificates needed?', sub_ar: 'ECAS · EQM · حلال', sub_en: 'ECAS · EQM · Halal' },
+                  { href: '/tools/landed-cost-uae', ar: 'التكلفة الواصلة', en: 'Landed cost', sub_ar: 'HS · جمارك · انتقائية', sub_en: 'HS · duty · excise' },
+                ].map(t => (
+                  <Link key={t.href} href={`/${locale}${t.href}`}
+                    className="rounded-xl border border-stone-200 bg-white/80 hover:border-orange-300 hover:bg-orange-50/60 px-3 py-2.5 transition-colors">
+                    <div className="text-[13px] font-semibold text-stone-800">{isAr ? t.ar : t.en}</div>
+                    <div className="text-[11px] text-stone-400">{isAr ? t.sub_ar : t.sub_en}</div>
+                  </Link>
+                ))}
               </div>
             </div>
 

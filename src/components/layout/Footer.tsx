@@ -66,6 +66,8 @@ export default function Footer({ locale = 'ar' }: { locale?: string }) {
             <FooterLink href={L('/market')}>{isAr ? 'لوحة الفرص المباشرة' : 'Live Opportunity Board'}</FooterLink>
             <FooterLink href={L('/compliance')}>{isAr ? 'فحص منتج جديد' : 'Check a New Product'}</FooterLink>
             <FooterLink href={L('/tools/product-registration-uae')}>{isAr ? 'أين أسجّل منتجي؟' : 'Where to Register My Product'}</FooterLink>
+            <FooterLink href={L('/tools/certificates-uae')}>{isAr ? 'هل أحتاج شهادة ECAS / EQM / حلال؟' : 'Do I need ECAS / EQM / Halal?'}</FooterLink>
+            <FooterLink href={L('/tools/landed-cost-uae')}>{isAr ? 'رمز HS وحاسبة التكلفة الواصلة' : 'HS Code & Landed-Cost Calculator'}</FooterLink>
             <FooterLink href={L('/tools/nutrition')}>{isAr ? 'حاسبة الحقائق الغذائية' : 'Nutrition Facts Calculator'}</FooterLink>
           </FooterCol>
 
