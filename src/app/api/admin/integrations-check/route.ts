@@ -7,7 +7,7 @@
  * can this service account see → does GSC_SITE_URL match one → sitemap status → 28-day totals
  * → GA4 totals → first-party visitors for the same window (bot cross-check).
  */
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { google } from 'googleapis'
 import { adminClient } from '@/lib/supabase/admin'
 
@@ -32,7 +32,9 @@ function explain(msg: string, email?: string): string {
   return 'See the raw message.'
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // ?detail=1 adds compact breakdowns (top queries/pages/countries/devices/daily trend + GA4 channels/landing pages).
+  const detail = new URL(req.url).searchParams.get('detail') === '1'
   const out: Record<string, unknown> = { checkedAt: new Date().toISOString() }
   const siteUrl = (process.env.GSC_SITE_URL ?? '').trim()
   const ga4 = (process.env.GA4_PROPERTY_ID ?? '').trim()
@@ -79,6 +81,18 @@ export async function GET() {
           const r = q.data.rows?.[0]
           gsc.last28d = { clicks: r?.clicks ?? 0, impressions: r?.impressions ?? 0, note: r ? undefined : 'No rows yet — normal for a newly added property (data starts from verification and lags ~2–3 days).' }
         } catch (e) { const msg = e instanceof Error ? e.message : String(e); gsc.queryError = msg; gsc.problem = explain(msg, email) }
+
+        if (detail) {
+          const startDate = daysAgo(31), endDate = daysAgo(3)
+          const by = async (d: 'query' | 'page' | 'country' | 'device' | 'date', keep: number) => {
+            const r = await sc.searchanalytics.query({ siteUrl, requestBody: { startDate, endDate, dimensions: [d], rowLimit: 250, dataState: 'all' } })
+            const rows = (r.data.rows ?? []).map(x => ({ k: x.keys?.[0] ?? '', clicks: x.clicks ?? 0, impr: x.impressions ?? 0, ctr: Math.round((x.ctr ?? 0) * 1000) / 10, pos: Math.round((x.position ?? 0) * 10) / 10 }))
+            return d === 'date' ? rows.sort((a, b) => a.k.localeCompare(b.k)).map(x => `${x.k}:${x.impr}i/${x.clicks}c`) : rows.sort((a, b) => b.impr - a.impr).slice(0, keep)
+          }
+          for (const [name, d, n] of [['topQueries', 'query', 40], ['topPages', 'page', 30], ['countries', 'country', 8], ['devices', 'device', 4], ['daily', 'date', 40]] as const) {
+            try { gsc[name] = await by(d, n) } catch (e) { gsc[name + 'Error'] = e instanceof Error ? e.message : String(e) }
+          }
+        }
       }
     } catch (e) { const msg = e instanceof Error ? e.message : String(e); gsc.error = msg; gsc.problem = explain(msg, email) }
     out.searchConsole = gsc
@@ -93,6 +107,15 @@ export async function GET() {
       const rep = await ga.properties.runReport({ property: `properties/${ga4}`, requestBody: { dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }], metrics: [{ name: 'activeUsers' }, { name: 'sessions' }, { name: 'screenPageViews' }] } })
       const v = rep.data.rows?.[0]?.metricValues ?? []
       g.last30d = { users: Number(v[0]?.value ?? 0), sessions: Number(v[1]?.value ?? 0), pageviews: Number(v[2]?.value ?? 0) }
+      if (detail) {
+        const run = async (dim: string, n: number) => {
+          const r = await ga.properties.runReport({ property: `properties/${ga4}`, requestBody: { dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }], dimensions: [{ name: dim }], metrics: [{ name: 'sessions' }, { name: 'activeUsers' }, { name: 'engagedSessions' }], orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit: String(n) } })
+          return (r.data.rows ?? []).map(x => ({ k: x.dimensionValues?.[0]?.value ?? '', sessions: Number(x.metricValues?.[0]?.value ?? 0), users: Number(x.metricValues?.[1]?.value ?? 0), engaged: Number(x.metricValues?.[2]?.value ?? 0) }))
+        }
+        for (const [name, dim, n] of [['channels', 'sessionDefaultChannelGroup', 8], ['sources', 'sessionSource', 10], ['landingPages', 'landingPage', 15], ['countries', 'country', 6], ['devices', 'deviceCategory', 4]] as const) {
+          try { g[name] = await run(dim, n) } catch (e) { g[name + 'Error'] = e instanceof Error ? e.message : String(e) }
+        }
+      }
     } catch (e) { const msg = e instanceof Error ? e.message : String(e); g.error = msg; g.problem = explain(msg, email) }
     out.ga4 = g
   } else if (!ga4) out.ga4 = { problem: 'GA4_PROPERTY_ID is not set on this deployment.' }
