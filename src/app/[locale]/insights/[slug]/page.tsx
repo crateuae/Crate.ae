@@ -4,6 +4,8 @@ import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { ChevronLeft, Tag, Clock } from 'lucide-react'
 import RfqForm from './RfqForm'
+import ImportToolsBox from '@/components/tools/ImportToolsBox'
+import { toolLinksForArticle } from '@/lib/import-guides/link'
 
 export const revalidate = 3600
 
@@ -127,6 +129,9 @@ export default async function InsightPage(
             <p key={i} className="text-gray-700 leading-relaxed">{p}</p>
           ))}
         </div>
+
+        {/* Free tools preset for this product — turns the impressions this page already earns into captured leads */}
+        <ImportToolsBox links={toolLinksForArticle(slug)} locale={locale} />
 
         {/* RFQ Form — the deal capture point */}
         <RfqForm

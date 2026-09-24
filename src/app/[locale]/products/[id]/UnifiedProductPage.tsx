@@ -4,6 +4,8 @@
  * Reads directly from Supabase row.
  */
 import Link from 'next/link'
+import ImportToolsBox from '@/components/tools/ImportToolsBox'
+import { toolLinksForProduct } from '@/lib/import-guides/link'
 import {
   Globe, Tag, ArrowRight, CheckCircle2, AlertTriangle,
   ShoppingCart, Plane, FileText, TrendingUp, TrendingDown, Minus,
@@ -579,6 +581,9 @@ export default function UnifiedProductPage({
             </div>
           </div>
         )}
+
+        {/* ── Free import tools, preset for this product ─────────────────────────── */}
+        <ImportToolsBox links={toolLinksForProduct(product)} locale={locale} productName={name} />
 
         {/* ── RFQ CTA ──────────────────────────────────────────────────────────── */}
         <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-3xl p-6 md:p-8 text-white shadow-sm">

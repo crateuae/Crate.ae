@@ -8,12 +8,59 @@ import { TRADING_CATEGORIES, catLabel } from './labels'
 
 export const revalidate = 3600
 
-export const metadata: Metadata = {
-  title: 'شبكة الموردين — Crate',
-  description: 'شركات التجارة العامة والمواد الغذائية المرخّصة في الإمارات — تواصل واطلب عبر Crate',
-}
-
 const PAGE_SIZE = 15
+
+// Categories whose companies SUPPLY goods — only these get the "suppliers" wording. Restaurants,
+// cafés, caterers etc. are buyers, so calling them "suppliers" would mislead the searcher.
+const SUPPLY_CATEGORIES = new Set([
+  'Foodstuff Trading', 'Beverages & Juices', 'Oils & Fats', 'Seafood', 'Meat & Poultry', 'Grains & Flour',
+  'Health & Nutrition', 'Chocolate & Sweets', 'Spices & Condiments', 'Dairy', 'Dairy & Eggs', 'Organic & Natural',
+  'Snacks', 'Frozen Foods', 'Food Packaging', 'General Trading', 'Grocery & General Food',
+])
+
+// Google already indexes /providers?cat=… and ranks these pages (positions 3–7) — each gets its own
+// title / description / canonical instead of one static Arabic title for every URL.
+export async function generateMetadata({ params, searchParams }: {
+  params: Promise<{ locale: string }>
+  searchParams: Promise<{ q?: string; cat?: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  const sp = await searchParams
+  const isAr = locale === 'ar'
+  const cat = (sp.cat ?? '').trim()
+  const q = (sp.q ?? '').trim()
+
+  const res = await getProviders({ type: 'trader', category: cat || undefined, from: 0, to: 0 })
+  const total = res.total ?? 0
+  const validCat = !!cat && total > 0
+  const n = total.toLocaleString('en-US')
+
+  const url = (loc: string) => `https://www.crate.ae/${loc}/providers${validCat ? `?${new URLSearchParams({ cat }).toString()}` : ''}`
+  const supply = validCat && SUPPLY_CATEGORIES.has(cat)
+
+  let title: string, description: string
+  if (validCat) {
+    const label = catLabel(cat, isAr)
+    title = isAr
+      ? `${supply ? `موردو ${label}` : `شركات ${label}`} في دبي — ${n} شركة مرخّصة`
+      : `${label} ${supply ? 'suppliers' : 'companies'} in Dubai — ${n} licensed companies`
+    description = isAr
+      ? `دليل ${n} شركة ${label} مرخّصة من السجل التجاري في دبي (DED). اطلب عرض سعر عبر Crate وقارن قبل الاستيراد.`
+      : `Directory of ${n} ${label.toLowerCase()} companies licensed in the Dubai commercial registry (DED). Request a quote through Crate before you import.`
+  } else {
+    title = isAr ? `شبكة الموردين والمستوردين المرخّصين في دبي — ${n} شركة` : `Licensed food suppliers & importers in Dubai — ${n} companies`
+    description = isAr
+      ? 'شركات التجارة العامة والمواد الغذائية المرخّصة في دبي من السجل التجاري الرسمي — اطلب عرض سعر عبر Crate.'
+      : 'Food and general-trading companies licensed in Dubai, from the official commercial registry — request quotes through Crate.'
+  }
+  return {
+    title, description,
+    alternates: { canonical: url(locale), languages: { ar: url('ar'), en: url('en'), 'x-default': url('ar') } },
+    openGraph: { title, description, url: url(locale) },
+    // free-text searches are thin/duplicate pages — keep them out of the index
+    ...(q ? { robots: { index: false, follow: true } } : {}),
+  }
+}
 
 export default async function ProvidersPage({
   params,
@@ -66,7 +113,11 @@ export default async function ProvidersPage({
             {isAr ? 'السجل التجاري الرسمي — دبي DED' : 'Official Commerce Registry — Dubai DED'}
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-3 tracking-tight">
-            {isAr ? 'شبكة الموردين والمستوردين' : 'Suppliers & Importers Network'}
+            {categoryFilter && (category_counts[categoryFilter] ?? 0) > 0
+              ? (isAr
+                  ? `${SUPPLY_CATEGORIES.has(categoryFilter) ? 'موردو' : 'شركات'} ${catLabel(categoryFilter, true)} في دبي`
+                  : `${catLabel(categoryFilter, false)} ${SUPPLY_CATEGORIES.has(categoryFilter) ? 'suppliers' : 'companies'} in Dubai`)
+              : (isAr ? 'شبكة الموردين والمستوردين' : 'Suppliers & Importers Network')}
           </h1>
           <p className="text-gray-500 max-w-2xl mx-auto mb-8 leading-relaxed text-sm">
             {isAr
