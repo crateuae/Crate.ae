@@ -63,6 +63,23 @@ function familyForName(name: string): Family | undefined {
   return undefined
 }
 
+/** Precise name → guide, only where the guide IS the product (used when the HS code gave no match). */
+const NAME_GUIDES: [RegExp, string][] = [
+  [/\b(cashews?|pistachios?|almonds?|walnuts?|hazelnuts?|macadamia|pecans?)\b/, 'nuts'],
+  [/\bmaple syrup\b/, 'maple-syrup'],
+  [/\b(corn flakes|cereal)\b/, 'breakfast-cereals'],
+  [/\b(biscuits?|cookies?)\b/, 'biscuits'],
+  [/\b(pasta|noodles?|ramen|vermicelli|penne|spaghetti|macaroni)\b/, 'pasta-noodles'],
+  [/\btuna\b/, 'canned-tuna'],
+  [/\b(ketchup|marinara|tomato sauce)\b/, 'sauces-ketchup'],
+  [/^(?!.*\b(free|drinks?|cola|soda|cookies?|cane|candy|sweets?|syrup)\b).*\bsugar\b/, 'sugar'],
+  [/^(?!.*\b(oat|almond|soy|coconut|plant|condensed|powder|evaporated)\b).*\bmilk\b/, 'milk'],
+]
+const guideByName = (name: string): GuideProduct | undefined => {
+  const hit = NAME_GUIDES.find(([re]) => re.test(name))
+  return hit ? findGuide(hit[1]) : undefined
+}
+
 const FAMILY_BY_CATEGORY: Record<string, Family> = {
   'Dairy Products': 'dairy', 'Oils & Fats': 'oils_grains', 'Frozen Products': 'processed_food', 'Meat, Poultry & Fish': 'meat',
   'Beverages': 'soft_drink', 'Sugar, Honey & Syrup': 'oils_grains', 'Canned & Preserved': 'processed_food', 'Spices & Sauces': 'processed_food',
@@ -92,6 +109,7 @@ export function toolLinksForProduct(p: { name_en?: string | null; category_en?: 
     // 2202.99 mixes energy drinks with iced tea etc. — decide by name
     if (hs.code === '2202.99') guide = /energy|celsius|monster|red ?bull|ghost|bang/.test(name) ? findGuide('energy-drinks') : findGuide('soft-drinks')
   }
+  if (!guide) guide = guideByName(name)
   const family: Family = guide?.family ?? (p.hs_code ? familyForHs(p.hs_code) : (FAMILY_BY_CATEGORY[p.category_en ?? ''] ?? familyForName(p.name_en ?? '') ?? 'processed_food'))
   const animal = guide?.animal || family === 'meat'
   return {

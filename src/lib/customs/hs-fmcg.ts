@@ -26,7 +26,7 @@ export const HS_FMCG: HsEntry[] = [
   { code: '0306', en: 'Crustaceans (shrimp, crab, lobster)', ar: 'قشريات (روبيان، سلطعون، كركند)', duty: 0 },
   { code: '0307', en: 'Molluscs (squid, octopus, clams)', ar: 'رخويات (حبار، أخطبوط، محار)', duty: 0 },
   // Ch 04 dairy & eggs & honey
-  { code: '0401', en: 'Milk & cream, not concentrated', ar: 'حليب وقشدة غير مركزة', duty: 'verify', note: 'Fresh milk lines are often exempt' },
+  { code: '0401', en: 'Milk & cream, not concentrated', ar: 'حليب وقشدة غير مركزة', duty: 'verify', note: 'Confirm the exemption status of this exact tariff line' },
   { code: '0402', en: 'Milk powder / condensed milk', ar: 'حليب مجفف / مكثف', duty: 'verify' },
   { code: '0403', en: 'Yoghurt, laban, buttermilk', ar: 'زبادي، لبن، لبن رائب', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
   { code: '0404', en: 'Whey & milk constituents', ar: 'مصل الحليب ومكوناته', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
@@ -55,7 +55,7 @@ export const HS_FMCG: HsEntry[] = [
   { code: '0813', en: 'Fruit, dried', ar: 'فواكه مجففة', duty: 'verify' },
   // Ch 09 coffee, tea, spices
   { code: '0901', en: 'Coffee (green or roasted)', ar: 'قهوة (خضراء أو محمصة)', duty: 0 },
-  { code: '0902', en: 'Tea', ar: 'شاي', duty: 'verify', note: 'Tea is exempt on many GCC lines — confirm' },
+  { code: '0902', en: 'Tea', ar: 'شاي', duty: 'verify', note: 'Confirm the exemption status of this exact tariff line' },
   { code: '0904', en: 'Pepper, chilli, paprika', ar: 'فلفل، شطة، بابريكا', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
   { code: '0906', en: 'Cinnamon', ar: 'قرفة', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
   { code: '0908', en: 'Nutmeg, cardamom', ar: 'جوزة الطيب، هيل', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
@@ -65,7 +65,7 @@ export const HS_FMCG: HsEntry[] = [
   { code: '1001', en: 'Wheat', ar: 'قمح', duty: 0 },
   { code: '1005', en: 'Maize (corn)', ar: 'ذرة', duty: 0 },
   { code: '1006', en: 'Rice', ar: 'أرز', duty: 0 },
-  { code: '1101', en: 'Wheat flour', ar: 'دقيق قمح', duty: 'verify', note: 'Staple flour is commonly exempt' },
+  { code: '1101', en: 'Wheat flour', ar: 'دقيق قمح', duty: 'verify', note: 'Confirm the exemption status of this exact tariff line' },
   { code: '1102', en: 'Other cereal flours', ar: 'دقيق حبوب أخرى', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
   { code: '1104', en: 'Rolled oats & worked grains', ar: 'شوفان مجروش وحبوب معالجة', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
   { code: '1108', en: 'Starches', ar: 'نشاء', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
@@ -86,13 +86,13 @@ export const HS_FMCG: HsEntry[] = [
   { code: '1604', en: 'Prepared / canned fish (tuna, sardines)', ar: 'أسماك محضرة أو معلبة (تونة، سردين)', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
   { code: '1605', en: 'Prepared crustaceans & molluscs', ar: 'قشريات ورخويات محضرة', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
   // Ch 17–18 sugar, cocoa
-  { code: '1701', en: 'Cane / beet sugar', ar: 'سكر قصب / بنجر', duty: 'verify', note: 'Raw/refined sugar is commonly exempt' },
+  { code: '1701', en: 'Cane / beet sugar', ar: 'سكر قصب / بنجر', duty: 'verify', note: 'GCC tariff guidance lists sugar among duty-free staples — confirm the exact line' },
   { code: '1702', en: 'Other sugars, glucose, syrups', ar: 'سكريات أخرى، جلوكوز، شراب', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
   { code: '1704', en: 'Sugar confectionery (no cocoa)', ar: 'حلويات سكرية (بدون كاكاو)', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
   { code: '1801', en: 'Cocoa beans', ar: 'حبوب كاكاو', duty: 'verify' },
   { code: '1806', en: 'Chocolate & cocoa preparations', ar: 'شوكولاتة ومحضرات كاكاو', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
   // Ch 19 cereal preparations
-  { code: '1901.10', en: 'Infant formula & baby food (retail)', ar: 'حليب أطفال وأغذية رضّع (تجزئة)', duty: 'verify', note: 'Infant food lines are commonly exempt' },
+  { code: '1901.10', en: 'Infant formula & baby food (retail)', ar: 'حليب أطفال وأغذية رضّع (تجزئة)', duty: 'verify', note: 'Confirm the exemption status of this exact tariff line' },
   { code: '1901', en: 'Malt extract; flour/milk preparations', ar: 'خلاصة شعير؛ محضرات دقيق/حليب', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
   { code: '1902', en: 'Pasta & noodles', ar: 'معكرونة ونودلز', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
   { code: '1904', en: 'Breakfast cereals & puffed grains', ar: 'حبوب إفطار وحبوب منفوشة', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
@@ -127,7 +127,7 @@ export const HS_FMCG: HsEntry[] = [
   // Ch 25 salt
   { code: '2501', en: 'Salt', ar: 'ملح', duty: 'verify', note: '5% standard rate unless this exact line is on the GCC exemption list' },
   // Ch 30 medicaments (info only)
-  { code: '3004', en: 'Medicaments (retail) — EDE controlled', ar: 'أدوية (تجزئة) — تحت رقابة مؤسسة الدواء', duty: 'verify', note: 'Pharmaceuticals are generally exempt; EDE permit required' },
+  { code: '3004', en: 'Medicaments (retail) — EDE controlled', ar: 'أدوية (تجزئة) — تحت رقابة مؤسسة الدواء', duty: 'verify', note: 'Registered and permitted by the Emirates Drug Establishment — confirm duty on the exact line' },
   // Ch 33 cosmetics & perfumery
   { code: '3301', en: 'Essential oils', ar: 'زيوت عطرية', duty: 5 },
   { code: '3303', en: 'Perfumes & toilet waters', ar: 'عطور ومياه تواليت', duty: 5 },

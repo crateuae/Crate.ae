@@ -137,6 +137,62 @@ export const GUIDE_PRODUCTS: GuideProduct[] = [
     slug: 'detergents', name: { en: 'detergents & disinfectants', ar: 'المنظفات والمطهرات' }, group: 'health', hs: '3402', category: 'detergent', family: 'detergent', notes: [],
     related: ['pet-food', 'skincare', 'perfume'],
   },
+  {
+    slug: 'maple-syrup', name: { en: 'maple syrup', ar: 'شراب القيقب' }, group: 'food', hs: '1702', category: 'food', family: 'processed_food',
+    notes: [{ en: 'ZAD registration is per SKU (brand × product × pack size × barcode), so every bottle size of a maple-syrup brand is a separate registration and label approval.', ar: 'التسجيل في زاد لكل صنف (علامة × منتج × حجم عبوة × باركود)، فكل حجم عبوة من علامة شراب القيقب تسجيل واعتماد ملصق منفصل.' }],
+    related: ['honey', 'sugar', 'biscuits'],
+  },
+  {
+    slug: 'nuts', name: { en: 'nuts (cashews, pistachios, almonds)', ar: 'المكسرات (كاجو، فستق، لوز)' }, group: 'food', hs: '0802', category: 'food', family: 'processed_food',
+    notes: [{ en: 'Allergen declarations are among the mandatory GSO 9 label elements, so tree nuts and peanut traces must be declared in Arabic on the pack.', ar: 'إعلان مسببات الحساسية من العناصر الإلزامية في GSO 9، فيجب إعلان المكسرات وآثار الفول السوداني بالعربية على العبوة.' }],
+    related: ['dates', 'chocolate', 'biscuits'],
+  },
+  {
+    slug: 'breakfast-cereals', name: { en: 'breakfast cereals', ar: 'حبوب الإفطار' }, group: 'food', hs: '1904', category: 'food', family: 'processed_food',
+    notes: [{ en: 'Allergen declarations (gluten-containing grains, nuts, milk derivatives) are among the mandatory GSO 9 label elements and must appear in Arabic.', ar: 'إعلان مسببات الحساسية (الحبوب المحتوية على الغلوتين، المكسرات، مشتقات الحليب) من العناصر الإلزامية في GSO 9 ويجب أن يظهر بالعربية.' }],
+    related: ['biscuits', 'milk', 'sugar'],
+  },
+  {
+    slug: 'milk', name: { en: 'milk', ar: 'الحليب' }, group: 'food', hs: '0401', category: 'food', family: 'dairy', ecasWatch: true,
+    notes: [
+      { en: 'For dairy the UAE label check also requires the fat-content percentage to be declared.', ar: 'في منتجات الألبان يشترط فحص الملصق الإماراتي أيضاً إعلان نسبة الدهون.' },
+      { en: 'Beverages containing at least 75% milk are excluded from the 2026 sweetened-drinks excise, so plain and most flavoured milk do not carry the sugar-tier tax.', ar: 'المشروبات التي تحتوي 75% حليباً على الأقل مستثناة من الضريبة الانتقائية على المشروبات المحلّاة 2026، فلا يخضع الحليب العادي ومعظم المنكّه لشرائح السكر.' },
+    ],
+    related: ['cheese', 'breakfast-cereals', 'chocolate'],
+  },
+  {
+    slug: 'sugar', name: { en: 'sugar', ar: 'السكر' }, group: 'staples', hs: '1701', category: 'food', family: 'oils_grains',
+    notes: [{ en: 'GCC tariff guidance lists sugar with rice and grains among the duty-free food staples — confirm the exemption for the exact line (raw, refined or specialty sugars) on the Dubai Customs tariff.', ar: 'توجيهات التعرفة الخليجية تُدرج السكر مع الأرز والحبوب ضمن السلع الغذائية المعفاة — أكّد الإعفاء للبند الدقيق (خام، مكرر، أو سكريات خاصة) على تعرفة جمارك دبي.' }],
+    related: ['rice', 'coffee', 'maple-syrup'],
+  },
+  {
+    slug: 'frozen-beef', name: { en: 'frozen beef', ar: 'لحم البقر المجمد' }, group: 'staples', hs: '0202', category: 'food', family: 'meat', animal: true,
+    notes: [
+      { en: 'UAE Food Code guidance requires a valid halal certificate from an accredited body in the exporting country for imported meat and poultry.', ar: 'توجيهات كود الغذاء الإماراتي تشترط شهادة حلال سارية من جهة معتمدة في بلد التصدير للحوم والدواجن المستوردة.' },
+      { en: 'ADAFSA guidance keeps chilled food below 5 °C and frozen food at −18 °C or colder, with transport temperature records.', ar: 'توجيهات ADAFSA تُبقي الأغذية المبردة تحت 5 °م والمجمدة عند −18 °م أو أقل، مع سجلات درجات الحرارة أثناء النقل.' },
+    ],
+    related: ['frozen-chicken', 'cheese', 'spices'],
+  },
+  {
+    slug: 'pasta-noodles', name: { en: 'pasta & noodles', ar: 'المعكرونة والنودلز' }, group: 'food', hs: '1902', category: 'food', family: 'processed_food',
+    notes: [{ en: 'Allergen declarations (gluten, egg) are among the mandatory GSO 9 label elements and must appear in Arabic.', ar: 'إعلان مسببات الحساسية (الغلوتين، البيض) من العناصر الإلزامية في GSO 9 ويجب أن يظهر بالعربية.' }],
+    related: ['sauces-ketchup', 'rice', 'canned-tuna'],
+  },
+  {
+    slug: 'canned-tuna', name: { en: 'canned tuna', ar: 'التونة المعلبة' }, group: 'food', hs: '1604', category: 'food', family: 'processed_food',
+    notes: [{ en: 'Canned fish is registered like any packaged food (ZAD + FIRS); the Arabic label must show production and expiry dates on the original pack, net content in metric units and country of origin.', ar: 'تُسجَّل الأسماك المعلبة كأي غذاء معبأ (زاد + FIRS)؛ ويجب أن يُظهر الملصق العربي تاريخي الإنتاج والانتهاء على العبوة الأصلية، والمحتوى الصافي بوحدات مترية، وبلد المنشأ.' }],
+    related: ['pasta-noodles', 'sauces-ketchup', 'olive-oil'],
+  },
+  {
+    slug: 'sauces-ketchup', name: { en: 'sauces & ketchup', ar: 'الصلصات والكاتشب' }, group: 'food', hs: '2103', category: 'food', family: 'processed_food',
+    notes: [{ en: 'If a sauce contains sulphites (E220–E228) they must be declared on the label by E-number.', ar: 'إذا احتوت الصلصة على سلفايت (E220–E228) وجب إعلانه على الملصق برقم E.' }],
+    related: ['pasta-noodles', 'canned-tuna', 'spices'],
+  },
+  {
+    slug: 'biscuits', name: { en: 'biscuits & cookies', ar: 'البسكويت والكوكيز' }, group: 'food', hs: '1905', category: 'food', family: 'confectionery_snack',
+    notes: [{ en: 'Allergen declarations (gluten, milk, egg, nuts) are among the mandatory GSO 9 label elements and must appear in Arabic.', ar: 'إعلان مسببات الحساسية (الغلوتين، الحليب، البيض، المكسرات) من العناصر الإلزامية في GSO 9 ويجب أن يظهر بالعربية.' }],
+    related: ['chocolate', 'breakfast-cereals', 'nuts'],
+  },
 ]
 
 export const findGuide = (slug: string) => GUIDE_PRODUCTS.find(p => p.slug === slug)
