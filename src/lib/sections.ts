@@ -28,6 +28,7 @@ export const SECTIONS: Section[] = [
     links: [
       { href: '/import', label: { en: 'Product import guides', ar: 'أدلة استيراد المنتجات' }, hint: { en: 'HS code, duty, steps and certificates per product', ar: 'رمز HS والرسوم والخطوات والشهادات لكل منتج' } },
       { href: '/compliance', label: { en: 'Label pre-check (Dubai Municipality)', ar: 'فحص الملصق (بلدية دبي)' }, hint: { en: 'Every UAE.S 9 gap at once — free', ar: 'كل نواقص UAE.S 9 دفعة واحدة — مجاناً' } },
+      { href: '/arabic-food-label-gso-9', label: { en: 'Arabic food label & GSO 9', ar: 'الملصق الغذائي العربي وGSO 9' }, hint: { en: 'Requirements, checklist and compliant label printing', ar: 'المتطلبات وقائمة التحقق وطباعة ملصق مطابق' } },
       { href: '/tools/product-registration-uae', label: { en: 'Where do I register my product?', ar: 'أين أسجّل منتجي؟' }, hint: { en: 'Montaji, FIRS/ZAD, EDE, ADAFSA — fees and documents', ar: 'منتاجي، FIRS/زاد، مؤسسة الدواء، ADAFSA — الرسوم والمستندات' } },
       { href: '/tools/certificates-uae', label: { en: 'ECAS / EQM / Halal certificates', ar: 'شهادات ECAS / EQM / حلال' }, hint: { en: 'Which you need and what they cost', ar: 'أيها تحتاج وكم تكلّف' } },
       { href: '/tools/landed-cost-uae', label: { en: 'HS code & landed cost', ar: 'رمز HS والتكلفة الواصلة' }, hint: { en: 'Duty + excise + VAT and a suggested price', ar: 'جمارك + انتقائية + VAT وسعر بيع مقترح' } },
