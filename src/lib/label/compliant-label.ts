@@ -75,11 +75,24 @@ export function buildLabelSVG(d: LabelData): string {
     parts.push(`<text x="${PAD}" y="${y}" class="lbl">${esc(label)}</text>`)
     const s = v && String(v).trim() ? String(v).trim() : ''
     if (s.length > 58) {
+      // A bilingual value is split at " · " into one line per language, each right-aligned in
+      // its own direction — word-wrapping a mixed string inside one rtl paragraph scrambles the
+      // Latin run across lines.
       y += 22
-      const ar = hasAr(s)
-      const w = ar ? wrap(s, 66, R, y, 22, { rtl: true, cls: 'v ar' }) : wrap(s, 84, PAD, y, 19, { cls: 'v' })
-      parts.push(w.svg)
-      y += w.lines * (ar ? 22 : 19) + 10
+      for (const seg of s.split(' · ').map(x => x.trim()).filter(Boolean)) {
+        const ar = hasAr(seg)
+        if (seg.length <= 84) {
+          parts.push(ar
+            ? `<text x="${R}" y="${y}" ${rtlAttrs} class="v ar">${esc(seg)}</text>`
+            : `<text x="${R}" y="${y}" text-anchor="end" class="v">${esc(seg)}</text>`)
+          y += ar ? 22 : 19
+        } else {
+          const w = ar ? wrap(seg, 66, R, y, 22, { rtl: true, cls: 'v ar' }) : wrap(seg, 84, PAD, y, 19, { cls: 'v' })
+          parts.push(w.svg)
+          y += w.lines * (ar ? 22 : 19)
+        }
+      }
+      y += 10
       return
     }
     parts.push(`<text x="${R}" y="${y}" text-anchor="end" class="${vcls(v)}">${val(v, label_ar)}</text>`)
