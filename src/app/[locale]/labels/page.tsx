@@ -12,13 +12,13 @@ type Bi = { en: string; ar: string }
 const COPY = {
   title: { en: 'Product Label Printing UAE — Instant Price, Pay Online', ar: 'طباعة ملصقات المنتجات في الإمارات — سعر فوري ودفع إلكتروني' },
   description: {
-    en: 'Order Arabic and bilingual product labels in the UAE: choose the size and quantity, see the price at once, pay online. Paper or PVC, cut to size, optional compliant design.',
-    ar: 'اطلب ملصقات منتجات عربية وثنائية اللغة في الإمارات: اختر المقاس والكمية، شاهد السعر فوراً، وادفع إلكترونياً. ورق أو PVC، قص على المقاس، وتصميم مطابق اختياري.',
+    en: 'Order Arabic and bilingual product labels in the UAE: choose the size and quantity, see the price at once, pay online. Laminated PVC, cut to size, optional compliant design.',
+    ar: 'اطلب ملصقات منتجات عربية وثنائية اللغة في الإمارات: اختر المقاس والكمية، شاهد السعر فوراً، وادفع إلكترونياً. فينيل PVC ملمّن، قص على المقاس، وتصميم مطابق اختياري.',
   },
   h1: { en: 'Product label printing: choose the size, see the price, pay online', ar: 'طباعة ملصقات المنتجات: اختر المقاس، شاهد السعر، وادفع إلكترونياً' },
   lead: {
-    en: 'Arabic and bilingual labels for food, cosmetics and supplements, cut to the size of your pack. The price below is the live price from our print partner Art for Printing — the same engine its own shop uses.',
-    ar: 'ملصقات عربية وثنائية اللغة للأغذية ومستحضرات التجميل والمكملات، مقصوصة على مقاس عبوتك. السعر أدناه هو السعر الحي من شريك الطباعة Art for Printing — المحرك نفسه الذي يستخدمه متجره.',
+    en: 'Arabic and bilingual labels for food, cosmetics and supplements, printed on laminated PVC vinyl and cut to the size of your pack. The price below is live: change the size or the quantity and it updates at once.',
+    ar: 'ملصقات عربية وثنائية اللغة للأغذية ومستحضرات التجميل والمكملات، مطبوعة على فينيل PVC ملمّن ومقصوصة على مقاس عبوتك. السعر أدناه حيّ: غيّر المقاس أو الكمية فيتحدّث فوراً.',
   },
   crumb: { en: 'Label printing', ar: 'طباعة الملصقات' },
   helpH2: { en: 'Before you print', ar: 'قبل أن تطبع' },
@@ -29,8 +29,8 @@ const COPY = {
   ],
   faqH2: { en: 'Questions about ordering', ar: 'أسئلة عن الطلب' },
   faq: [
-    { q: { en: 'How is the price calculated?', ar: 'كيف يُحسب السعر؟' }, a: { en: 'Labels are laid out on A5, A4 or A3 sheets and you pay per sheet. The price panel shows how many sheets your order needs and how many labels they hold; the cheapest sheet for your quantity is chosen automatically.', ar: 'تُوزَّع الملصقات على أوراق A5 أو A4 أو A3 وتدفع بالورقة. تُظهر لوحة السعر عدد الأوراق التي يحتاجها طلبك وكم ملصقاً تتسع؛ ويُختار تلقائياً أرخص مقاس ورقة لكميتك.' } },
-    { q: { en: 'Who prints the labels and takes the payment?', ar: 'من يطبع الملصقات ويستلم الدفع؟' }, a: { en: 'Art for Printing, our print partner in the UAE, prints, delivers and takes the payment on a secure card page. Crate prepares the order and earns a commission from the partner.', ar: 'تطبع Art for Printing، شريك الطباعة في الإمارات، الملصقات وتسلّمها وتستلم الدفع عبر صفحة بطاقات آمنة. وتجهّز Crate الطلب وتحصل على عمولة من الشريك.' } },
+    { q: { en: 'How is the price calculated?', ar: 'كيف يُحسب السعر؟' }, a: { en: 'By printed area: label width × height × quantity, in square metres. The rate per square metre falls as the run grows, and a small order is charged a minimum — the price panel tells you how many labels that minimum covers. Cutting to a custom shape is an extra shown in the total.', ar: 'بحسب المساحة المطبوعة: عرض الملصق × ارتفاعه × الكمية، بالمتر المربع. ينخفض سعر المتر كلما كبرت الكمية، وللطلب الصغير حد أدنى — وتخبرك لوحة السعر بعدد الملصقات التي يغطيها. والقص حسب الشكل إضافة تظهر في الإجمالي.' } },
+    { q: { en: 'Who prints the labels and takes the payment?', ar: 'من يطبع الملصقات ويستلم الدفع؟' }, a: { en: 'Art for Printing, our print partner in the UAE, prints and delivers, and takes the payment on a secure card page. Crate prepares the order and the label with you.', ar: 'تطبع Art for Printing، شريك الطباعة في الإمارات، الملصقات وتسلّمها، وتستلم الدفع عبر صفحة بطاقات آمنة. وتجهّز Crate الطلب والملصق معك.' } },
     { q: { en: 'When does production start?', ar: 'متى يبدأ الإنتاج؟' }, a: { en: 'After the payment is received and you approve the proof. Nothing is printed before you have seen it.', ar: 'بعد استلام الدفع وموافقتك على البروفة. لا يُطبع شيء قبل أن تراه.' } },
     { q: { en: 'Can I print the production and expiry dates on the sticker?', ar: 'هل يمكن طباعة تاريخي الإنتاج والانتهاء على الملصق؟' }, a: { en: 'For food, the dates stay as the manufacturer printed them on the pack; the Arabic over-sticker carries the other mandatory information. See the GSO 9 guide for the full list.', ar: 'في الأغذية تبقى التواريخ كما طبعها المصنّع على العبوة؛ ويحمل الملصق العربي الإضافي بقية البيانات الإلزامية. راجع دليل GSO 9 للقائمة الكاملة.' } },
   ],

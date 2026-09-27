@@ -66,11 +66,30 @@ export type StickerAsk = {
 
 export type AfpStickerPlan = { sheet: string; sheet_label?: string; per_sheet: number; sheets: number; pieces: number; capacity?: number; spare?: number; cut?: string }
 
+/**
+ * A label off the ROLL, priced by the square metre on AFP's `custom-pvc-sticker-sqm` — the
+ * product Crate's owner buys from, and the cheap route for a run of labels. Laminated PVC;
+ * `plotter` adds a contour cut charged per row of the roll.
+ */
+export type SqmAsk = {
+  w_mm: number
+  h_mm: number
+  pieces: number
+  finish: 'matte' | 'glossy'
+  plotter: boolean
+}
+export type AfpSqmPlan = { pieces: number; across: number; rows: number; run_m: number; roll_cm: number; printed_m2?: number; charged_m2: number; cut: string; finish: string }
+
 export type AfpQuote = {
   ok: boolean
   quantity?: number
   unit_price_aed?: number
+  /** goods, what the buyer pays net of VAT — Crate's margin included */
   line_total_aed?: number
+  /** goods at AFP's own price, net of VAT. SERVER-SIDE ONLY: never send it to the browser. */
+  base_line_total_aed?: number
+  markup_pct?: number
+  sqm?: AfpSqmPlan
   design_fee_aed?: number
   subtotal_aed?: number
   vat_aed?: number
@@ -87,6 +106,9 @@ export async function getAfpQuote(input: {
   quantity?: number
   selectedOptions?: Record<string, string>
   sticker?: StickerAsk
+  sqm?: SqmAsk
+  /** Crate's margin on top of AFP's price, in percent */
+  markup_pct?: number
   design?: boolean
 }): Promise<AfpQuote> {
   if (!afpConfigured()) return { ok: false, error: 'partner_not_configured' }
@@ -108,6 +130,12 @@ export type AfpOrderResult = {
   artwork_stored?: boolean
   /** AFP's pay link for this order — opens a fresh hosted-payment session on every click. */
   pay_url?: string | null
+  line_total_aed?: number
+  base_line_total_aed?: number
+  markup_pct?: number
+  /** Crate's margin inside the goods price, net of VAT */
+  partner_share_aed?: number
+  sqm?: AfpSqmPlan
   sticker?: AfpStickerPlan
   error?: string
   detail?: string
@@ -119,6 +147,8 @@ export async function createAfpOrder(input: {
   quantity?: number
   selectedOptions?: Record<string, string>
   sticker?: StickerAsk
+  sqm?: SqmAsk
+  markup_pct?: number
   design?: boolean
   locale?: 'ar' | 'en'
   configNote?: string

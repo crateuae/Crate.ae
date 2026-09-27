@@ -1,17 +1,18 @@
 'use client'
 /**
- * The label order configurator. A buyer thinks in PIECES of a SIZE; Art for Printing's engine
- * turns that into sheets and prices it (src/lib/partner/afp.ts → AFP /api/partner/quote), so
- * no price lives in this file. After the order, the buyer gets AFP's pay link straight away.
+ * The label order configurator. A buyer thinks in PIECES of a SIZE; the factory (Art for
+ * Printing) lays them out on its roll and prices the printed area, and Crate's margin is added
+ * on the server (src/app/api/partner/quote). No price lives in this file. After the order the
+ * buyer gets the factory's pay link straight away.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2, CheckCircle2, Upload, CreditCard, MessageCircle, Info, Tag } from 'lucide-react'
 
 type Bi = { en: string; ar: string }
 type Quote = {
-  quantity: number; unit_price_aed: number; line_total_aed: number; design_fee_aed: number
+  line_total_aed: number; design_fee_aed: number
   subtotal_aed: number; vat_aed: number; total_aed: number
-  sticker: { sheet: string; sheet_label?: string; per_sheet: number; sheets: number; pieces: number; capacity: number; spare: number }
+  sqm: { pieces: number; across: number; rows: number; run_m: number; roll_cm: number; printed_m2?: number; charged_m2: number; cut: string; finish: string }
 }
 type Done = { ref: string; total: number; payUrl: string | null }
 
@@ -25,7 +26,7 @@ const SIZES: Array<{ w: number; h: number; hint: Bi }> = [
   { w: 10, h: 15, hint: { en: 'cartons, buckets', ar: 'كراتين، سطول' } },
   { w: 29.7, h: 42, hint: { en: 'A3 carton marking', ar: 'وسم كرتون A3' } },
 ]
-const PACKS = [100, 250, 500, 1000]
+const PACKS = [250, 500, 1000, 2500]
 const MAX_ART_BYTES = 3 * 1024 * 1024 // the order travels as JSON through a serverless function
 
 const newRequestId = () => { try { return crypto.randomUUID() } catch { return `req-${Date.now()}-${Math.floor(Math.random() * 1e6)}` } }
@@ -39,9 +40,7 @@ export default function LabelOrderClient({ locale, initial }: { locale: 'ar' | '
   const [w, setW] = useState(String(initial.w))
   const [h, setH] = useState(String(initial.h))
   const [qty, setQty] = useState(String(initial.qty))
-  const [material, setMaterial] = useState<'paper' | 'pvc'>('paper')
-  const [finish, setFinish] = useState<'matt' | 'glossy'>('matt')
-  const [lamination, setLamination] = useState(false)
+  const [finish, setFinish] = useState<'matte' | 'glossy'>('matte')
   const [plotter, setPlotter] = useState(false)
   const [design, setDesign] = useState(false)
   const [product, setProduct] = useState(initial.product)
@@ -62,7 +61,7 @@ export default function LabelOrderClient({ locale, initial }: { locale: 'ar' | '
   const wMm = Math.round(Number(w) * 10 * 10) / 10, hMm = Math.round(Number(h) * 10 * 10) / 10
   const pieces = Math.floor(Number(qty))
   const valid = wMm >= 5 && hMm >= 5 && pieces >= 1
-  const sticker = useMemo(() => ({ w_mm: wMm, h_mm: hMm, pieces, material, finish, lamination, plotter }), [wMm, hMm, pieces, material, finish, lamination, plotter])
+  const ask = useMemo(() => ({ w_mm: wMm, h_mm: hMm, pieces, finish, plotter }), [wMm, hMm, pieces, finish, plotter])
 
   // Live price, debounced. A stale answer (an earlier request landing late) is dropped.
   useEffect(() => {
@@ -71,14 +70,16 @@ export default function LabelOrderClient({ locale, initial }: { locale: 'ar' | '
     setQuoting(true); setQuoteErr('')
     const id = window.setTimeout(async () => {
       try {
-        const res = await fetch('/api/partner/quote', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sticker, design }) })
+        const res = await fetch('/api/partner/quote', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sqm: ask, design }) })
         const d = await res.json()
         if (mine !== seq.current) return
-        if (d?.ok) { setQuote(d as Quote) }
+        if (d?.ok && d.sqm) { setQuote(d as Quote) }
         else {
           setQuote(null)
           setQuoteErr(d?.error === 'piece_too_large'
-            ? L('This size is larger than an A3 sheet. Send it as a quote request and we price it by the square metre.', 'هذا المقاس أكبر من ورقة A3. أرسله كطلب عرض سعر ونسعّره بالمتر المربع.')
+            ? (plotter
+              ? L('This size is too wide to cut to shape on the roll. Choose rectangles, or send it as a quote request.', 'هذا المقاس أعرض من أن يُقص حسب الشكل على الرول. اختر «مستطيلات» أو أرسله كطلب عرض سعر.')
+              : L('This size is wider than the roll we print on. Send it as a quote request and we price it individually.', 'هذا المقاس أعرض من الرول الذي نطبع عليه. أرسله كطلب عرض سعر ونسعّره منفرداً.'))
             : res.status === 503 ? L('Ordering is being activated — available soon.', 'خدمة الطلب قيد التفعيل — قريباً.')
             : L('Could not fetch a price right now. Try again in a moment.', 'تعذّر جلب السعر الآن. حاول بعد قليل.'))
         }
@@ -86,7 +87,7 @@ export default function LabelOrderClient({ locale, initial }: { locale: 'ar' | '
       finally { if (mine === seq.current) setQuoting(false) }
     }, 350)
     return () => window.clearTimeout(id)
-  }, [sticker, design, valid]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ask, design, valid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const onFile = (f?: File) => {
     setErr('')
@@ -107,7 +108,7 @@ export default function LabelOrderClient({ locale, initial }: { locale: 'ar' | '
       const res = await fetch('/api/partner/order', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          crate_request_id: reqId.current, sticker, design, locale, website: hp,
+          crate_request_id: reqId.current, sqm: ask, design, locale, website: hp,
           configNote: [product ? `Product: ${product}` : '', details].filter(Boolean).join(' — '),
           artwork: artwork ?? undefined, buyer,
           source_page: 'labels', compliance_product: product || null,
@@ -124,6 +125,13 @@ export default function LabelOrderClient({ locale, initial }: { locale: 'ar' | '
   const inp = 'w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100'
   const chip = (on: boolean) => `rounded-xl border px-3 py-2 text-sm text-start transition ${on ? 'border-orange-400 bg-orange-50 text-gray-900' : 'border-gray-200 bg-white text-gray-700 hover:border-orange-200'}`
   const label = 'block text-sm font-semibold text-gray-800 mb-2'
+
+  // Below the minimum order the price does not move with the quantity, so say how many
+  // labels the same money buys.
+  const pieceM2 = (wMm / 1000) * (hMm / 1000)
+  const printedM2 = pieceM2 * Math.max(pieces, 0)
+  const sameMoneyUpTo = quote && pieceM2 > 0 && quote.sqm.charged_m2 > printedM2 + 1e-9 ? Math.floor(quote.sqm.charged_m2 / pieceM2 + 1e-9) : 0
+  const goodsIncVat = quote ? quote.line_total_aed * (quote.subtotal_aed > 0 ? 1 + quote.vat_aed / quote.subtotal_aed : 1) : 0
 
   if (done) {
     return (
@@ -182,36 +190,30 @@ export default function LabelOrderClient({ locale, initial }: { locale: 'ar' | '
             ))}
             <input inputMode="numeric" value={qty} onChange={e => setQty(e.target.value.replace(/[^0-9]/g, ''))} aria-label={L('Custom quantity', 'كمية خاصة')} className={`${inp} !w-28 text-center tabular-nums`} dir="ltr" />
           </div>
+          <p className="mt-2 text-[12px] text-gray-500">{L('Priced by printed area — the larger the run, the lower the price per label.', 'السعر بحسب المساحة المطبوعة — كلما زادت الكمية انخفض سعر الملصق.')}</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <span className={label}>{L('3. Material', '٣. الخامة')}</span>
-            <div className="grid grid-cols-1 gap-2">
-              <button type="button" onClick={() => setMaterial('paper')} className={chip(material === 'paper')}>
-                <span className="block font-semibold">{L('Paper', 'ورق')}</span>
-                <span className="block text-[11px] text-gray-500">{L('dry, ambient goods', 'سلع جافة بدرجة حرارة الغرفة')}</span>
-              </button>
-              <button type="button" onClick={() => setMaterial('pvc')} className={chip(material === 'pvc')}>
-                <span className="block font-semibold">{L('PVC / vinyl', 'PVC / فينيل')}</span>
-                <span className="block text-[11px] text-gray-500">{L('moisture, oil, chilled storage', 'رطوبة، زيوت، تخزين مبرّد')}</span>
-              </button>
-            </div>
-          </div>
-          <div>
-            <span className={label}>{L('4. Finish and cut', '٤. التشطيب والقص')}</span>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <button type="button" onClick={() => setFinish('matt')} className={chip(finish === 'matt')}>{L('Matt', 'مطفي')}</button>
+            <span className={label}>{L('3. Finish', '٣. التشطيب')}</span>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setFinish('matte')} className={chip(finish === 'matte')}>{L('Matte', 'مطفي')}</button>
               <button type="button" onClick={() => setFinish('glossy')} className={chip(finish === 'glossy')}>{L('Glossy', 'لامع')}</button>
             </div>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <button type="button" onClick={() => setPlotter(false)} className={chip(!plotter)}>{L('Rectangles', 'مستطيلات')}</button>
-              <button type="button" onClick={() => setPlotter(true)} className={chip(plotter)}>{L('Cut to shape', 'قص حسب الشكل')}</button>
+            <p className="mt-2 text-[12px] text-gray-500 leading-relaxed">{L('Laminated PVC vinyl. Both finishes are protected against scratches and UV, and cost the same.', 'فينيل PVC ملمّن. كلا التشطيبين محمي من الخدش والأشعة، وبالسعر نفسه.')}</p>
+          </div>
+          <div>
+            <span className={label}>{L('4. Cut', '٤. القص')}</span>
+            <div className="grid grid-cols-1 gap-2">
+              <button type="button" onClick={() => setPlotter(false)} className={chip(!plotter)}>
+                <span className="block font-semibold">{L('Rectangles', 'مستطيلات')}</span>
+                <span className="block text-[11px] text-gray-500">{L('straight cut, included', 'قص مستقيم، ضمن السعر')}</span>
+              </button>
+              <button type="button" onClick={() => setPlotter(true)} className={chip(plotter)}>
+                <span className="block font-semibold">{L('Cut to shape', 'قص حسب الشكل')}</span>
+                <span className="block text-[11px] text-gray-500">{L('contour cut, charged per row — see the total', 'قص كنتور، يُحتسب لكل صف — انظر الإجمالي')}</span>
+              </button>
             </div>
-            <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
-              <input type="checkbox" checked={lamination} onChange={e => setLamination(e.target.checked)} className="mt-1 accent-orange-500" />
-              <span>{L('Protective lamination', 'تغليف حماية (لمنيشن)')}</span>
-            </label>
           </div>
         </div>
 
@@ -254,16 +256,16 @@ export default function LabelOrderClient({ locale, initial }: { locale: 'ar' | '
         {quote ? (
           <>
             <div className="text-3xl font-bold text-gray-900 tabular-nums" dir="ltr">AED {aed(quote.total_aed)}</div>
-            <div className="text-xs text-gray-500 mb-4">{L('including 5% VAT', 'شامل ضريبة القيمة المضافة 5%')} · <span dir="ltr">AED {aed((quote.line_total_aed * (1 + (quote.vat_aed / Math.max(quote.subtotal_aed, 0.01)))) / Math.max(pieces, 1))}</span> {L('per label', 'للملصق')}</div>
+            <div className="text-xs text-gray-500 mb-4">{L('including 5% VAT', 'شامل ضريبة القيمة المضافة 5%')} · <span dir="ltr">AED {aed(goodsIncVat / Math.max(pieces, 1))}</span> {L('per label', 'للملصق')}</div>
             <dl className="text-sm flex flex-col gap-1.5 border-t border-gray-100 pt-3">
-              <div className="flex justify-between gap-3"><dt className="text-gray-500">{L('Labels', 'الملصقات')} · <span dir="ltr">{quote.sticker.sheets} × {quote.sticker.sheet}</span></dt><dd className="tabular-nums text-gray-900" dir="ltr">{aed(quote.line_total_aed)}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-gray-500">{L('Labels', 'الملصقات')} · <span dir="ltr">{quote.sqm.charged_m2} m²</span></dt><dd className="tabular-nums text-gray-900" dir="ltr">{aed(quote.line_total_aed)}</dd></div>
               {quote.design_fee_aed > 0 && <div className="flex justify-between gap-3"><dt className="text-gray-500">{L('Design', 'التصميم')}</dt><dd className="tabular-nums text-gray-900" dir="ltr">{aed(quote.design_fee_aed)}</dd></div>}
               <div className="flex justify-between gap-3"><dt className="text-gray-500">{L('VAT 5%', 'الضريبة 5%')}</dt><dd className="tabular-nums text-gray-900" dir="ltr">{aed(quote.vat_aed)}</dd></div>
             </dl>
-            {quote.sticker.spare > 0 && (
+            {sameMoneyUpTo > pieces && (
               <p className="mt-3 flex items-start gap-1.5 text-[12px] text-gray-600 leading-relaxed bg-orange-50 rounded-xl px-3 py-2">
                 <Info className="w-3.5 h-3.5 text-orange-500 mt-0.5 shrink-0" />
-                {L(`The sheets hold ${quote.sticker.capacity.toLocaleString('en-US')} labels. You can raise the quantity to that number at the same price.`, `الأوراق تتسع لـ ${quote.sticker.capacity.toLocaleString('en-US')} ملصقاً. يمكنك رفع الكمية إلى هذا العدد بالسعر نفسه.`)}
+                {L(`This is the minimum order. You can raise the quantity to ${sameMoneyUpTo.toLocaleString('en-US')} labels at the same price.`, `هذا هو الحد الأدنى للطلب. يمكنك رفع الكمية إلى ${sameMoneyUpTo.toLocaleString('en-US')} ملصقاً بالسعر نفسه.`)}
               </p>
             )}
           </>
