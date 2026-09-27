@@ -167,8 +167,8 @@ export const GSO9 = {
 
   figure: {
     caption: {
-      en: 'Anatomy of a compliant Arabic food label, rendered by the same generator behind our free pre-check (sample data). Dates stay printed on the original pack.',
-      ar: 'تشريح ملصق غذائي عربي مطابق، من المولّد نفسه الذي يشغّل فحصنا المجاني (بيانات نموذجية). تبقى التواريخ مطبوعة على العبوة الأصلية.',
+      en: 'Anatomy of a compliant bilingual food label — English on the left, Arabic on the right, one shared nutrition table (sample data). Dates stay printed on the original pack.',
+      ar: 'تشريح ملصق غذائي مطابق ثنائي اللغة — الإنجليزية يساراً والعربية يميناً وجدول قيم غذائية مشترك (بيانات نموذجية). تبقى التواريخ مطبوعة على العبوة الأصلية.',
     },
     alt: { en: 'Sample bilingual Arabic-English food label laid out to GSO 9 with product name, ingredients, allergens, nutrition table, storage, origin and importer', ar: 'ملصق غذائي نموذجي ثنائي اللغة وفق GSO 9 يعرض اسم المنتج والمكوّنات ومسببات الحساسية وجدول القيم الغذائية والتخزين والمنشأ والمستورد' },
   },

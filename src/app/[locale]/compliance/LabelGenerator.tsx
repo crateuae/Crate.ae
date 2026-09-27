@@ -40,6 +40,8 @@ export default function LabelGenerator({ isAr, data }: { isAr: boolean; data: La
 
 function LabelModal({ isAr, t, data, onClose }: { isAr: boolean; t: Record<string, string>; data: LabelData; onClose: () => void }) {
   const svg = useMemo(() => buildLabelSVG(data), [JSON.stringify(data)])
+  // The same drawing, sized to its container for the preview; the download keeps the fixed size.
+  const screenSvg = useMemo(() => buildLabelSVG(data, { fluid: true }), [JSON.stringify(data)])
   const { gate } = useLeadGate()
 
   // Every download passes through the site-wide lead gate (signed in → direct; else email first).
@@ -86,8 +88,11 @@ function LabelModal({ isAr, t, data, onClose }: { isAr: boolean; t: Record<strin
           <button onClick={onClose} className="text-stone-400 hover:text-stone-600 p-1"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-5">
-          <div className="rounded-2xl border border-stone-200 overflow-hidden bg-stone-50 flex justify-center p-3">
-            <div className="w-full max-w-[380px]" dangerouslySetInnerHTML={{ __html: svg }} />
+          {/* A print file is a fixed drawing: on a phone it scrolls sideways at a readable size
+              instead of shrinking to 6 px type. The SVG pins its own direction, so the Arabic
+              page's dir="rtl" cannot flip it. */}
+          <div className="rounded-2xl border border-stone-200 bg-stone-50 p-3 overflow-x-auto">
+            <div className="mx-auto w-full min-w-[440px] sm:min-w-0 max-w-[480px]" dangerouslySetInnerHTML={{ __html: screenSvg }} />
           </div>
           <div className="flex items-center gap-2 mt-4">
             <button onClick={() => download('svg')} className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-stone-800 text-white text-sm font-semibold py-2.5 hover:bg-stone-700"><Download className="w-4 h-4" />{t.svg}</button>

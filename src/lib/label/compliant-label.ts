@@ -11,6 +11,12 @@
 // Bidi rule that cost a whole afternoon: for an SVG <text> with direction="rtl" the
 // "start" of the string is its RIGHT end. Right-aligned Arabic is therefore
 // text-anchor="start" at the right margin — with "end" the text runs OFF the right edge.
+//
+// And its twin, which cost the second afternoon: `direction` is INHERITED from the page. On
+// the Arabic site (html dir="rtl") every English line without its own direction turned
+// right-to-left — "start" became the right end, the English ran off the left edge and
+// "20 g" printed as "g 20". So every <text> here states its direction, and the root pins
+// ltr, so the label draws the same inside an Arabic page as it does in a downloaded file.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export interface LabelData {
@@ -54,14 +60,18 @@ function wrap(text: string, maxChars: number, x: number, y: number, lh: number, 
   }
   if (cur) lines.push(cur)
   if (!lines.length) lines.push('')
-  const attrs = opts.rtl ? rtlAttrs : 'text-anchor="start"'
+  const attrs = opts.rtl ? rtlAttrs : 'text-anchor="start" direction="ltr"'
   const svg = `<text x="${x}" y="${y}" ${attrs} class="${opts.cls || 'v'}">` +
     lines.map((ln, i) => `<tspan x="${x}" dy="${i === 0 ? 0 : lh}">${esc(ln)}</tspan>`).join('') +
     `</text>`
   return { svg, lines: lines.length }
 }
 
-export function buildLabelSVG(d: LabelData): string {
+/**
+ * @param opts.fluid  for an on-screen preview: the SVG scales to its container (width 100%).
+ *                    Leave it off for a download — the PNG rasteriser needs the fixed size.
+ */
+export function buildLabelSVG(d: LabelData, opts: { fluid?: boolean } = {}): string {
   const W = 620, PAD = 28, R = W - PAD
   const parts: string[] = []
   let y = 56
@@ -72,7 +82,7 @@ export function buildLabelSVG(d: LabelData): string {
   // A long value (importer name + address, a bilingual storage line) drops under the label
   // and wraps, so it never runs into the label text.
   const row = (label: string, v: unknown, label_ar: string) => {
-    parts.push(`<text x="${PAD}" y="${y}" class="lbl">${esc(label)}</text>`)
+    parts.push(`<text direction="ltr" x="${PAD}" y="${y}" class="lbl">${esc(label)}</text>`)
     const s = v && String(v).trim() ? String(v).trim() : ''
     if (s.length > 58) {
       // A bilingual value is split at " · " into one line per language, each right-aligned in
@@ -84,7 +94,7 @@ export function buildLabelSVG(d: LabelData): string {
         if (seg.length <= 84) {
           parts.push(ar
             ? `<text x="${R}" y="${y}" ${rtlAttrs} class="v ar">${esc(seg)}</text>`
-            : `<text x="${R}" y="${y}" text-anchor="end" class="v">${esc(seg)}</text>`)
+            : `<text direction="ltr" x="${R}" y="${y}" text-anchor="end" class="v">${esc(seg)}</text>`)
           y += ar ? 22 : 19
         } else {
           const w = ar ? wrap(seg, 66, R, y, 22, { rtl: true, cls: 'v ar' }) : wrap(seg, 84, PAD, y, 19, { cls: 'v' })
@@ -95,12 +105,12 @@ export function buildLabelSVG(d: LabelData): string {
       y += 10
       return
     }
-    parts.push(`<text x="${R}" y="${y}" text-anchor="end" class="${vcls(v)}">${val(v, label_ar)}</text>`)
+    parts.push(`<text direction="ltr" x="${R}" y="${y}" text-anchor="end" class="${vcls(v)}">${val(v, label_ar)}</text>`)
     y += 28
   }
 
   // Header — names (English left, Arabic right on its own line)
-  parts.push(`<text x="${PAD}" y="${y}" class="name-en">${esc(d.product_name || 'Product name')}</text>`)
+  parts.push(`<text direction="ltr" x="${PAD}" y="${y}" class="name-en">${esc(d.product_name || 'Product name')}</text>`)
   parts.push(`<text x="${R}" y="${y + 32}" ${rtlAttrs} class="name-ar">${d.product_name_ar ? esc(d.product_name_ar) : missing('اسم المنتج')}</text>`)
   y += 56
   parts.push(`<line x1="${PAD}" y1="${y}" x2="${R}" y2="${y}" class="rule"/>`)
@@ -112,7 +122,7 @@ export function buildLabelSVG(d: LabelData): string {
 
   // Ingredients — Arabic block (mandatory) then the English block, each in its own direction.
   parts.push(`<text x="${R}" y="${y}" ${rtlAttrs} class="hd-ar">المكوّنات</text>`)
-  parts.push(`<text x="${PAD}" y="${y}" class="hd">Ingredients</text>`)
+  parts.push(`<text direction="ltr" x="${PAD}" y="${y}" class="hd">Ingredients</text>`)
   y += 24
   const ingAr = d.ingredients_ar || (hasAr(d.ingredients) ? d.ingredients : null)
   const ingEn = d.ingredients && !hasAr(d.ingredients) ? d.ingredients : null
@@ -129,7 +139,7 @@ export function buildLabelSVG(d: LabelData): string {
     parts.push(`<rect x="${PAD}" y="${y - 4}" width="${R - PAD}" height="${h}" class="warn"/>`)
     let yy = y + 14
     if (alAr) { parts.push(`<text x="${R - 8}" y="${yy}" ${rtlAttrs} class="warn-tx ar">${esc(alAr)}</text>`); yy += 22 }
-    if (alEn) { parts.push(`<text x="${PAD + 8}" y="${yy}" class="warn-tx">${esc(alEn)}</text>`) }
+    if (alEn) { parts.push(`<text direction="ltr" x="${PAD + 8}" y="${yy}" class="warn-tx">${esc(alEn)}</text>`) }
     y += h + 8
   }
 
@@ -137,7 +147,7 @@ export function buildLabelSVG(d: LabelData): string {
   const n = d.nutrition
   if (n && n.rows && n.rows.length) {
     y += 8
-    parts.push(`<text x="${PAD}" y="${y}" class="hd">Nutrition Facts</text>`)
+    parts.push(`<text direction="ltr" x="${PAD}" y="${y}" class="hd">Nutrition Facts</text>`)
     parts.push(`<text x="${R}" y="${y}" ${rtlAttrs} class="hd-ar">الحقائق الغذائية</text>`)
     y += 10
     const tx = PAD, tw = R - PAD, cols = Math.min(n.columns?.length || 1, 3)
@@ -145,14 +155,14 @@ export function buildLabelSVG(d: LabelData): string {
     const colW = (tw - 220) / cols
     parts.push(`<rect x="${tx}" y="${y}" width="${tw}" height="${rowH}" class="th"/>`)
     ;(n.columns || []).slice(0, cols).forEach((c, i) => {
-      parts.push(`<text x="${tx + 220 + colW * i + colW / 2}" y="${y + 15}" text-anchor="middle" class="tv">${esc(c)}</text>`)
+      parts.push(`<text direction="ltr" x="${tx + 220 + colW * i + colW / 2}" y="${y + 15}" text-anchor="middle" class="tv">${esc(c)}</text>`)
     })
     y += rowH
     n.rows.slice(0, 14).forEach((r, ri) => {
       if (ri % 2) parts.push(`<rect x="${tx}" y="${y}" width="${tw}" height="${rowH}" class="tr"/>`)
-      parts.push(`<text x="${tx + 8}" y="${y + 15}" class="tv">${esc(r.label)}</text>`)
+      parts.push(`<text direction="ltr" x="${tx + 8}" y="${y + 15}" class="tv">${esc(r.label)}</text>`)
       ;(r.values || []).slice(0, cols).forEach((v, i) => {
-        parts.push(`<text x="${tx + 220 + colW * i + colW / 2}" y="${y + 15}" text-anchor="middle" class="tv">${esc(v)}</text>`)
+        parts.push(`<text direction="ltr" x="${tx + 220 + colW * i + colW / 2}" y="${y + 15}" text-anchor="middle" class="tv">${esc(v)}</text>`)
       })
       y += rowH
     })
@@ -172,18 +182,18 @@ export function buildLabelSVG(d: LabelData): string {
   if (d.has_sulfites) {
     parts.push(`<rect x="${PAD}" y="${y - 4}" width="${R - PAD}" height="26" class="warn"/>`)
     parts.push(`<text x="${R - 8}" y="${y + 13}" ${rtlAttrs} class="warn-tx ar">يحتوي على سلفايت (E220–E228)</text>`)
-    parts.push(`<text x="${PAD + 8}" y="${y + 13}" class="warn-tx">Contains sulphites</text>`); y += 34
+    parts.push(`<text direction="ltr" x="${PAD + 8}" y="${y + 13}" class="warn-tx">Contains sulphites</text>`); y += 34
   }
 
   y += 6
   parts.push(`<line x1="${PAD}" y1="${y}" x2="${R}" y2="${y}" class="rule-soft"/>`); y += 18
-  parts.push(`<text x="${W / 2}" y="${y}" text-anchor="middle" class="foot">UAE.S GSO 9 template — verify all fields before printing · قالب مطابق للمواصفة، تحقّق قبل الطباعة</text>`)
+  parts.push(`<text direction="ltr" x="${W / 2}" y="${y}" text-anchor="middle" class="foot">UAE.S GSO 9 template — verify all fields before printing · قالب مطابق للمواصفة، تحقّق قبل الطباعة</text>`)
   y += 24
 
   const H = Math.max(560, y + PAD)
   // Font stack: the site's Poppins/Noto Sans Arabic CSS variables when embedded in a page,
   // then the same faces by name, then Arial (which carries Arabic glyphs) for a standalone file.
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="var(--font-en), Poppins, var(--font-ar), 'Noto Sans Arabic', Arial, sans-serif">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" direction="ltr" style="direction:ltr${opts.fluid ? ';width:100%;height:auto;display:block' : ''}" font-family="var(--font-en), Poppins, var(--font-ar), 'Noto Sans Arabic', Arial, sans-serif">
   <style>
     .ar{font-family:var(--font-ar),'Noto Sans Arabic','Segoe UI',Tahoma,Arial,sans-serif}
     .name-en{font-size:24px;font-weight:800;fill:#111}
