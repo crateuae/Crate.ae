@@ -54,6 +54,7 @@ export const SECTIONS: Section[] = [
     tagline: { en: 'Plan packing and repacking, and find packaging suppliers, factories and companies.', ar: 'خطّط للتعبئة وإعادة التعبئة، واعثر على موردي ومصانع وشركات التغليف.' },
     links: [
       { href: '/packaging/planner', label: { en: 'Packaging & repacking calculator', ar: 'حاسبة التعبئة وإعادة التعبئة' }, hint: { en: 'Cartons, private-label repacking and mixed food baskets', ar: 'كراتين، وإعادة تعبئة بعلامتك، وسلال غذائية مختلطة' } },
+      { href: '/labels', label: { en: 'Label printing — instant price', ar: 'طباعة الملصقات — سعر فوري' }, hint: { en: 'Choose size and quantity, pay online', ar: 'اختر المقاس والكمية وادفع إلكترونياً' } },
       { href: '/packaging/suppliers', label: { en: 'Packaging suppliers, factories & companies', ar: 'موردو ومصانع وشركات التغليف' }, hint: { en: 'Materials, manufacturers, packing and repacking services', ar: 'مواد، ومصانع، وخدمات التعبئة وإعادة التعبئة' } },
       { href: '/guides/carton-specs', label: { en: 'Carton specifications guide', ar: 'دليل مواصفات الكراتين' }, hint: { en: 'Flute, plies, paper grades and standard sizes', ar: 'الفلوت والطبقات ودرجات الورق والقياسات' } },
     ],

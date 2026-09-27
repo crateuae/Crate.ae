@@ -30,7 +30,8 @@ export default async function Gso9Page({ params }: { params: Promise<{ locale: s
   const url = `${BASE}/${locale}${GSO9_PATH}`
   const L = (p: string) => `/${locale}${p}`
 
-  const quoteHref = `${L('/rfq')}?product=${encodeURIComponent(isAr ? 'طباعة ملصق غذائي عربي (GSO 9)' : 'Arabic food label printing (GSO 9)')}&type=labels`
+  // Instant price + online payment. (Was the manual RFQ form until /labels existed.)
+  const quoteHref = `${L('/labels')}?w=7&h=10&qty=250`
   const waHref = `https://wa.me/${PHONE_E164.replace('+', '')}?text=${encodeURIComponent(isAr ? 'مرحباً Crate، أريد عرض سعر لطباعة ملصق غذائي عربي مطابق لـ GSO 9.' : 'Hello Crate, I need a quote for GSO 9 compliant Arabic food labels.')}`
   const labelSvg = buildLabelSVG(GSO9_SAMPLE_LABEL)
 

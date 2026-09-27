@@ -48,19 +48,46 @@ async function postSigned(path: string, bodyObj: unknown): Promise<any> {
   }
 }
 
+/**
+ * A label asked for the way a buyer thinks of it — a size and a number of PIECES. AFP turns
+ * it into sheets with its own imposition engine and prices it from its own product config,
+ * so Crate never holds a price list. `material` picks AFP's paper or PVC sheet product.
+ */
+export type StickerAsk = {
+  w_mm: number
+  h_mm: number
+  pieces: number
+  material: 'paper' | 'pvc'
+  finish: 'matt' | 'glossy'
+  lamination: boolean
+  /** true = contour-cut to any shape; false = rectangles, guillotine-cut */
+  plotter: boolean
+}
+
+export type AfpStickerPlan = { sheet: string; sheet_label?: string; per_sheet: number; sheets: number; pieces: number; capacity?: number; spare?: number; cut?: string }
+
 export type AfpQuote = {
   ok: boolean
+  quantity?: number
   unit_price_aed?: number
   line_total_aed?: number
+  design_fee_aed?: number
+  subtotal_aed?: number
+  vat_aed?: number
+  total_aed?: number
   currency?: string
   product?: { slug: string; name_en: string; name_ar: string; uom: string }
+  sticker?: AfpStickerPlan
   error?: string
+  detail?: string
 }
 
 export async function getAfpQuote(input: {
   product_slug?: string
-  quantity: number
+  quantity?: number
   selectedOptions?: Record<string, string>
+  sticker?: StickerAsk
+  design?: boolean
 }): Promise<AfpQuote> {
   if (!afpConfigured()) return { ok: false, error: 'partner_not_configured' }
   return postSigned('/api/partner/quote', input)
@@ -70,19 +97,30 @@ export type AfpOrderResult = {
   ok: boolean
   afp_ref?: string
   order_id?: string
+  quantity?: number
   total_aed?: number
+  subtotal_aed?: number
+  vat_aed?: number
+  design_fee_aed?: number
   unit_price_aed?: number
   status?: string
   deduped?: boolean
   artwork_stored?: boolean
+  /** AFP's pay link for this order — opens a fresh hosted-payment session on every click. */
+  pay_url?: string | null
+  sticker?: AfpStickerPlan
   error?: string
+  detail?: string
 }
 
 export async function createAfpOrder(input: {
   crate_request_id?: string
   product_slug?: string
-  quantity: number
+  quantity?: number
   selectedOptions?: Record<string, string>
+  sticker?: StickerAsk
+  design?: boolean
+  locale?: 'ar' | 'en'
   configNote?: string
   artwork?: { name: string; dataUrl: string }
   buyer: { name: string; phone: string; email?: string; address?: string; company?: string }

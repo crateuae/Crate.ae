@@ -8,7 +8,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 
 // The three sections of the site (Import · Trade · Packaging) come from ONE source: src/lib/sections.ts.
 const ICON_BY_HREF: Record<string, typeof Package> = {
-  '/import': BookOpen, '/compliance': ScanLine, '/arabic-food-label-gso-9': Tag, '/tools/product-registration-uae': FileText, '/tools/certificates-uae': ShieldCheck,
+  '/import': BookOpen, '/compliance': ScanLine, '/arabic-food-label-gso-9': Tag, '/labels': Tag, '/tools/product-registration-uae': FileText, '/tools/certificates-uae': ShieldCheck,
   '/tools/landed-cost-uae': Calculator, '/tools/nutrition': Calculator, '/insights': FileText,
   '/market': BarChart2, '/products': Boxes, '/providers': Users, '/search': Search, '/rfq': FileText,
   '/packaging': Package, '/packaging/planner': Calculator, '/packaging/suppliers': Factory, '/guides/carton-specs': BookOpen,
