@@ -43,6 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Free tools + generated import guides (reviewed 2026-09-24)
     ...pair('/arabic-food-label-gso-9', new Date('2026-09-27'), 0.9, 'monthly'),
     ...pair('/labels', new Date('2026-09-28'), 0.9, 'weekly'),
+    ...pair('/sell-to-uae', new Date('2026-10-27'), 0.7, 'monthly'),
     ...pair('/tools/product-registration-uae', TOOLS_LASTMOD, 0.9, 'monthly'),
     ...pair('/tools/certificates-uae', TOOLS_LASTMOD, 0.9, 'monthly'),
     ...pair('/tools/landed-cost-uae', TOOLS_LASTMOD, 0.9, 'monthly'),

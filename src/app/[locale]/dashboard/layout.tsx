@@ -1,13 +1,14 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Boxes, FolderTree, Package, ShieldCheck, LayoutDashboard, ArrowRight, LogOut, Store, LineChart, Activity, FileText, Megaphone, Telescope, UserCheck, Network, Handshake } from 'lucide-react'
+import { Boxes, FolderTree, Package, ShieldCheck, LayoutDashboard, ArrowRight, LogOut, Store, LineChart, Activity, FileText, Megaphone, Telescope, UserCheck, Network, Handshake, PackageOpen } from 'lucide-react'
 
 const SIDEBAR_ITEMS = [
   { href: '/dashboard', icon: LayoutDashboard, label_ar: 'نظرة عامة', label_en: 'Overview', exact: true },
   { href: '/dashboard/crm', icon: Network, label_ar: 'CRM الموحّد', label_en: 'Unified CRM' },
   { href: '/dashboard/organism', icon: Activity, label_ar: 'حالة الكائن', label_en: 'Organism' },
   { href: '/dashboard/rfq', icon: FileText, label_ar: 'صندوق الطلبات', label_en: 'Requests Inbox' },
+  { href: '/dashboard/supplier-offers', icon: PackageOpen, label_ar: 'عروض الموردين', label_en: 'Supplier Offers' },
   { href: '/dashboard/campaigns', icon: Megaphone, label_ar: 'الحملات', label_en: 'Campaigns' },
   { href: '/dashboard/contacts', icon: UserCheck, label_ar: 'جهات الاتصال', label_en: 'Contacts' },
   { href: '/dashboard/providers', icon: Store, label_ar: 'الموردون', label_en: 'Providers' },

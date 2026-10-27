@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
-import { BarChart2, Boxes, Users, Search, FileText, ArrowLeft, ArrowRight, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { BarChart2, Boxes, Users, Search, FileText, Send, ArrowLeft, ArrowRight, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { getProviders } from '@/lib/supabase/cached'
 import { sectionOf } from '@/lib/sections'
 
@@ -54,6 +54,7 @@ export default async function TradeHub({ params }: { params: Promise<{ locale: s
     { href: '/market', icon: BarChart2, count: d.opportunities, unit: { en: 'opportunities evaluated', ar: 'فرصة قيد التقييم' } },
     { href: '/products', icon: Boxes, count: d.products, unit: { en: 'products tracked', ar: 'منتج مُتابَع' } },
     { href: '/providers', icon: Users, count: d.traders, unit: { en: 'licensed trading companies', ar: 'شركة تجارة مرخّصة' } },
+    { href: '/sell-to-uae', icon: Send, count: 0, unit: { en: '', ar: '' } },
     { href: '/search', icon: Search, count: 0, unit: { en: '', ar: '' } },
     { href: '/rfq', icon: FileText, count: 0, unit: { en: '', ar: '' } },
   ]

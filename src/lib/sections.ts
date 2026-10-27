@@ -44,6 +44,7 @@ export const SECTIONS: Section[] = [
       { href: '/market', label: { en: 'Market opportunities', ar: 'فرص السوق' }, hint: { en: 'Scored daily from Noon, Amazon.ae, Carrefour, Lulu and Google Trends', ar: 'مقيَّمة يومياً من نون وأمازون.ae وكارفور ولولو وGoogle Trends' } },
       { href: '/products', label: { en: 'Products', ar: 'المنتجات' }, hint: { en: 'A signal page for every tracked product', ar: 'صفحة إشارات لكل منتج مُتابَع' } },
       { href: '/providers', label: { en: 'Suppliers (trading companies)', ar: 'الموردون (شركات التجارة)' }, hint: { en: 'Companies licensed in the Dubai commercial registry', ar: 'شركات مرخّصة في السجل التجاري بدبي' } },
+      { href: '/sell-to-uae', label: { en: 'Sell to UAE importers', ar: 'بِع للمستوردين في الإمارات' }, hint: { en: 'Exporters: submit your offer — free', ar: 'للمصدّرين: أرسل عرضك — مجاناً' } },
       { href: '/search', label: { en: 'Smart supplier search', ar: 'بحث ذكي عن الموردين' }, hint: { en: 'Type what you need in plain words', ar: 'اكتب ما تحتاجه بكلمات عادية' } },
       { href: '/rfq', label: { en: 'Request a quote', ar: 'اطلب عرض سعر' }, hint: { en: 'We reply with the best supplier offer', ar: 'نردّ بأفضل عرض من المورّدين' } },
     ],

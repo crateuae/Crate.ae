@@ -14,8 +14,8 @@ export type Block = { p: Bi } | { ul: Bi[] }
 export interface Section { id: string; h: Bi; blocks: Block[] }
 export interface Doc { key: 'privacy' | 'terms' | 'about'; title: Bi; description: Bi; updated: string; intro: Bi; sections: Section[] }
 
-export const UPDATED = '2026-09-25'
-export const UPDATED_LABEL: Bi = { en: '25 September 2026', ar: '25 سبتمبر 2026' }
+export const UPDATED = '2026-10-27'
+export const UPDATED_LABEL: Bi = { en: '27 October 2026', ar: '27 أكتوبر 2026' }
 export const CONTACT = { email: 'uae@crate.ae', phone: '+971 54 300 0415', site: 'https://www.crate.ae' }
 
 const p = (en: string, ar: string): Block => ({ p: { en, ar } })
@@ -43,6 +43,7 @@ export const PRIVACY: Doc = {
         [`Label scanner — the photo you take or upload is sent to AI and text-recognition services to read the text on it. We do not keep the photo. We keep the extracted text (product name, class, ingredients, label text) and the check result.`, `ماسح الملصقات — تُرسل الصورة التي تلتقطها أو ترفعها إلى خدمات ذكاء اصطناعي وتعرّف على النصوص لقراءة ما عليها. لا نحتفظ بالصورة. نحتفظ بالنص المستخرج (اسم المنتج والفئة والمكوّنات ونص الملصق) ونتيجة الفحص.`],
         [`Accounts — your email and name and how you sign in (Google, or email and password), handled through our authentication provider.`, `الحسابات — بريدك واسمك وطريقة تسجيل الدخول (Google أو البريد وكلمة المرور)، عبر مزوّد المصادقة لدينا.`],
         [`Printed-label orders — your name, email, phone, order details and any artwork you upload. These are passed to our print partner, Art for Printing, so it can quote, confirm and produce your order.`, `طلبات طباعة الملصقات — اسمك وبريدك وهاتفك وتفاصيل الطلب وأي تصميم ترفعه. تُمرَّر إلى شريك الطباعة لدينا Art for Printing ليسعّر طلبك ويؤكده وينفّذه.`],
+        [`Supplier offers — when you submit an offer as an exporter or producer: your company, contact name, WhatsApp number, email, website and the offer itself (product, price, minimum order, payment terms, documents you hold). With your consent we share the offer and your contact details with UAE importers who request that product.`, `عروض الموردين — عند إرسال عرض كمصدّر أو منتج: شركتك واسم المسؤول ورقم واتساب والبريد والموقع والعرض نفسه (المنتج والسعر والحد الأدنى وشروط الدفع والمستندات المتوفرة). وبموافقتك نشارك العرض وبيانات التواصل مع المستوردين في الإمارات الذين يطلبون هذا المنتج.`],
         [`Partners — the business profile details you enter in the partner portal, some of which appear on your public partner page.`, `الشركاء — بيانات الملف التجاري التي تدخلها في بوابة الشركاء، ويظهر بعضها في صفحة الشريك العامة.`],
         [`Emails — we record delivery events (sent, bounced, unsubscribed) and replies to our emails.`, `الرسائل البريدية — نسجّل أحداث التسليم (أُرسلت، ارتدّت، أُلغي الاشتراك) والردود على رسائلنا.`],
         [`WhatsApp — if you tap the WhatsApp button, WhatsApp opens with a pre-written message. From then on WhatsApp's own privacy terms apply.`, `واتساب — إذا ضغطت زر واتساب يُفتح التطبيق برسالة جاهزة. ومن ثَمّ تسري شروط الخصوصية الخاصة بواتساب.`],

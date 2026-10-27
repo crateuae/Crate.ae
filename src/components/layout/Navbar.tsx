@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Package, BarChart2, ShieldCheck, Boxes, Users, LayoutDashboard, Menu, X, LogIn, LogOut, ChevronDown, Bell, BookOpen, FileText, ScanLine, Calculator, Search, Factory, Tag } from 'lucide-react'
+import { Package, BarChart2, ShieldCheck, Boxes, Users, LayoutDashboard, Menu, X, LogIn, LogOut, ChevronDown, Bell, BookOpen, FileText, ScanLine, Calculator, Search, Factory, Tag, Send } from 'lucide-react'
 import { SECTIONS } from '@/lib/sections'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -10,7 +10,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 const ICON_BY_HREF: Record<string, typeof Package> = {
   '/import': BookOpen, '/compliance': ScanLine, '/arabic-food-label-gso-9': Tag, '/labels': Tag, '/tools/product-registration-uae': FileText, '/tools/certificates-uae': ShieldCheck,
   '/tools/landed-cost-uae': Calculator, '/tools/nutrition': Calculator, '/insights': FileText,
-  '/market': BarChart2, '/products': Boxes, '/providers': Users, '/search': Search, '/rfq': FileText,
+  '/market': BarChart2, '/products': Boxes, '/providers': Users, '/search': Search, '/rfq': FileText, '/sell-to-uae': Send,
   '/packaging': Package, '/packaging/planner': Calculator, '/packaging/suppliers': Factory, '/guides/carton-specs': BookOpen,
 }
 const SECTION_ICON = { import: ShieldCheck, trade: BarChart2, packaging: Package } as const
