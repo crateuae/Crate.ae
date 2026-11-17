@@ -9,6 +9,7 @@
 import { NextResponse } from 'next/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { assessInboundRisk, htmlToText } from '@/lib/security/inbound-risk'
+import { fillMissingBodies } from '@/lib/email/inbound-body'
 
 const SOURCES = ['self_claimed', 'admin_import', 'places_api', 'rfq_requester', 'provider_profile']
 const STATUSES = ['pending', 'verified', 'rejected']
@@ -67,6 +68,10 @@ export async function GET() {
   // Inbound supplier replies (empty [] if the table isn't set up yet). We surface a
   // PLAIN-TEXT preview + a phishing-risk assessment per message so the owner can
   // read the details safely (no HTML is ever sent to the browser).
+  // Bodies the webhook could not fetch are filled here, a few per page load.
+  let inboundAccess: string = 'unknown'
+  try { inboundAccess = (await fillMissingBodies(db, 15, 8000)).access } catch { /* never block the page */ }
+
   const inbound = await (async () => {
     try {
       const { data } = await db.from('inbound_emails')
@@ -96,5 +101,6 @@ export async function GET() {
     recent,
     topProviders,
     inbound,
+    inbound_body_access: inboundAccess,
   })
 }

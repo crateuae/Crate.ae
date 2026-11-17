@@ -7,6 +7,7 @@ import { buildGuide } from '@/lib/import-guides/build'
 import { answersToQuery } from '@/lib/portal-router/rules'
 import { certAnswersToQuery } from '@/lib/certificates/rules'
 import GuideActions from './GuideActions'
+import { SOURCE_PRODUCTS } from '@/lib/sourcing/model'
 
 export const revalidate = 86400
 export const dynamicParams = false
@@ -220,6 +221,19 @@ export default async function ImportGuidePage({ params }: { params: Promise<{ lo
           <div className="text-xs text-gray-500 mt-2">{H.uplift}: <b className="tabular-nums">{g.cost.effectiveRatePct.toFixed(1)}%</b></div>
           <div className="text-[11px] text-gray-400 mt-2">{H.costNote}</div>
         </section>
+
+        {/* Looking for a supplier? — only where we hold supplier offers for the product */}
+        {(() => {
+          const sp = SOURCE_PRODUCTS.find(x => x.guide === slug)
+          if (!sp) return null
+          return (
+            <section className="bg-orange-50 border border-orange-200 rounded-2xl p-5 mb-4 print:hidden">
+              <h2 className="text-base font-semibold text-gray-900 mb-1">{isAr ? `تبحث عن مورّد ${sp.name.ar}؟` : `Looking for a ${sp.name.en} supplier?`}</h2>
+              <p className="text-sm text-gray-600 mb-3">{isAr ? 'أخبرنا بالمواصفات والكمية، ونرسل لك عروض الموردين المطابقة — مجاناً.' : 'Tell us the specification and quantity and we send you the matching supplier offers — free.'}</p>
+              <Link href={`/${locale}/source/${sp.slug}`} className="inline-flex items-center rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-5 py-2.5">{isAr ? 'اطلب عروض الموردين' : 'Request supplier offers'}</Link>
+            </section>
+          )
+        })()}
 
         {/* FAQ */}
         <section className={card}>

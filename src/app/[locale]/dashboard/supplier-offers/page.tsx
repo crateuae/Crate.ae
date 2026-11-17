@@ -6,7 +6,7 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Loader2, RefreshCw, ChevronDown, ChevronUp, MessageCircle, Copy, Check, Plus, AlertTriangle, Search, FileText } from 'lucide-react'
+import { Loader2, RefreshCw, ChevronDown, ChevronUp, MessageCircle, Copy, Check, Plus, AlertTriangle, Search, FileText, Send } from 'lucide-react'
 import {
   CATEGORIES, STATUSES, PAYMENT_TERMS, DOCUMENTS, INCOTERMS, PRICE_UNITS, CURRENCIES,
   labelOf, priceLine, offerRef, type OfferAnswers,
@@ -134,6 +134,7 @@ function OfferCard({ o, isAr, onChanged }: { o: Offer; isAr: boolean; onChanged:
     const d = await r.json().catch(() => ({}))
     setBusy(false)
     if (r.ok && d.answers) onChanged(o.id, d.answers)
+    else if (!r.ok) window.alert((isAr ? 'لم يتم: ' : 'Not done: ') + (d.error ?? r.status))
   }
   // Sending a reply moves the offer along the pipeline it belongs to.
   const NEXT: Partial<Record<string, string>> = { supplier_first: 'new', supplier_docs: 'docs_requested', supplier_verified: 'verified' }
@@ -188,6 +189,16 @@ function OfferCard({ o, isAr, onChanged }: { o: Offer; isAr: boolean; onChanged:
               {busy && <Loader2 className="w-4 h-4 animate-spin text-slate-400 self-center" />}
             </div>
           </div>
+
+          {o.email && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" disabled={busy} onClick={() => { if (window.confirm(isAr ? `إرسال طلب المستندات بالبريد إلى ${o.email}؟` : `Email the documents request to ${o.email}?`)) patch({ action: 'email_docs' }) }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-blue-200 text-blue-700 text-xs font-bold hover:bg-blue-50 disabled:opacity-50">
+                <Send className="w-3 h-3" />{isAr ? 'إرسال طلب المستندات بالبريد' : 'Email documents request'}
+              </button>
+              {a._docs_requested_at && <span className="text-[11px] text-slate-400">{isAr ? 'أُرسل في ' : 'Sent '}{new Date(a._docs_requested_at).toLocaleString(isAr ? 'ar-AE' : 'en-AE', { dateStyle: 'medium', timeStyle: 'short' })}</span>}
+            </div>
+          )}
 
           {o.phone && (
             <div>

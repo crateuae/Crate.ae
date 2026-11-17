@@ -88,6 +88,7 @@ export interface OfferAnswers {
   _status: string
   _admin_notes?: string
   _updated_at?: string
+  _docs_requested_at?: string
 }
 
 export interface ParsedOffer {

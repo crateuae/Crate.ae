@@ -13,6 +13,7 @@ interface Crm {
     created_at: string; providers: { name_en: string | null; slug: string | null } | null
     body_preview: string; risk: { level: 'high' | 'medium' | 'low'; reasons: string[] }
   }[]
+  inbound_body_access?: string
 }
 
 export default function CrmOverviewPage() {
@@ -64,11 +65,13 @@ export default function CrmOverviewPage() {
     lure_invoice: 'طُعم فواتير/دفع', lure_verify: 'طلب تحقّق/تحديث بيانات', lure_credentials: 'يذكر كلمة مرور/دخول',
     lure_urgency: 'إلحاح/تهديد', lure_money: 'تحويل مالي/بطاقات', lure_click: 'حثّ على النقر/فتح مرفق',
     ip_url: 'رابط بعنوان IP', short_url: 'رابط مختصر', brand_spoof: 'يستخدم اسم Crate من نطاق خارجي',
+    lure_vendor: 'دعوة تسجيل مورّد (احتيال رسوم التسجيل)', brand_impersonation: 'ينتحل اسم جهة إماراتية من نطاق غير رسمي', generic_rfq: 'طلب تسعير عام بلا تفاصيل',
   } : {
     risky_tld: 'Suspicious TLD', unusual_domain: 'Unusual domain', lure_salary: 'Salary bait',
     lure_invoice: 'Invoice/payment bait', lure_verify: 'Asks to verify/update details', lure_credentials: 'Mentions password/login',
     lure_urgency: 'Urgency/threat', lure_money: 'Money transfer/gift cards', lure_click: 'Pushes click/open attachment',
     ip_url: 'Raw IP link', short_url: 'Shortened link', brand_spoof: 'Uses "Crate" from external domain',
+    lure_vendor: 'Vendor registration invite (fee scam)', brand_impersonation: 'Uses a UAE organisation name from a non-official domain', generic_rfq: 'Generic quote request, no details',
   }
 
   if (err) return <div className="p-10 text-center text-red-500">{err}</div>
@@ -158,6 +161,14 @@ export default function CrmOverviewPage() {
       <div className="bg-white border border-slate-200 rounded-2xl p-5">
         <h3 className="font-bold text-slate-700 text-sm mb-1 flex items-center gap-2"><Inbox className="w-4 h-4 text-orange-500" />{T.inbound}</h3>
         <p className="text-[11px] text-slate-400 mb-3">{T.inboundHint}</p>
+        {(d.inbound_body_access === 'restricted_key' || d.inbound_body_access === 'no_key') && (
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2 mb-3 text-[11px] leading-relaxed">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span>{isAr
+              ? 'نصوص الرسائل غير متاحة: مفتاح Resend الحالي للإرسال فقط. أنشئ مفتاحاً بصلاحية Full access في Resend وأضفه في Vercel باسم RESEND_FULL_API_KEY — تُملأ النصوص بعدها تلقائياً.'
+              : 'Message bodies unavailable: the current Resend key can only send. Create a Full access key in Resend and add it in Vercel as RESEND_FULL_API_KEY — bodies then fill in automatically.'}</span>
+          </div>
+        )}
         {!d.inbound?.length ? <p className="text-xs text-slate-400">{T.none}</p> : (
           <div className="space-y-1.5">
             {d.inbound.map((m, i) => {

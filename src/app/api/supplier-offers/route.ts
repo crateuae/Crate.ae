@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { notifyAdmin } from '@/lib/email/notify-admin'
 import { parseOffer, OFFER_TOOL, CATEGORIES, PAYMENT_TERMS, labelOf, priceLine, offerRef } from '@/lib/supplier-offers/model'
+import { sendDocsRequest } from '@/lib/supplier-offers/send'
 
 export const runtime = 'nodejs'
 
@@ -64,7 +65,14 @@ export async function POST(req: NextRequest) {
     `<b>الشركة:</b> ${esc(offer.company)}${offer.name ? ` — ${esc(offer.name)}` : ''}`,
     `<b>واتساب:</b> ${esc(offer.phone)}${offer.email ? ` · ${esc(offer.email)}` : ''}`,
     `<b>المراجعة:</b> https://www.crate.ae/ar/dashboard/supplier-offers`,
+    offer.email ? `<b>طلب المستندات:</b> أُرسل تلقائياً إلى بريد المورّد.` : `<b>طلب المستندات:</b> لا يوجد بريد — أرسله من زر واتساب في اللوحة.`,
   ].filter(Boolean).join('<br>'))
+
+  // The documents request goes out on its own — the reviewer starts from "documents requested".
+  if (offer.email) {
+    try { await sendDocsRequest(db, { id: row.id, email: offer.email, company: offer.company, locale, answers: offer.answers }) }
+    catch (e) { console.error('[supplier-offers] docs email:', e) }
+  }
 
   return NextResponse.json({ ok: true, ref })
 }

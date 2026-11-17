@@ -1,7 +1,8 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Boxes, FolderTree, Package, ShieldCheck, LayoutDashboard, ArrowRight, LogOut, Store, LineChart, Activity, FileText, Megaphone, Telescope, UserCheck, Network, Handshake, PackageOpen } from 'lucide-react'
+import { useEffect } from 'react'
+import { Boxes, FolderTree, Package, ShieldCheck, LayoutDashboard, ArrowRight, LogOut, Store, LineChart, Activity, FileText, Megaphone, Telescope, UserCheck, Network, Handshake, PackageOpen, ShoppingCart } from 'lucide-react'
 
 const SIDEBAR_ITEMS = [
   { href: '/dashboard', icon: LayoutDashboard, label_ar: 'نظرة عامة', label_en: 'Overview', exact: true },
@@ -9,6 +10,7 @@ const SIDEBAR_ITEMS = [
   { href: '/dashboard/organism', icon: Activity, label_ar: 'حالة الكائن', label_en: 'Organism' },
   { href: '/dashboard/rfq', icon: FileText, label_ar: 'صندوق الطلبات', label_en: 'Requests Inbox' },
   { href: '/dashboard/supplier-offers', icon: PackageOpen, label_ar: 'عروض الموردين', label_en: 'Supplier Offers' },
+  { href: '/dashboard/buyer-requests', icon: ShoppingCart, label_ar: 'طلبات المشترين', label_en: 'Buyer Requests' },
   { href: '/dashboard/campaigns', icon: Megaphone, label_ar: 'الحملات', label_en: 'Campaigns' },
   { href: '/dashboard/contacts', icon: UserCheck, label_ar: 'جهات الاتصال', label_en: 'Contacts' },
   { href: '/dashboard/providers', icon: Store, label_ar: 'الموردون', label_en: 'Providers' },
@@ -25,6 +27,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
   const locale = pathname.split('/')[1] || 'ar'
   const isAr = locale === 'ar'
+  // Only the admin reaches the dashboard: from now on this browser is not counted as a visitor.
+  useEffect(() => { try { localStorage.setItem('crate_owner', '1') } catch { /* storage blocked */ } }, [])
 
   return (
     <div className="min-h-screen bg-gray-50 flex">

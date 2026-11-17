@@ -17,6 +17,20 @@ const LURES: { re: RegExp; key: string }[] = [
   { re: /\b(urgent|immediately|within\s+24\s*hours|final\s+notice|account\s+suspended|will\s+be\s+closed)\b/i, key: 'lure_urgency' },
   { re: /\b(gift\s*card|wire\s*transfer|bitcoin|crypto|western\s*union|bank\s*transfer\s+now)\b/i, key: 'lure_money' },
   { re: /\b(click\s+here|open\s+the\s+attachment|download\s+now|view\s+document)\b/i, key: 'lure_click' },
+  // "Vendor invitation / supplier registration" — the usual opening of the registration-fee scam.
+  { re: /\b(vendor\s+(invitation|registration|enrol?ment)|supplier\s+(registration|invitation)|registration\s+fee|pre-?qualification\s+fee)\b/i, key: 'lure_vendor' },
+]
+
+// Large UAE organisations whose names are borrowed by vendor-registration scams. A mention
+// from any domain other than the real one is a strong signal.
+const UAE_BRANDS: Array<{ re: RegExp; domains: string[] }> = [
+  { re: /\bekfc\b|emirates\s+flight\s+catering/i, domains: ['ekfc.com', 'emirates.com'] },
+  { re: /\bemirates\s+(airline|group)\b/i, domains: ['emirates.com'] },
+  { re: /\badnoc\b/i, domains: ['adnoc.ae'] },
+  { re: /\bdewa\b/i, domains: ['dewa.gov.ae'] },
+  { re: /\betihad\b/i, domains: ['etihad.com', 'etihad.ae'] },
+  { re: /\bemaar\b/i, domains: ['emaar.ae', 'emaar.com'] },
+  { re: /\b(expo\s*2020|expo\s*city)\b/i, domains: ['expocitydubai.com'] },
 ]
 
 export type InboundRisk = { level: 'high' | 'medium' | 'low'; reasons: string[] }
@@ -38,6 +52,12 @@ export function assessInboundRisk(input: { from_email?: string | null; subject?:
   if (/https?:\/\/\d{1,3}(\.\d{1,3}){3}/i.test(hay)) { score += 2; reasons.add('ip_url') }
   if (/\b(bit\.ly|tinyurl|t\.co|goo\.gl|cutt\.ly|is\.gd|rebrand\.ly)\b/i.test(hay)) { score += 1; reasons.add('short_url') }
   if (/crate/i.test(input.subject || '') && domain && !/crate\.ae$/i.test(domain)) { score += 1; reasons.add('brand_spoof') }
+  for (const b of UAE_BRANDS) {
+    if (b.re.test(hay) && domain && !b.domains.some(d => domain === d || domain.endsWith(`.${d}`))) { score += 3; reasons.add('brand_impersonation'); break }
+  }
+  // A "request for quotation / product information" from a domain with no business on it,
+  // with nothing else said, is the opening line of the fake-buyer scam.
+  if (/\b(request\s+for\s+(quotation|product\s+information)|order\s+rfq|new\s+order\s+request|web\s+quote)\b/i.test(input.subject || '') && !(input.body || '').trim()) { score += 1; reasons.add('generic_rfq') }
 
   const level = score >= 4 ? 'high' : score >= 2 ? 'medium' : 'low'
   return { level, reasons: [...reasons] }

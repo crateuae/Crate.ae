@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { parseOffer, OFFER_TOOL, STATUS_KEYS, type Channel } from '@/lib/supplier-offers/model'
+import { sendDocsRequest } from '@/lib/supplier-offers/send'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -26,8 +27,12 @@ export async function PATCH(req: NextRequest) {
   const id = typeof b.id === 'string' ? b.id : ''
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const db = adminClient()
-  const { data: row } = await db.from('tool_leads').select('answers').eq('id', id).eq('tool', OFFER_TOOL).maybeSingle()
+  const { data: row } = await db.from('tool_leads').select('id, email, company, locale, answers').eq('id', id).eq('tool', OFFER_TOOL).maybeSingle()
   if (!row) return NextResponse.json({ error: 'not found' }, { status: 404 })
+  if (b.action === 'email_docs') {
+    const r = await sendDocsRequest(db, row)
+    return r.ok ? NextResponse.json({ ok: true, answers: r.answers }) : NextResponse.json({ error: r.error }, { status: 400 })
+  }
   const answers = { ...(row.answers as Record<string, unknown>) }
   if (typeof b.status === 'string') {
     if (!STATUS_KEYS.has(b.status)) return NextResponse.json({ error: 'bad status' }, { status: 400 })

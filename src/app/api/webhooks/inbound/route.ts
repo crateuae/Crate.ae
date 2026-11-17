@@ -17,6 +17,8 @@ import crypto from 'node:crypto'
 import { Resend } from 'resend'
 import { adminClient } from '@/lib/supabase/admin'
 import { cleanEmail } from '@/lib/email/normalize'
+import { fetchInboundBody } from '@/lib/email/inbound-body'
+import { htmlToText } from '@/lib/security/inbound-risk'
 
 const FROM = process.env.RESEND_FROM_EMAIL ?? 'uae@crate.ae'
 
@@ -57,8 +59,21 @@ export async function POST(req: NextRequest) {
   const toArr = Array.isArray(d.to) ? d.to : []
   const to = pick({ to0: (toArr[0] as string) ?? '' }, ['to0']) || pick(d, ['to'])
   const subject = pick(d, ['subject'])
-  const text = pick(d, ['text', 'text_body', 'plain'])
-  const html = pick(d, ['html', 'html_body'])
+  let text = pick(d, ['text', 'text_body', 'plain'])
+  let html = pick(d, ['html', 'html_body'])
+  // The webhook carries no body — fetch it by id (needs a Full access key, see lib/email/inbound-body).
+  let bodyNote = ''
+  const emailId = pick(d, ['email_id', 'id'])
+  if (!text && !html && emailId) {
+    const b = await fetchInboundBody(emailId)
+    if (b.ok) {
+      html = b.html ?? ''
+      text = b.text?.trim() ? b.text : (b.html ? htmlToText(b.html) : '')
+      if (b.attachments.length) bodyNote = `Attachments: ${b.attachments.map(a => a.filename).join(', ')}`
+    } else if (b.error === 'restricted_key' || b.error === 'no_key') {
+      bodyNote = 'The message text could not be fetched: set RESEND_FULL_API_KEY (a Resend key with Full access) in Vercel.'
+    }
+  }
 
   const supabase = adminClient()
 
@@ -87,6 +102,7 @@ export async function POST(req: NextRequest) {
         replyTo: from || undefined,
         subject: `↩️ ${subject || '(no subject)'} — from ${from || 'unknown'}`,
         html: (html || `<pre>${(text || '').replace(/</g, '&lt;')}</pre>`)
+          + (bodyNote ? `<p style="color:#b45309;font-size:12px">${bodyNote.replace(/</g, '&lt;')}</p>` : '')
           + `<hr><p style="color:#888;font-size:12px">Reply received at ${to || FROM} · from ${from}</p>`,
       })
     } catch (e) { console.error('[inbound] forward:', e) }
