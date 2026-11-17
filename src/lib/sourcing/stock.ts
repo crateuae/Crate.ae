@@ -10,6 +10,10 @@ import { SOURCE_PRODUCTS } from './model'
 
 export interface OfferStock { count: number; origins: string[] }
 
+const ORIGIN_AR: Record<string, string> = { Iran: 'إيران', Turkey: 'تركيا', India: 'الهند', Pakistan: 'باكستان', Egypt: 'مصر', 'Saudi Arabia': 'السعودية', USA: 'الولايات المتحدة' }
+/** Origin names for the page language. */
+export const originsFor = (origins: string[], ar: boolean) => (ar ? origins.map(o => ORIGIN_AR[o] ?? o) : origins)
+
 const ORIGIN_EN: Record<string, string> = { 'ایران': 'Iran', 'إيران': 'Iran', 'iran': 'Iran', 'تركيا': 'Turkey', 'turkey': 'Turkey', 'türkiye': 'Turkey', 'الهند': 'India', 'india': 'India' }
 const normOrigin = (o: string) => ORIGIN_EN[o.trim().toLowerCase()] ?? ORIGIN_EN[o.trim()] ?? o.trim()
 

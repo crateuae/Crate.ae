@@ -67,7 +67,7 @@ export default async function SourceHub({ params, searchParams }: { params: Prom
                 <span className="w-9 h-9 shrink-0 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center"><PackageSearch className="w-[18px] h-[18px]" /></span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-semibold text-gray-900">{isAr ? `اطلب عروض ${p.name.ar}` : `Request ${p.name.en} offers`}</span>
-                  {(stock[p.slug]?.count ?? 0) > 0 && <span className="block text-[12px] text-gray-500">{isAr ? `${stock[p.slug].count} عرض مورّد لدينا` : `${stock[p.slug].count} supplier offers on file`}</span>}
+                  {(stock[p.slug]?.count ?? 0) > 0 && <span className="block text-[12px] text-gray-500">{isAr ? `عروض الموردين لدينا: ${stock[p.slug].count}` : `${stock[p.slug].count} supplier offers on file`}</span>}
                 </span>
                 <Arrow className="w-4 h-4 text-orange-500 group-hover:translate-x-0.5 transition-transform rtl:group-hover:-translate-x-0.5" />
               </Link>

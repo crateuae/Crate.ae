@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { PackageSearch, FileCheck2, ShieldCheck, ArrowLeft, ArrowRight } from 'lucide-react'
 import { pageAlternates } from '@/lib/seo/alternates'
 import { SOURCE_PRODUCTS, type Bi } from '@/lib/sourcing/model'
-import { getOfferStock } from '@/lib/sourcing/stock'
+import { getOfferStock, originsFor } from '@/lib/sourcing/stock'
 import { GUIDE_PRODUCTS } from '@/lib/import-guides/products'
 import { buildGuide } from '@/lib/import-guides/build'
 import BuyerRequestForm from '@/components/sourcing/BuyerRequestForm'
@@ -72,7 +72,7 @@ export default async function SourceProductPage({ params }: { params: Promise<{ 
             <p className="mt-4 inline-flex items-center gap-2 text-sm bg-white border border-orange-200 rounded-xl px-4 py-2 text-gray-700">
               <PackageSearch className="w-4 h-4 text-orange-500" />
               {isAr
-                ? `لدينا ${stock.count} عرض مورّد لـ${t(p.name)}${stock.origins.length ? ` (المنشأ: ${stock.origins.join('، ')})` : ''} — قيد التوثيق.`
+                ? `عروض الموردين لدينا: ${stock.count}${stock.origins.length ? ` · المنشأ: ${originsFor(stock.origins, true).join('، ')}` : ''} · قيد التوثيق`
                 : `${stock.count} supplier offers for ${t(p.name)} on file${stock.origins.length ? ` (origin: ${stock.origins.join(', ')})` : ''} — being verified.`}
             </p>
           )}
