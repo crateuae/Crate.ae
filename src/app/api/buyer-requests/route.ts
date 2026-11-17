@@ -11,6 +11,7 @@ import { Resend } from 'resend'
 import { adminClient } from '@/lib/supabase/admin'
 import { notifyAdmin } from '@/lib/email/notify-admin'
 import { OFFER_TOOL, priceLine, offerRef, labelOf, CATEGORIES, PAYMENT_TERMS } from '@/lib/supplier-offers/model'
+import { rateLimit, rejectCrossOrigin, readJsonObject, badBody } from '@/lib/security/guard'
 import { parseRequest, REQUEST_TOOL, requestRef, matchOffers, DELIVERY, SERVICES, type OfferRow } from '@/lib/sourcing/model'
 
 export const runtime = 'nodejs'
@@ -19,8 +20,13 @@ const FROM = process.env.RESEND_FROM_EMAIL ?? 'uae@crate.ae'
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!))
 
 export async function POST(req: NextRequest) {
-  let body: Record<string, unknown>
-  try { body = await req.json() } catch { return NextResponse.json({ ok: false, error: 'bad_json' }, { status: 400 }) }
+  const xo = rejectCrossOrigin(req)
+  if (xo) return xo
+  // Each accepted request emails the admin and (when an address is given) the buyer.
+  const limited = rateLimit(req, 'buyreq-min', 4, 60_000) || rateLimit(req, 'buyreq-hour', 15, 3_600_000)
+  if (limited) return limited
+  const body = await readJsonObject(req, 30_000)
+  if (!body) return badBody()
   if (typeof body.website_hp === 'string' && body.website_hp.trim()) return NextResponse.json({ ok: true, ref: 'BR-000000' })
   if (body.consent !== true) return NextResponse.json({ ok: false, error: 'consent_required', field: 'consent' }, { status: 422 })
   const parsed = parseRequest(body)

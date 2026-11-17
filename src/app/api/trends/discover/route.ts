@@ -52,17 +52,7 @@ function matchesExistingProduct(keyword: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  // Auth: only enforce if called from external cron (x-source: cron header)
-  // Dashboard UI calls are always allowed
-  const cronSecret = process.env.CRON_SECRET
-  const providedSecret = req.headers.get('x-cron-secret')
-  const source = req.headers.get('x-source')
-  const isExternalCron = source === 'cron'
-  const isRealSecret = cronSecret && cronSecret !== 'your_cron_secret' && cronSecret !== ''
-  if (isExternalCron && isRealSecret && providedSecret !== cronSecret) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+  // Access is enforced in src/proxy.ts: admin session, CRON_SECRET, or the internal token the heartbeat sends.
   const body = await req.json().catch(() => ({}))
   const limit: number = Math.min(body.limit || 20, 30)
 
@@ -143,7 +133,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status') || 'pending'
-  const limit  = parseInt(searchParams.get('limit') || '100')
+  const limit  = Math.min(500, Math.max(1, parseInt(searchParams.get('limit') || '100', 10) || 100))
 
   let query = supabase
     .from('trend_discoveries')

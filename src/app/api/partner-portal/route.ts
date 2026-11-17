@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server' // session (anon + cookies)
 import { adminClient } from '@/lib/supabase/admin'    // service role (RLS bypass) for the row
+import { rejectCrossOrigin, rateLimit, readJsonObject, badBody, clipText, validEmail, safeHttpUrl } from '@/lib/security/guard'
 
 export const runtime = 'nodejs'
 
@@ -21,38 +22,67 @@ const SELF_EDITABLE = [
   'services', 'materials', 'description', 'logo_url', 'public_published',
 ]
 
+// Per-field rules for the self-editable whitelist: every value is typed, bounded and, for URLs, http(s) only
+// (the public partner page renders website/logo as links and images).
+const FIELD_RULES: Record<string, (v: unknown) => unknown> = {
+  name_en: v => clipText(v, 160),
+  name_ar: v => clipText(v, 160),
+  phone: v => clipText(v, 40),
+  email: v => validEmail(v) ?? '',
+  website: v => safeHttpUrl(v) ?? '',
+  address: v => clipText(v, 300),
+  services: v => clipText(v, 2000),
+  materials: v => clipText(v, 2000),
+  description: v => clipText(v, 4000),
+  logo_url: v => safeHttpUrl(v) ?? '',
+  public_published: v => v === true,
+}
+
+// Only a user whose email Supabase has CONFIRMED can be matched to a partner record.
 async function sessionEmail(): Promise<string | null> {
   try {
     const sb = await createClient()
     const { data: { user } } = await sb.auth.getUser()
-    return user?.email ? user.email.trim().toLowerCase() : null
+    return user?.email && user.email_confirmed_at ? user.email.trim().toLowerCase() : null
   } catch { return null }
 }
+
+/** ilike treats % _ \ as wildcards; an email is compared literally. */
+const likeLiteral = (s: string) => s.replace(/[\\%_]/g, c => '\\' + c)
 
 export async function GET() {
   const email = await sessionEmail()
   if (!email) return NextResponse.json({ ok: false, error: 'not_authenticated' }, { status: 401 })
   const db = adminClient()
-  const { data: partner } = await db.from('partners').select('*').ilike('account_email', email).maybeSingle()
+  const { data: partner } = await db.from('partners').select('*').ilike('account_email', likeLiteral(email)).maybeSingle()
   if (!partner) return NextResponse.json({ ok: false, error: 'no_partner_linked', email }, { status: 404 })
   return NextResponse.json({ ok: true, partner, email })
 }
 
 export async function PATCH(req: NextRequest) {
+  const xo = rejectCrossOrigin(req)
+  if (xo) return xo
+  const limited = rateLimit(req, 'partner-patch', 20, 60_000)
+  if (limited) return limited
   const email = await sessionEmail()
   if (!email) return NextResponse.json({ ok: false, error: 'not_authenticated' }, { status: 401 })
   const db = adminClient()
 
   // Resolve the partner from the SESSION email only — the client cannot target another row.
-  const { data: partner } = await db.from('partners').select('id').ilike('account_email', email).maybeSingle()
+  const { data: partner } = await db.from('partners').select('id').ilike('account_email', likeLiteral(email)).maybeSingle()
   if (!partner) return NextResponse.json({ ok: false, error: 'no_partner_linked' }, { status: 404 })
 
-  const body = await req.json().catch(() => ({} as any))
+  const body = await readJsonObject(req, 20_000)
+  if (!body) return badBody()
   const patch: Record<string, unknown> = {}
-  for (const k of SELF_EDITABLE) if (k in body) patch[k] = body[k] === '' ? null : body[k]
+  for (const k of SELF_EDITABLE) {
+    if (!(k in body)) continue
+    const v = FIELD_RULES[k](body[k])
+    patch[k] = v === '' ? null : v
+  }
   if (!Object.keys(patch).length) return NextResponse.json({ ok: true })
 
   const { error } = await db.from('partners').update(patch).eq('id', partner.id)
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
+  if (error) { console.error('[partner-portal] update:', error.message); return NextResponse.json({ ok: false, error: 'db_error' }, { status: 500 }) }
   return NextResponse.json({ ok: true })
 }

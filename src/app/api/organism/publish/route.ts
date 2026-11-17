@@ -14,8 +14,7 @@ import { publishApproved } from '@/lib/organism/publish'
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
-  // Open trigger: Vercel Cron + manual admin publish from the dashboard.
-  // Rate-governed by daily_publish_cap, so open access is acceptable.
+  // Access is enforced in src/proxy.ts: admin session, CRON_SECRET, or Vercel Cron.
 
   const startedAt = Date.now()
   try {

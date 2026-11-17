@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'node:crypto'
 import { adminClient } from '@/lib/supabase/admin'
 import { Resend } from 'resend'
+import { esc } from '@/lib/security/guard'
 
 export const runtime = 'nodejs'
 
@@ -37,8 +38,8 @@ export async function POST(req: NextRequest) {
   let body: any
   try { body = JSON.parse(raw) } catch { return NextResponse.json({ ok: false, error: 'bad_json' }, { status: 400 }) }
 
-  const afpRef = String(body.afp_ref || '')
-  const status = String(body.status || '')
+  const afpRef = String(body.afp_ref || '').slice(0, 60)
+  const status = String(body.status || '').slice(0, 40)
   if (!afpRef || !status) return NextResponse.json({ ok: false, error: 'missing_fields' }, { status: 400 })
 
   const db = adminClient()
@@ -59,10 +60,10 @@ export async function POST(req: NextRequest) {
         to: [order.buyer_email],
         subject: `تحديث طلب الملصقات ${afpRef} — Label order update`,
         html: `<div dir="rtl" style="font-family:sans-serif;line-height:1.7;color:#1f2430">
-          <p>${order.buyer_name ? `مرحباً ${order.buyer_name}،` : 'مرحباً،'}</p>
+          <p>${order.buyer_name ? `مرحباً ${esc(order.buyer_name)}،` : 'مرحباً،'}</p>
           <p>${msg.ar}</p>
           <p style="color:#888" dir="ltr">${msg.en}</p>
-          <p>رقم الطلب / Ref: <b>${afpRef}</b></p>
+          <p>رقم الطلب / Ref: <b>${esc(afpRef)}</b></p>
           <hr><p style="color:#999;font-size:12px">Crate · uae@crate.ae</p>
         </div>`,
       })

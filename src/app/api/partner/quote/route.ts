@@ -13,12 +13,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAfpQuote } from '@/lib/partner/afp'
 import { readStickerAsk, readSqmAsk, crateMarkupPct } from '@/lib/partner/sticker-ask'
+import { rateLimit, rejectCrossOrigin, readJsonObject, badBody } from '@/lib/security/guard'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
-  let body: any
-  try { body = await req.json() } catch { return NextResponse.json({ ok: false, error: 'bad_json' }, { status: 400 }) }
+  const xo = rejectCrossOrigin(req)
+  if (xo) return xo
+  // Each quote is a signed call to the factory's pricing engine: a generous but bounded budget.
+  const limited = rateLimit(req, 'quote-min', 30, 60_000) || rateLimit(req, 'quote-hour', 300, 3_600_000)
+  if (limited) return limited
+  const body: any = await readJsonObject(req, 20_000)
+  if (!body) return badBody()
 
   const sqm = readSqmAsk(body?.sqm)
   const sticker = sqm ? null : readStickerAsk(body?.sticker)

@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { adminClient } from '@/lib/supabase/admin'
+import { rateLimit } from '@/lib/security/guard'
+import crypto from 'node:crypto'
 import { analyzeMarketGap } from '@/lib/ai/claude'
 
 // Called by cron daily — scrapes signals and generates gap alerts
 export async function POST(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret')
-  if (secret !== process.env.CRON_SECRET) {
+  const secret = req.headers.get('x-cron-secret') || ''
+  const expected = process.env.CRON_SECRET || ''
+  const a = Buffer.from(secret), b = Buffer.from(expected)
+  if (expected.length < 16 || a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = await createAdminClient()
+  const supabase = adminClient()
   const { data: products } = await supabase.from('products').select('id, name_ar, name_en, product_class').eq('is_active', true)
   if (!products?.length) return NextResponse.json({ processed: 0 })
 
@@ -78,9 +82,11 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const type = searchParams.get('type')
   const urgency = searchParams.get('urgency')
-  const limit = parseInt(searchParams.get('limit') || '20')
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10) || 20))
+  const limited = rateLimit(req, 'signals', 60, 60_000)
+  if (limited) return limited
 
-  const supabase = await createAdminClient()
+  const supabase = adminClient()
   let query = supabase
     .from('gap_alerts')
     .select(`
@@ -91,10 +97,10 @@ export async function GET(req: NextRequest) {
     .order('gap_score', { ascending: false })
     .limit(limit)
 
-  if (type) query = query.eq('alert_type', type)
-  if (urgency) query = query.eq('urgency', urgency)
+  if (type) query = query.eq('alert_type', type.slice(0, 40))
+  if (urgency) query = query.eq('urgency', urgency.slice(0, 20))
 
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) { console.error('[market/signals]', error.message); return NextResponse.json({ error: 'db_error' }, { status: 500 }) }
   return NextResponse.json(data)
 }

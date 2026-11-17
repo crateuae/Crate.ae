@@ -11,14 +11,20 @@ import { adminClient } from '@/lib/supabase/admin'
 import { notifyAdmin } from '@/lib/email/notify-admin'
 import { parseOffer, OFFER_TOOL, CATEGORIES, PAYMENT_TERMS, labelOf, priceLine, offerRef } from '@/lib/supplier-offers/model'
 import { sendDocsRequest } from '@/lib/supplier-offers/send'
+import { rateLimit, rejectCrossOrigin, readJsonObject, badBody } from '@/lib/security/guard'
 
 export const runtime = 'nodejs'
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!))
 
 export async function POST(req: NextRequest) {
-  let body: Record<string, unknown>
-  try { body = await req.json() } catch { return NextResponse.json({ ok: false, error: 'bad_json' }, { status: 400 }) }
+  const xo = rejectCrossOrigin(req)
+  if (xo) return xo
+  // Each accepted offer emails the admin and (when an address is given) the supplier.
+  const limited = rateLimit(req, 'offer-min', 4, 60_000) || rateLimit(req, 'offer-hour', 15, 3_600_000)
+  if (limited) return limited
+  const body = await readJsonObject(req, 30_000)
+  if (!body) return badBody()
   if (typeof body.website_hp === 'string' && body.website_hp.trim()) return NextResponse.json({ ok: true, ref: 'SO-000000' }) // honeypot
   if (body.consent !== true) return NextResponse.json({ ok: false, error: 'consent_required', field: 'consent' }, { status: 422 })
 

@@ -29,6 +29,8 @@ function verifySignature(payload: string, headers: Headers): boolean {
   const ts = headers.get('svix-timestamp')
   const sigHeader = headers.get('svix-signature')
   if (!id || !ts || !sigHeader) return false
+  // Reject replays: the signed timestamp must be recent (Svix recommends a 5 minute tolerance).
+  if (!Number.isFinite(Number(ts)) || Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false
   const key = Buffer.from(secret.replace(/^whsec_/, ''), 'base64')
   const expected = crypto.createHmac('sha256', key).update(`${id}.${ts}.${payload}`).digest('base64')
   return sigHeader.split(' ').some(part => {

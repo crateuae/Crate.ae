@@ -14,12 +14,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { organismDb, getActiveBrain, sense, scoreSensed } from '@/lib/organism/pipeline'
 import { captureOutcomes } from '@/lib/organism/learning'
+import { internalToken } from '@/lib/security/internal'
 
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
-  // Open trigger: Vercel Cron + manual admin pulse from the dashboard.
-  // These ops are idempotent and rate-governed, so open access is acceptable.
+  // Access is enforced in src/proxy.ts: admin session, CRON_SECRET, or Vercel Cron.
 
   const startedAt = Date.now()
   try {
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       const ctrl = new AbortController()
       const t = setTimeout(() => ctrl.abort(), 30000)
       const dr = await fetch(`${base}/api/trends/discover`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-token': internalToken() },
         body: JSON.stringify({ limit: 20 }), signal: ctrl.signal,
       }).catch(() => null)
       clearTimeout(t)

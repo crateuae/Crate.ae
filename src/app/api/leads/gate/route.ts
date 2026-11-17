@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { cleanEmail } from '@/lib/email/normalize'
 import { notifyAdmin } from '@/lib/email/notify-admin'
+import { rateLimit, rejectCrossOrigin, readJsonObject, badBody, esc, validEmail } from '@/lib/security/guard'
 
 export const runtime = 'nodejs'
 
@@ -16,11 +17,15 @@ const KIND_AR: Record<string, string> = { pdf: 'حفظ PDF', download: 'تحمي
 const clip = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().replace(/[\[\]]/g, '').slice(0, n) : '')
 
 export async function POST(req: NextRequest) {
-  let b: Record<string, unknown>
-  try { b = await req.json() } catch { return NextResponse.json({ ok: false, error: 'bad_json' }, { status: 400 }) }
+  const xo = rejectCrossOrigin(req)
+  if (xo) return xo
+  const limited = rateLimit(req, 'gate-min', 6, 60_000) || rateLimit(req, 'gate-hour', 30, 3_600_000)
+  if (limited) return limited
+  const b = await readJsonObject(req, 10_000)
+  if (!b) return badBody()
   if (typeof b.website === 'string' && b.website.trim()) return NextResponse.json({ ok: true }) // honeypot
 
-  const email = cleanEmail(b.email)
+  const email = validEmail(b.email) && cleanEmail(b.email)
   if (!email) return NextResponse.json({ ok: false, error: 'invalid_email' }, { status: 422 })
   const kind = KINDS.has(String(b.kind)) ? String(b.kind) : 'download'
   const title = clip(b.title, 160) || KIND_AR[kind]
@@ -60,12 +65,12 @@ export async function POST(req: NextRequest) {
   // Heads-up only on first contact — repeat downloads by a known email would be noise.
   if (isNewContact) {
     notifyAdmin(`عميل محتمل جديد — ${KIND_AR[kind]}: ${category}`, [
-      `<b>إيميل:</b> ${email}`,
-      name ? `<b>الاسم:</b> ${name}` : '',
-      `<b>العنصر:</b> ${title}`,
-      `<b>التصنيف:</b> ${category}`,
+      `<b>إيميل:</b> ${esc(email)}`,
+      name ? `<b>الاسم:</b> ${esc(name)}` : '',
+      `<b>العنصر:</b> ${esc(title)}`,
+      `<b>التصنيف:</b> ${esc(category)}`,
       `<b>اشتراك بالقائمة:</b> ${subscribe ? 'نعم' : 'لا'}`,
-      sourcePage ? `<b>صفحة:</b> https://www.crate.ae${sourcePage}` : '',
+      sourcePage ? `<b>صفحة:</b> https://www.crate.ae${esc(sourcePage)}` : '',
       `<b>الصندوق:</b> https://www.crate.ae/ar/dashboard/rfq`,
     ].filter(Boolean).join('<br>'))
   }

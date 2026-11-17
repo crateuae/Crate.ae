@@ -19,15 +19,9 @@ import { opportunityPitchHtml } from '@/lib/campaigns/outreach-template'
 
 export const maxDuration = 60
 
-function authorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return true // no secret configured → allow (dev)
-  const auth = req.headers.get('authorization')
-  return auth === `Bearer ${secret}` || req.nextUrl.searchParams.get('secret') === secret
-}
+// Access is enforced in src/proxy.ts (admin session or CRON_SECRET) — secrets in the query string are no longer accepted.
 
 async function run(req: NextRequest) {
-  if (!authorized(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   if (process.env.ENABLE_OUTREACH !== 'true') {
     return NextResponse.json({ skipped: 'ENABLE_OUTREACH not set — outreach disabled' })
   }

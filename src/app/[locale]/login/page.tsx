@@ -7,6 +7,10 @@ import Link from 'next/link'
 
 const ADMIN_EMAIL = 'crateuae@gmail.com'
 
+// `next` must be a same-site path (never an absolute URL or //host).
+const safeNext = (n: string | null, fallback: string) =>
+  n && n.startsWith('/') && !n.startsWith('//') && !n.startsWith('/\\') ? n : fallback
+
 export default function LoginPage() {
   const params = useParams()
   const router = useRouter()
@@ -40,7 +44,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${origin}/${locale}/auth/callback${searchParams.get('next') ? `?next=${encodeURIComponent(searchParams.get('next')!)}` : ''}`,
+        redirectTo: `${origin}/${locale}/auth/callback${searchParams.get('next') ? `?next=${encodeURIComponent(safeNext(searchParams.get('next'), `/${locale}`))}` : ''}`,
         queryParams: { access_type: 'offline', prompt: 'consent' },
       },
     })
@@ -67,7 +71,7 @@ export default function LoginPage() {
         if (data.user.email === ADMIN_EMAIL) {
           router.push(`/${locale}/dashboard`)
         } else {
-          router.push(searchParams.get('next') || `/${locale}`)
+          router.push(safeNext(searchParams.get('next'), `/${locale}`))
         }
       }
     } else {

@@ -9,6 +9,7 @@ import { resolveAudience, type AudienceSpec } from '@/lib/campaigns/audience'
 import { adminClient } from '@/lib/supabase/admin'
 import { cleanEmail } from '@/lib/email/normalize'
 import { supplierPitchHtml } from '@/lib/campaigns/outreach-template'
+import { rateLimit, rejectCrossOrigin, readJsonObject, badBody, clipText, validEmail, esc } from '@/lib/security/guard'
 
 /**
  * CAPTURE → OUTREACH loop closure. An incoming RFQ (demand signal) drafts an
@@ -80,13 +81,13 @@ async function notifyAdmin(payload: {
 }) {
   if (!process.env.RESEND_API_KEY) return
   const lines = [
-    `<b>منتج:</b> ${payload.product}`,
-    `<b>مقدّم الطلب:</b> ${payload.contact}`,
-    payload.company ? `<b>شركة:</b> ${payload.company}` : '',
-    payload.phone   ? `<b>هاتف:</b> ${payload.phone}` : '',
-    payload.email   ? `<b>إيميل:</b> ${payload.email}` : '',
-    payload.quantity ? `<b>كمية:</b> ${payload.quantity}` : '',
-    payload.page    ? `<b>صفحة:</b> https://www.crate.ae${payload.page}` : '',
+    `<b>منتج:</b> ${esc(payload.product)}`,
+    `<b>مقدّم الطلب:</b> ${esc(payload.contact)}`,
+    payload.company ? `<b>شركة:</b> ${esc(payload.company)}` : '',
+    payload.phone   ? `<b>هاتف:</b> ${esc(payload.phone)}` : '',
+    payload.email   ? `<b>إيميل:</b> ${esc(payload.email)}` : '',
+    payload.quantity ? `<b>كمية:</b> ${esc(payload.quantity)}` : '',
+    payload.page    ? `<b>صفحة:</b> https://www.crate.ae${esc(payload.page)}` : '',
   ].filter(Boolean).join('<br>')
 
   await fetch('https://api.resend.com/emails', {
@@ -102,15 +103,39 @@ async function notifyAdmin(payload: {
 }
 
 export async function POST(req: NextRequest) {
-  let body: Record<string, string>
-  try { body = await req.json() } catch { return NextResponse.json({ error: 'invalid json' }, { status: 400 }) }
+  const xo = rejectCrossOrigin(req)
+  if (xo) return xo
+  const limited = rateLimit(req, 'rfq-min', 5, 60_000) || rateLimit(req, 'rfq-hour', 20, 3_600_000)
+  if (limited) return limited
 
-  const { opportunity_id, product_name, product_name_ar, quantity, destination,
-          budget_aed, notes, contact_name, contact_email, contact_phone,
-          company_name, source_page, locale, provider_id, intent } = body
+  const raw = await readJsonObject(req, 20_000)
+  if (!raw) return badBody()
+  if (typeof raw.website === 'string' && raw.website.trim()) return NextResponse.json({ ok: true }) // honeypot
 
-  if (!contact_name?.trim() || !product_name?.trim()) {
+  // Every field is a bounded plain string (objects/arrays/numbers from a hand-made request become '').
+  const uuid = (v: unknown) => (typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v) ? v : '')
+  const opportunity_id = uuid(raw.opportunity_id)
+  const provider_id = uuid(raw.provider_id)
+  const product_name = clipText(raw.product_name, 200)
+  const product_name_ar = clipText(raw.product_name_ar, 200)
+  const quantity = clipText(raw.quantity, 100)
+  const destination = clipText(raw.destination, 120)
+  const budgetNum = Number(raw.budget_aed)
+  const budget_aed = Number.isFinite(budgetNum) && budgetNum > 0 && budgetNum < 1e10 ? String(budgetNum) : ''
+  const notes = clipText(raw.notes, 2000)
+  const contact_name = clipText(raw.contact_name, 120)
+  const contact_email = validEmail(raw.contact_email) ?? ''
+  const contact_phone = clipText(raw.contact_phone, 40)
+  const company_name = clipText(raw.company_name, 160)
+  const source_page = clipText(raw.source_page, 300)
+  const locale = raw.locale === 'en' ? 'en' : 'ar'
+  const intent = ['quote', 'product', 'requirement'].includes(String(raw.intent)) ? String(raw.intent) : ''
+
+  if (!contact_name || !product_name) {
     return NextResponse.json({ error: 'contact_name and product_name are required' }, { status: 422 })
+  }
+  if (raw.contact_email && !contact_email) {
+    return NextResponse.json({ error: 'invalid_email' }, { status: 422 })
   }
 
   // Fold the request intent into the notes so it survives without a schema change.

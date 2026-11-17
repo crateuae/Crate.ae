@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimit } from '@/lib/security/guard'
 
 export const runtime = 'edge'
 
@@ -16,9 +17,17 @@ export async function POST(req: NextRequest) {
     const ua = req.headers.get('user-agent') || ''
     if (!ua || BOT_RE.test(ua)) return NextResponse.json({ ok: true })
 
-    const body = await req.json()
-    const { path, visitor_id, lang, referrer } = body
-    if (!path || !visitor_id) return NextResponse.json({ ok: true })
+    // A page-view beacon: quietly drop floods (no error text, nothing for a script to learn from).
+    if (rateLimit(req, 'track', 120, 60_000)) return NextResponse.json({ ok: true })
+    const text = await req.text()
+    if (text.length > 4000) return NextResponse.json({ ok: true })
+    const body = JSON.parse(text)
+    const str = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '')
+    const path = str(body?.path, 300)
+    const visitor_id = str(body?.visitor_id, 80)
+    const lang = str(body?.lang, 8)
+    const referrer = str(body?.referrer, 300)
+    if (!path.startsWith('/') || !visitor_id) return NextResponse.json({ ok: true })
     if (path.includes('/dashboard') || path.includes('/admin') || path.startsWith('/api')) {
       return NextResponse.json({ ok: true })
     }

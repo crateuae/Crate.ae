@@ -11,6 +11,7 @@ import { cleanEmail } from '@/lib/email/normalize'
 import { notifyAdmin } from '@/lib/email/notify-admin'
 import { parseAnswers, routeProduct, CATEGORIES, EMIRATES } from '@/lib/portal-router/rules'
 import { portalRouterEmail } from '@/lib/portal-router/email'
+import { rateLimit, rejectCrossOrigin, readJsonObject, badBody, validEmail, esc } from '@/lib/security/guard'
 
 export const runtime = 'nodejs'
 
@@ -18,13 +19,18 @@ const FROM = process.env.RESEND_FROM_EMAIL ?? 'uae@crate.ae'
 const clip = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : '') || null
 
 export async function POST(req: NextRequest) {
-  let body: Record<string, unknown>
-  try { body = await req.json() } catch { return NextResponse.json({ ok: false, error: 'bad_json' }, { status: 400 }) }
+  const xo = rejectCrossOrigin(req)
+  if (xo) return xo
+  // Each accepted request sends an email to the address given: bounded so it cannot be used to mail-bomb a third party.
+  const limited = rateLimit(req, 'portal-min', 3, 60_000) || rateLimit(req, 'portal-hour', 10, 3_600_000)
+  if (limited) return limited
+  const body = await readJsonObject(req, 10_000)
+  if (!body) return badBody()
 
   // Honeypot: real users never fill this field.
   if (typeof body.website === 'string' && body.website.trim()) return NextResponse.json({ ok: true })
 
-  const email = cleanEmail(body.email)
+  const email = validEmail(body.email) && cleanEmail(body.email)
   if (!email) return NextResponse.json({ ok: false, error: 'invalid_email' }, { status: 422 })
   const answers = parseAnswers(body.answers as Record<string, unknown>)
   if (!answers) return NextResponse.json({ ok: false, error: 'invalid_answers' }, { status: 422 })
@@ -66,10 +72,10 @@ export async function POST(req: NextRequest) {
   const cat = CATEGORIES.find(c => c.key === answers.category)?.label.ar
   const em = EMIRATES.find(e => e.key === answers.emirate)?.label.ar
   notifyAdmin(`عميل محتمل — موجّه البوابات: ${cat} / ${em}`, [
-    `<b>إيميل:</b> ${email}`,
-    body.name ? `<b>الاسم:</b> ${clip(body.name, 120)}` : '',
-    body.company ? `<b>شركة:</b> ${clip(body.company, 160)}` : '',
-    body.phone ? `<b>هاتف:</b> ${clip(body.phone, 40)}` : '',
+    `<b>إيميل:</b> ${esc(email)}`,
+    body.name ? `<b>الاسم:</b> ${esc(clip(body.name, 120))}` : '',
+    body.company ? `<b>شركة:</b> ${esc(clip(body.company, 160))}` : '',
+    body.phone ? `<b>هاتف:</b> ${esc(clip(body.phone, 40))}` : '',
     `<b>المسار:</b> ${result.key}`,
     `<b>موافقة تسويقية:</b> ${consent ? 'نعم' : 'لا'}`,
     `<b>البريد أُرسل:</b> ${emailSent ? 'نعم' : 'لا'}`,

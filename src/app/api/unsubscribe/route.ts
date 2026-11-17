@@ -7,13 +7,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifyUnsub } from '@/lib/campaigns/unsubscribe'
+import { rateLimit, esc } from '@/lib/security/guard'
 
 function db() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } })
 }
 
-function page(ok: boolean, email: string): string {
+function page(ok: boolean, rawEmail: string): string {
+  const email = esc(rawEmail)
   const title_ar = ok ? 'تم إلغاء الاشتراك' : 'رابط غير صالح'
   const title_en = ok ? 'You have been unsubscribed' : 'Invalid link'
   const body_ar = ok
@@ -42,6 +44,8 @@ async function suppress(email: string, token: string): Promise<boolean> {
 }
 
 export async function GET(req: NextRequest) {
+  const limited = rateLimit(req, 'unsub', 30, 60_000)
+  if (limited) return limited
   const email = req.nextUrl.searchParams.get('e') ?? ''
   const token = req.nextUrl.searchParams.get('t') ?? ''
   const ok = await suppress(email, token)
@@ -52,6 +56,8 @@ export async function GET(req: NextRequest) {
 
 // RFC 8058 one-click (mail clients POST to the List-Unsubscribe URL)
 export async function POST(req: NextRequest) {
+  const limited = rateLimit(req, 'unsub', 30, 60_000)
+  if (limited) return limited
   const email = req.nextUrl.searchParams.get('e') ?? ''
   const token = req.nextUrl.searchParams.get('t') ?? ''
   const ok = await suppress(email, token)

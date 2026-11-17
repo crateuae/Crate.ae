@@ -14,7 +14,7 @@ import {
   Package, Building2, ChevronLeft, BarChart3, Award,
 } from 'lucide-react'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { getProductSignals } from '@/lib/supabase/actions'
+import { getProductSignals } from '@/lib/supabase/signals'
 import { PRODUCTS_CATALOG, getProductSlug, getProductFMCG } from '@/lib/data/products-catalog'
 import UnifiedProductPage, { type DBProduct } from './UnifiedProductPage'
 

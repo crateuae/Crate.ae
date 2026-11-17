@@ -17,26 +17,34 @@ import { readStickerAsk, readSqmAsk, crateMarkupPct } from '@/lib/partner/sticke
 import { adminClient } from '@/lib/supabase/admin'
 import { cleanEmail } from '@/lib/email/normalize'
 import { notifyAdmin } from '@/lib/email/notify-admin'
+import { rateLimit, rejectCrossOrigin, readJsonObject, badBody, esc, validEmail } from '@/lib/security/guard'
 
 export const runtime = 'nodejs'
 
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
 
 export async function POST(req: NextRequest) {
+  const xo = rejectCrossOrigin(req)
+  if (xo) return xo
+  // Every accepted request creates a real order at the factory: keep the burst very small.
+  const limited = rateLimit(req, 'order-min', 3, 60_000) || rateLimit(req, 'order-hour', 12, 3_600_000)
+  if (limited) return limited
+  // 5.5 MB: room for the artwork data URL (the platform caps request bodies near 4.5 MB anyway).
+  const body: any = await readJsonObject(req, 5_500_000)
+  if (!body) return badBody()
+  if (typeof body?.website === 'string' && body.website.trim()) return NextResponse.json({ ok: true }) // honeypot
   if (!afpConfigured()) {
     return NextResponse.json({ ok: false, error: 'service_unavailable' }, { status: 503 })
   }
-  let body: any
-  try { body = await req.json() } catch { return NextResponse.json({ ok: false, error: 'bad_json' }, { status: 400 }) }
-  if (typeof body?.website === 'string' && body.website.trim()) return NextResponse.json({ ok: true }) // honeypot
 
   const buyer = body?.buyer || {}
-  const name = String(buyer.name || '').trim()
-  const phone = String(buyer.phone || '').trim()
+  const name = String(buyer.name || '').trim().slice(0, 120)
+  const phone = String(buyer.phone || '').trim().slice(0, 40)
   if (!name || !phone) {
     return NextResponse.json({ ok: false, error: 'missing_buyer', detail: 'name + phone required' }, { status: 400 })
   }
-  const email = cleanEmail(buyer.email) || undefined
+  const email = (validEmail(buyer.email) && cleanEmail(buyer.email)) || undefined
+  if (buyer.email && !email) return NextResponse.json({ ok: false, error: 'invalid_email' }, { status: 422 })
   const sqm = readSqmAsk(body?.sqm)
   const sticker = sqm ? null : readStickerAsk(body?.sticker)
   if ((body?.sqm && !sqm) || (!sqm && body?.sticker && !sticker)) return NextResponse.json({ ok: false, error: 'invalid_size' }, { status: 422 })
@@ -49,9 +57,12 @@ export async function POST(req: NextRequest) {
   const product_slug = body?.product_slug ? String(body.product_slug) : undefined
   const configNote = body?.configNote ? String(body.configNote).slice(0, 400) : undefined
   const crateRequestId = body?.crate_request_id ? String(body.crate_request_id).slice(0, 80) : undefined
-  const artwork = (body?.artwork?.dataUrl && body?.artwork?.name)
-    ? { name: String(body.artwork.name).slice(0, 80), dataUrl: String(body.artwork.dataUrl) }
+  // Artwork: a data URL of a print-ready image/PDF, bounded in size, never an arbitrary string.
+  const artDataUrl = typeof body?.artwork?.dataUrl === 'string' ? body.artwork.dataUrl : ''
+  const artwork = (artDataUrl && body?.artwork?.name && artDataUrl.length <= 5_000_000 && /^data:(image\/(png|jpe?g|webp|gif|bmp|tiff|heic|heif)|application\/pdf);base64,[A-Za-z0-9+/=]+$/.test(artDataUrl))
+    ? { name: String(body.artwork.name).replace(/[^\w.\- ]+/g, '_').slice(0, 80), dataUrl: artDataUrl }
     : undefined
+  if (body?.artwork?.dataUrl && !artwork) return NextResponse.json({ ok: false, error: 'invalid_artwork' }, { status: 422 })
 
   // ── Inject the order into the factory ──
   const afp = await createAfpOrder({
@@ -119,11 +130,11 @@ export async function POST(req: NextRequest) {
 
     await notifyAdmin(
       `طلب ملصقات جديد — ${afp.afp_ref} — AED ${afpTotal}`,
-      `<p><b>${name}</b> — ${phone}${email ? ` — ${email}` : ''}</p>
-       <p>${what}</p>
+      `<p><b>${esc(name)}</b> — ${esc(phone)}${email ? ` — ${esc(email)}` : ''}</p>
+       <p>${esc(what)}</p>
        <p>يدفع العميل: AED ${afpTotal} (شامل الضريبة)${hasMargin ? ` · سعر المصنع للبضاعة: AED ${afp.base_line_total_aed} صافي · هامش Crate (${commissionPct}%): AED ${commissionAed} صافي` : ` · عمولة Crate: AED ${commissionAed} (${commissionPct}%)`}</p>
        <p>مرجع المصنع: <b>${afp.afp_ref}</b> — الحالة: ${afp.status || 'pending'}</p>
-       ${afp.pay_url ? `<p>رابط الدفع (يمكن إرساله للعميل واتساب): <a href="${afp.pay_url}">${afp.pay_url}</a></p>` : ''}
+       ${afp.pay_url ? `<p>رابط الدفع (يمكن إرساله للعميل واتساب): <a href="${esc(afp.pay_url)}">${esc(afp.pay_url)}</a></p>` : ''}
        <p style="color:#888">ظهر للعميل زر الدفع مباشرة بعد الطلب. إن لم يدفع، أرسل له الرابط.</p>`,
     ).catch(() => {})
   }

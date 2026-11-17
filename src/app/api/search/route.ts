@@ -8,11 +8,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { parseQuery } from '@/lib/search/parse'
+import { rateLimit } from '@/lib/security/guard'
 
 export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
-  const q = req.nextUrl.searchParams.get('q') || ''
+  const limited = rateLimit(req, 'search', 40, 60_000)
+  if (limited) return limited
+  const q = (req.nextUrl.searchParams.get('q') || '').slice(0, 200)
   if (!q.trim()) return NextResponse.json({ ok: true, parsed: null, results: [], count: 0, provider: 'deterministic' })
 
   const parsed = parseQuery(q)

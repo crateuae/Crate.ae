@@ -26,11 +26,7 @@ function db() {
     { auth: { persistSession: false, autoRefreshToken: false } })
 }
 
-function authorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return true
-  return req.headers.get('authorization') === `Bearer ${secret}` || req.nextUrl.searchParams.get('secret') === secret
-}
+// Access is enforced in src/proxy.ts (admin session or CRON_SECRET) — secrets in the query string are no longer accepted.
 
 const PLACES = 'https://maps.googleapis.com/maps/api/place'
 
@@ -71,7 +67,6 @@ async function emailFromSite(website: string): Promise<string | null> {
 }
 
 async function run(req: NextRequest) {
-  if (!authorized(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const key = process.env.GOOGLE_PLACES_API_KEY
   if (!key) return NextResponse.json({ skipped: 'GOOGLE_PLACES_API_KEY not set — enrichment inactive (no charges)' })
 

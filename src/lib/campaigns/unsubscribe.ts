@@ -1,10 +1,10 @@
-import { createHmac } from 'crypto'
+import { createHmac, timingSafeEqual } from 'crypto'
 
 /**
  * Signed unsubscribe tokens — so an unsubscribe link cannot be forged and no
  * database lookup is needed to validate it. token = HMAC(email, secret).
  */
-const SECRET = process.env.UNSUBSCRIBE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || 'crate-fallback-secret'
+const SECRET = process.env.UNSUBSCRIBE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 const SITE = 'https://www.crate.ae'
 
 export function unsubToken(email: string): string {
@@ -12,9 +12,10 @@ export function unsubToken(email: string): string {
 }
 
 export function verifyUnsub(email: string, token: string): boolean {
+  if (!SECRET) return false // never validate against a guessable key
   const expected = unsubToken(email)
-  // constant-ish comparison
-  return token.length === expected.length && token === expected
+  if (token.length !== expected.length) return false
+  return timingSafeEqual(Buffer.from(token), Buffer.from(expected))
 }
 
 /** One-click unsubscribe URL for an address. */

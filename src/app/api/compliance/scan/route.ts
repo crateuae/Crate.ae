@@ -8,7 +8,8 @@
  * Returns { extracted, compliance } for the UI to prefill + display.
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { adminClient } from '@/lib/supabase/admin'
+import { rateLimit, rejectCrossOrigin, clientIp } from '@/lib/security/guard'
 import { extractLabelFromImage, type LabelExtraction } from '@/lib/ai/vision'
 import { extractLabelViaFreeOCR } from '@/lib/ai/ocr-free'
 import { checkComplianceDeterministic } from '@/lib/compliance/engine'
@@ -17,20 +18,20 @@ export const maxDuration = 60
 
 const MAX_B64 = 7_500_000 // ~5.6 MB image — reject larger to bound cost/latency
 
-// Best-effort per-IP throttle. This is a PUBLIC endpoint that calls the PAID
-// Claude Vision API, so we cap bursts to blunt abuse/cost. Module scope persists
-// within a warm serverless instance (resets on cold start — acceptable for a
-// free-tier tool; a determined attacker across cold instances is out of scope here).
-const RATE = { windowMs: 60_000, max: 6, hourMs: 3_600_000, hourMax: 40 }
-const hits = new Map<string, number[]>()
-function rateLimited(ip: string): boolean {
-  const now = Date.now()
-  const arr = (hits.get(ip) || []).filter(t => now - t < RATE.hourMs)
-  arr.push(now)
-  hits.set(ip, arr)
-  if (hits.size > 5000) hits.clear() // bound memory
-  const lastMin = arr.filter(t => now - t < RATE.windowMs).length
-  return lastMin > RATE.max || arr.length > RATE.hourMax
+// This is a PUBLIC endpoint that calls the PAID Claude Vision API. Three layers cap the cost of abuse:
+//   1. per-IP burst + hourly limit (per warm instance),
+//   2. a GLOBAL hourly ceiling counted in the database (holds across instances),
+//   3. strict input checks (same-site origin, size, real image bytes) before anything is sent to the AI.
+const GLOBAL_HOURLY_SCANS = 300
+
+/** The file's own first bytes must say jpeg / png / webp — the declared MIME type is not trusted. */
+function imageMatches(base64: string, mediaType: string): boolean {
+  let head: Buffer
+  try { head = Buffer.from(base64.slice(0, 32), 'base64') } catch { return false }
+  if (mediaType === 'image/jpeg') return head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff
+  if (mediaType === 'image/png') return head.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+  if (mediaType === 'image/webp') return head.subarray(0, 4).toString('latin1') === 'RIFF' && head.subarray(8, 12).toString('latin1') === 'WEBP'
+  return false
 }
 
 export async function POST(req: NextRequest) {
@@ -42,20 +43,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'scanner not configured' }, { status: 503 })
   }
 
-  const ip = (req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()) || req.headers.get('x-real-ip') || 'unknown'
-  if (rateLimited(ip)) {
-    return NextResponse.json({ error: 'too many scans — please wait a moment and try again' }, { status: 429 })
+  const xo = rejectCrossOrigin(req)
+  if (xo) return xo
+  const limited = rateLimit(req, 'scan-min', 6, 60_000) || rateLimit(req, 'scan-hour', 40, 3_600_000)
+  if (limited) {
+    return NextResponse.json({ error: 'too many scans — please wait a moment and try again' }, { status: 429, headers: limited.headers })
+  }
+  if (Number(req.headers.get('content-length') || 0) > MAX_B64 + 1000) {
+    return NextResponse.json({ error: 'image too large — capture a smaller/compressed frame' }, { status: 413 })
   }
 
-  let body: { image?: string }
+  let body: { image?: unknown }
   try { body = await req.json() } catch { return NextResponse.json({ error: 'invalid json' }, { status: 400 }) }
 
-  const dataUrl = body.image ?? ''
+  const dataUrl = typeof body?.image === 'string' ? body.image : ''
   const m = dataUrl.match(/^data:(image\/(jpeg|png|webp));base64,(.+)$/)
   if (!m) return NextResponse.json({ error: 'image must be a base64 data URL (jpeg/png/webp)' }, { status: 422 })
   const mediaType = m[1]
   const base64 = m[3]
   if (base64.length > MAX_B64) return NextResponse.json({ error: 'image too large — capture a smaller/compressed frame' }, { status: 413 })
+  if (!imageMatches(base64, mediaType)) return NextResponse.json({ error: 'file is not a valid jpeg/png/webp image' }, { status: 422 })
+
+  // Global ceiling (database-backed, so it holds across serverless instances).
+  try {
+    const { count } = await adminClient().from('compliance_checks').select('id', { count: 'exact', head: true })
+      .filter('input_data->>source', 'eq', 'smart_scan')
+      .gte('created_at', new Date(Date.now() - 3_600_000).toISOString())
+    if ((count ?? 0) >= GLOBAL_HOURLY_SCANS) {
+      console.warn('[security] scan global hourly ceiling reached', clientIp(req))
+      return NextResponse.json({ error: 'label reader is busy — please try again later', service_down: true }, { status: 503, headers: { 'Retry-After': '600' } })
+    }
+  } catch { /* never block scanning on the counter */ }
 
   // 1. OCR + extraction — Claude Vision first (best structured read), falling back
   //    to FREE OCR (OCR.space) on ANY Claude failure so a zero-credit Anthropic
@@ -103,7 +121,7 @@ export async function POST(req: NextRequest) {
 
   // 2. Deterministic compliance verdict from the extracted data
   try {
-    const supabase = await createAdminClient()
+    const supabase = adminClient()
     const compliance = await checkComplianceDeterministic(supabase, {
       product_class: extracted.product_class,
       product_name: extracted.product_name,

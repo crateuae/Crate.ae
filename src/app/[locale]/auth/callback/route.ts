@@ -1,17 +1,19 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-
-const ADMIN_EMAIL = 'crateuae@gmail.com'
+import { isAdminUser } from '@/lib/security/admin'
+import { safeNextPath } from '@/lib/security/guard'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ locale: string }> }
 ) {
-  const { locale } = await params
+  const { locale: rawLocale } = await params
+  const locale = rawLocale === 'en' ? 'en' : 'ar'
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? `/${locale}`
+  // `next` must be a same-site path: "@evil.com" or "//evil.com" would otherwise turn this into an open redirect.
+  const next = safeNextPath(searchParams.get('next'), `/${locale}`)
 
   if (!code) {
     return NextResponse.redirect(`${origin}/${locale}/login?error=auth_failed`)
@@ -40,7 +42,7 @@ export async function GET(
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (user?.email === ADMIN_EMAIL) {
+  if (isAdminUser(user)) {
     return NextResponse.redirect(`${origin}/${locale}/dashboard`)
   }
 

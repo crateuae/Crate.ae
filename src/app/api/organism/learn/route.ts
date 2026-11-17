@@ -13,7 +13,7 @@ import { captureOutcomes, relearnWeights } from '@/lib/organism/learning'
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
-  // Open trigger: Vercel Cron + manual admin learn from the dashboard.
+  // Access is enforced in src/proxy.ts: admin session or CRON_SECRET.
 
   const startedAt = Date.now()
   try {
